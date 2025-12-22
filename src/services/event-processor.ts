@@ -7,6 +7,7 @@ import {
   WebhookPayload,
 } from '../types';
 import { EventEmitter } from 'events';
+import { notificationService } from './notifications';
 
 /**
  * DeFi Event Processor
@@ -352,7 +353,7 @@ export class EventProcessor extends EventEmitter {
       new_wallet_activity: `New wallet with significant activity detected`,
     };
 
-    return {
+    const alert: WhaleAlert = {
       id: `${Date.now()}-${Math.random().toString(36).substring(7)}`,
       type,
       severity: 'warning',
@@ -360,6 +361,15 @@ export class EventProcessor extends EventEmitter {
       message: messages[type],
       timestamp: Date.now(),
     };
+
+    // Send notifications for whale alerts
+    try {
+      notificationService.notifyWhaleAlert(alert);
+    } catch (error) {
+      logger.error('Failed to send whale alert notification', error);
+    }
+
+    return alert;
   }
 
   /**

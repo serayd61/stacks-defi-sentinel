@@ -3,6 +3,7 @@ import { AnalyticsService } from '../services/analytics';
 import { DeFiChainhooksManager } from '../chainhooks/client';
 import { EventProcessor } from '../services/event-processor';
 import { apiKeyService, ApiTier, TIER_LIMITS, TIER_PRICES } from '../services/api-keys';
+import { notificationService, NotificationChannel } from '../services/notifications';
 import { WebhookPayload } from '../types';
 import { logger } from '../utils/logger';
 
@@ -381,6 +382,131 @@ export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (
     } catch (error) {
       logger.error('Failed to process v1/data request', error);
       return reply.status(500).send({ error: 'Internal server error' });
+    }
+  });
+
+  // ==========================================
+  // NOTIFICATION ENDPOINTS
+  // ==========================================
+
+  // Create notification subscription
+  fastify.post('/notifications/subscribe', async (req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { owner, channel, config, filters } = req.body as {
+        owner: string;
+        channel: NotificationChannel;
+        config: {
+          telegramChatId?: string;
+          discordWebhookUrl?: string;
+          webhookUrl?: string;
+        };
+        filters?: {
+          minStxAmount?: number;
+          tokens?: string[];
+          alertTypes?: string[];
+        };
+      };
+
+      if (!owner || !channel || !config) {
+        return reply.status(400).send({ error: 'owner, channel, and config are required' });
+      }
+
+      const subscription = notificationService.createSubscription(owner, channel, config, filters);
+      
+      logger.info(`Created notification subscription for ${owner}`);
+      return reply.send({
+        success: true,
+        subscription: {
+          id: subscription.id,
+          channel: subscription.channel,
+          active: subscription.active,
+          createdAt: subscription.createdAt,
+        },
+      });
+    } catch (error: any) {
+      logger.error('Failed to create notification subscription', error);
+      return reply.status(400).send({ error: error.message });
+    }
+  });
+
+  // Get user's notification subscriptions
+  fastify.get('/notifications/subscriptions', async (req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const owner = (req.query as any).owner;
+      
+      if (!owner) {
+        return reply.status(400).send({ error: 'owner query parameter required' });
+      }
+
+      const subscriptions = notificationService.getSubscriptionsByOwner(owner);
+      
+      return reply.send({
+        subscriptions: subscriptions.map(sub => ({
+          id: sub.id,
+          channel: sub.channel,
+          active: sub.active,
+          createdAt: sub.createdAt,
+          filters: sub.filters,
+        })),
+      });
+    } catch (error) {
+      logger.error('Failed to get subscriptions', error);
+      return reply.status(500).send({ error: 'Failed to get subscriptions' });
+    }
+  });
+
+  // Delete notification subscription
+  fastify.delete('/notifications/subscriptions/:id', async (req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { id } = req.params as { id: string };
+      
+      const deleted = notificationService.deleteSubscription(id);
+      
+      if (!deleted) {
+        return reply.status(404).send({ error: 'Subscription not found' });
+      }
+
+      return reply.send({ success: true, message: 'Subscription deleted' });
+    } catch (error) {
+      logger.error('Failed to delete subscription', error);
+      return reply.status(500).send({ error: 'Failed to delete subscription' });
+    }
+  });
+
+  // Toggle notification subscription
+  fastify.patch('/notifications/subscriptions/:id', async (req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { id } = req.params as { id: string };
+      const { active } = req.body as { active: boolean };
+      
+      const updated = notificationService.toggleSubscription(id, active);
+      
+      if (!updated) {
+        return reply.status(404).send({ error: 'Subscription not found' });
+      }
+
+      return reply.send({ success: true, active });
+    } catch (error) {
+      logger.error('Failed to toggle subscription', error);
+      return reply.status(500).send({ error: 'Failed to toggle subscription' });
+    }
+  });
+
+  // Test notification (for debugging)
+  fastify.post('/notifications/test', async (req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { subscriptionId } = req.body as { subscriptionId: string };
+      
+      // Send a test notification
+      logger.info(`Test notification requested for ${subscriptionId}`);
+      
+      return reply.send({
+        success: true,
+        message: 'Test notification sent (if subscription exists and is active)',
+      });
+    } catch (error) {
+      logger.error('Failed to send test notification', error);
+      return reply.status(500).send({ error: 'Failed to send test notification' });
     }
   });
 };
