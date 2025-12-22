@@ -2,6 +2,7 @@ import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import { AnalyticsService } from '../services/analytics';
 import { DeFiChainhooksManager } from '../chainhooks/client';
 import { EventProcessor } from '../services/event-processor';
+import { apiKeyService, ApiTier, TIER_LIMITS, TIER_PRICES } from '../services/api-keys';
 import { WebhookPayload } from '../types';
 import { logger } from '../utils/logger';
 
@@ -238,6 +239,148 @@ export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (
         chainhooksApi: 'unknown',
         timestamp: new Date().toISOString(),
       });
+    }
+  });
+
+  // ==========================================
+  // API KEY ENDPOINTS
+  // ==========================================
+
+  // Get API pricing info
+  fastify.get('/api-pricing', async (req: FastifyRequest, reply: FastifyReply) => {
+    return reply.send({
+      tiers: [
+        {
+          name: 'Free',
+          tier: ApiTier.FREE,
+          price: TIER_PRICES[ApiTier.FREE],
+          limit: TIER_LIMITS[ApiTier.FREE],
+          features: ['Dashboard access', 'Basic analytics', '100 API requests/day'],
+        },
+        {
+          name: 'Pro',
+          tier: ApiTier.PRO,
+          price: TIER_PRICES[ApiTier.PRO],
+          limit: TIER_LIMITS[ApiTier.PRO],
+          features: ['All Free features', '1000 API requests/day', 'Real-time webhooks', 'Priority support'],
+        },
+        {
+          name: 'Enterprise',
+          tier: ApiTier.ENTERPRISE,
+          price: TIER_PRICES[ApiTier.ENTERPRISE],
+          limit: TIER_LIMITS[ApiTier.ENTERPRISE],
+          features: ['All Pro features', '10000 API requests/day', 'Custom webhooks', 'Dedicated support', 'SLA'],
+        },
+      ],
+    });
+  });
+
+  // Generate API key
+  fastify.post('/api-keys/generate', async (req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const { owner, tier } = req.body as { owner: string; tier?: ApiTier };
+      
+      if (!owner) {
+        return reply.status(400).send({ error: 'Owner address required' });
+      }
+
+      const key = apiKeyService.generateApiKey(owner, tier || ApiTier.FREE);
+      const info = apiKeyService.getKeyInfo(key);
+
+      logger.info(`Generated API key for ${owner}`);
+      return reply.send({
+        success: true,
+        apiKey: key,
+        ...info,
+        limits: {
+          daily: TIER_LIMITS[tier || ApiTier.FREE],
+        },
+      });
+    } catch (error: any) {
+      logger.error('Failed to generate API key', error);
+      return reply.status(400).send({ error: error.message });
+    }
+  });
+
+  // Validate API key
+  fastify.post('/api-keys/validate', async (req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const authHeader = req.headers.authorization;
+      const apiKey = authHeader?.replace('Bearer ', '') || (req.body as any)?.apiKey;
+
+      if (!apiKey) {
+        return reply.status(400).send({ error: 'API key required' });
+      }
+
+      const result = apiKeyService.validateKey(apiKey);
+      return reply.send(result);
+    } catch (error) {
+      logger.error('Failed to validate API key', error);
+      return reply.status(500).send({ error: 'Failed to validate key' });
+    }
+  });
+
+  // Get API key info
+  fastify.get('/api-keys/info', async (req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const authHeader = req.headers.authorization;
+      const apiKey = authHeader?.replace('Bearer ', '');
+
+      if (!apiKey) {
+        return reply.status(401).send({ error: 'API key required in Authorization header' });
+      }
+
+      const info = apiKeyService.getKeyInfo(apiKey);
+      if (!info) {
+        return reply.status(404).send({ error: 'API key not found' });
+      }
+
+      return reply.send({
+        ...info,
+        limits: {
+          daily: TIER_LIMITS[info.tier as ApiTier],
+          remaining: TIER_LIMITS[info.tier as ApiTier] - (info.requestCount || 0),
+        },
+      });
+    } catch (error) {
+      logger.error('Failed to get API key info', error);
+      return reply.status(500).send({ error: 'Failed to get key info' });
+    }
+  });
+
+  // Protected API endpoint example (requires API key)
+  fastify.get('/v1/data', async (req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const authHeader = req.headers.authorization;
+      const apiKey = authHeader?.replace('Bearer ', '');
+
+      if (!apiKey) {
+        return reply.status(401).send({ 
+          error: 'API key required',
+          docs: 'Include your API key in the Authorization header: Bearer YOUR_API_KEY',
+        });
+      }
+
+      const validation = apiKeyService.validateKey(apiKey);
+      if (!validation.valid) {
+        return reply.status(403).send({ 
+          error: validation.error,
+          tier: validation.tier,
+        });
+      }
+
+      // Return data based on tier
+      const stats = analytics.getDashboardStats();
+      
+      return reply.send({
+        success: true,
+        tier: validation.tier,
+        remaining: validation.remaining,
+        data: stats,
+      });
+    } catch (error) {
+      logger.error('Failed to process v1/data request', error);
+      return reply.status(500).send({ error: 'Internal server error' });
     }
   });
 };
