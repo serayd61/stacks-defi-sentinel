@@ -13,6 +13,7 @@ interface RouteOptions {
 
 /**
  * DeFi Monitor API Routes
+ * Updated: Dec 22, 2025
  */
 export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (
   fastify,
