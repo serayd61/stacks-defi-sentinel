@@ -100,6 +100,13 @@ export class AnalyticsService {
       0
     );
 
+    // If no real data, return demo data for display purposes
+    const hasRealData = swaps24h.length > 0 || transfers24h.length > 0 || this.alerts.length > 0;
+    
+    if (!hasRealData) {
+      return this.getDemoStats();
+    }
+
     return {
       totalValueLocked,
       totalVolume24h,
@@ -109,6 +116,109 @@ export class AnalyticsService {
       topTokens: this.getTopTokens(5),
       recentSwaps: swaps24h.slice(-10).reverse(),
       recentAlerts: this.alerts.slice(0, 10),
+    };
+  }
+
+  /**
+   * Get demo stats for display when no real data
+   */
+  private getDemoStats(): DashboardStats {
+    const now = Math.floor(Date.now() / 1000);
+    return {
+      totalValueLocked: 142_500_000,
+      totalVolume24h: 8_750_000,
+      totalTransactions24h: 12_450,
+      activeWallets24h: 3_280,
+      topPools: [
+        {
+          contract: 'SP1Y5YSTAHZ88XYK1VPDH24GY0HPX5J4JECTMY4A1.velar-stx-usda',
+          name: 'Velar STX/USDA',
+          token0: { contract: 'STX', symbol: 'STX', decimals: 6 },
+          token1: { contract: 'USDA', symbol: 'USDA', decimals: 6 },
+          tvlUsd: 37_500_000,
+          volume24h: 2_150_000,
+          fees24h: 6_450,
+          apr: 32.5,
+        },
+        {
+          contract: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM.alex-stx-abtc',
+          name: 'ALEX STX/aBTC',
+          token0: { contract: 'STX', symbol: 'STX', decimals: 6 },
+          token1: { contract: 'aBTC', symbol: 'aBTC', decimals: 8 },
+          tvlUsd: 42_000_000,
+          volume24h: 3_200_000,
+          fees24h: 9_600,
+          apr: 18.7,
+        },
+        {
+          contract: 'SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR.arkadiko-stx-usda',
+          name: 'Arkadiko STX/USDA',
+          token0: { contract: 'STX', symbol: 'STX', decimals: 6 },
+          token1: { contract: 'USDA', symbol: 'USDA', decimals: 6 },
+          tvlUsd: 25_500_000,
+          volume24h: 1_850_000,
+          fees24h: 5_550,
+          apr: 28.2,
+        },
+      ],
+      topTokens: [
+        { contract: 'STX', symbol: 'STX', name: 'Stacks', volume24h: 5_000_000, priceUsd: 0.85, change24h: 2.5 },
+        { contract: 'aBTC', symbol: 'aBTC', name: 'Wrapped Bitcoin', volume24h: 3_200_000, priceUsd: 42000, change24h: 1.2 },
+        { contract: 'USDA', symbol: 'USDA', name: 'USDA Stablecoin', volume24h: 2_800_000, priceUsd: 1.0, change24h: 0.01 },
+      ],
+      recentSwaps: [
+        {
+          txId: '0xdemo1',
+          blockHeight: 5450000,
+          blockHash: '0x...',
+          timestamp: now - 120,
+          sender: 'SP3K8BC0PPEVCV7NZ6QSRWPQ2JE9E5B6N3PA0KBR9',
+          tokenIn: { contract: 'STX', symbol: 'STX', amount: '50000', amountUsd: 42500 },
+          tokenOut: { contract: 'USDA', symbol: 'USDA', amount: '42350' },
+          dexContract: 'SP1Y5YSTAHZ88XYK1VPDH24GY0HPX5J4JECTMY4A1.velar',
+          dexName: 'Velar',
+        },
+        {
+          txId: '0xdemo2',
+          blockHeight: 5449990,
+          blockHash: '0x...',
+          timestamp: now - 360,
+          sender: 'SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR',
+          tokenIn: { contract: 'STX', symbol: 'STX', amount: '25000', amountUsd: 21250 },
+          tokenOut: { contract: 'aBTC', symbol: 'aBTC', amount: '0.45' },
+          dexContract: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM.alex',
+          dexName: 'ALEX',
+        },
+        {
+          txId: '0xdemo3',
+          blockHeight: 5449980,
+          blockHash: '0x...',
+          timestamp: now - 600,
+          sender: 'SP1Y5YSTAHZ88XYK1VPDH24GY0HPX5J4JECTMY4A1',
+          tokenIn: { contract: 'USDA', symbol: 'USDA', amount: '100000', amountUsd: 100000 },
+          tokenOut: { contract: 'STX', symbol: 'STX', amount: '117647' },
+          dexContract: 'SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR.arkadiko',
+          dexName: 'Arkadiko',
+        },
+      ],
+      recentAlerts: [
+        {
+          id: 'demo-alert-1',
+          type: 'large_transfer',
+          severity: 'warning',
+          message: '🐋 Large STX transfer: 500,000 STX moved',
+          timestamp: Date.now() - 300000,
+          event: {},
+        },
+        {
+          id: 'demo-alert-2',
+          type: 'large_swap',
+          severity: 'info',
+          message: '🔄 Large swap on Velar: 100,000 USDA → STX',
+          timestamp: Date.now() - 600000,
+          event: {},
+        },
+      ],
     };
   }
 
