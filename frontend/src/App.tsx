@@ -14,12 +14,15 @@ import {
   Droplets,
   ArrowRightLeft,
   Clock,
-  RefreshCw
+  RefreshCw,
+  CreditCard
 } from 'lucide-react';
 import { StatCard } from './components/StatCard';
 import { SwapTable } from './components/SwapTable';
 import { WhaleAlerts } from './components/WhaleAlerts';
 import { PoolsTable } from './components/PoolsTable';
+import SubscriptionPanel from './components/SubscriptionPanel';
+import { WalletProvider } from './contexts/WalletContext';
 import { useApi } from './hooks/useApi';
 import { useWebSocket } from './hooks/useWebSocket';
 
@@ -29,7 +32,7 @@ const WS_URL = import.meta.env.VITE_WS_URL || 'wss://stacks-defi-sentinel-produc
 function App() {
   const { dashboardStats, isLoading, error, fetchDashboard } = useApi();
   const { isConnected, events } = useWebSocket(WS_URL);
-  const [activeTab, setActiveTab] = useState<'overview' | 'swaps' | 'alerts'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'swaps' | 'alerts' | 'subscribe'>('overview');
   const [lastUpdate, setLastUpdate] = useState(new Date());
 
   useEffect(() => {
@@ -156,6 +159,7 @@ function App() {
               { id: 'overview', label: 'Overview', icon: BarChart3 },
               { id: 'swaps', label: 'Swaps', icon: ArrowRightLeft },
               { id: 'alerts', label: 'Whale Alerts', icon: Bell },
+              { id: 'subscribe', label: 'Subscribe', icon: CreditCard },
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -291,6 +295,13 @@ function App() {
               </div>
             )}
 
+            {/* Subscribe Section */}
+            {activeTab === 'subscribe' && (
+              <div className="max-w-2xl mx-auto">
+                <SubscriptionPanel />
+              </div>
+            )}
+
             {/* Pools Section */}
             {activeTab === 'overview' && (
               <div className="mt-8">
@@ -347,4 +358,11 @@ function App() {
   );
 }
 
-export default App;
+// Wrap App with WalletProvider
+const AppWithWallet: React.FC = () => (
+  <WalletProvider>
+    <App />
+  </WalletProvider>
+);
+
+export default AppWithWallet;
