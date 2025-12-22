@@ -1,5 +1,5 @@
 import React from 'react';
-import { Droplets, TrendingUp } from 'lucide-react';
+import { Droplets, TrendingUp, Percent } from 'lucide-react';
 
 interface Pool {
   contract: string;
@@ -23,70 +23,100 @@ export function PoolsTable({ pools }: PoolsTableProps) {
     return `$${num.toFixed(2)}`;
   };
 
+  const getTokenGradient = (index: number) => {
+    const gradients = [
+      'from-purple-500 to-purple-600',
+      'from-orange-500 to-orange-600',
+      'from-blue-500 to-blue-600',
+      'from-emerald-500 to-emerald-600',
+      'from-pink-500 to-pink-600',
+    ];
+    return gradients[index % gradients.length];
+  };
+
   return (
-    <div className="bg-stacks-bg-card rounded-2xl border border-stacks-border overflow-hidden">
-      <div className="p-4 border-b border-stacks-border">
-        <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Droplets className="w-5 h-5 text-blue-400" />
+    <div className="bg-white/[0.02] backdrop-blur-sm rounded-2xl border border-white/5 overflow-hidden">
+      <div className="p-5 border-b border-white/5">
+        <h3 className="text-lg font-semibold flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-blue-500/10 text-blue-400">
+            <Droplets className="w-5 h-5" />
+          </div>
           Top Liquidity Pools
         </h3>
       </div>
       
       <div className="overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-stacks-bg-highlight">
+          <thead className="bg-white/[0.02]">
             <tr>
-              <th className="text-left p-4 text-stacks-text-muted font-medium text-sm">#</th>
-              <th className="text-left p-4 text-stacks-text-muted font-medium text-sm">Pool</th>
-              <th className="text-right p-4 text-stacks-text-muted font-medium text-sm">TVL</th>
-              <th className="text-right p-4 text-stacks-text-muted font-medium text-sm">Volume 24h</th>
-              <th className="text-right p-4 text-stacks-text-muted font-medium text-sm">Fees 24h</th>
-              <th className="text-right p-4 text-stacks-text-muted font-medium text-sm">APR</th>
+              <th className="text-left p-4 text-gray-500 font-medium text-xs uppercase tracking-wider">#</th>
+              <th className="text-left p-4 text-gray-500 font-medium text-xs uppercase tracking-wider">Pool</th>
+              <th className="text-right p-4 text-gray-500 font-medium text-xs uppercase tracking-wider">TVL</th>
+              <th className="text-right p-4 text-gray-500 font-medium text-xs uppercase tracking-wider">Volume 24h</th>
+              <th className="text-right p-4 text-gray-500 font-medium text-xs uppercase tracking-wider">Fees 24h</th>
+              <th className="text-right p-4 text-gray-500 font-medium text-xs uppercase tracking-wider">APR</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody className="divide-y divide-white/5">
             {pools.length === 0 ? (
               <tr>
-                <td colSpan={6} className="text-center p-8 text-stacks-text-muted">
-                  No pool data available
+                <td colSpan={6} className="text-center py-12">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center">
+                      <Droplets className="w-8 h-8 text-gray-600" />
+                    </div>
+                    <p className="text-gray-500">No pool data available</p>
+                    <p className="text-xs text-gray-600">Pool statistics will appear here</p>
+                  </div>
                 </td>
               </tr>
             ) : (
               pools.map((pool, index) => (
                 <tr 
                   key={pool.contract} 
-                  className="table-row border-t border-stacks-border"
+                  className="hover:bg-white/[0.02] transition-colors group"
                 >
-                  <td className="p-4 text-stacks-text-muted">{index + 1}</td>
                   <td className="p-4">
-                    <div className="flex items-center gap-2">
+                    <span className="text-gray-500 font-medium">{index + 1}</span>
+                  </td>
+                  <td className="p-4">
+                    <div className="flex items-center gap-3">
                       <div className="flex -space-x-2">
-                        <div className="w-8 h-8 rounded-full bg-stacks-purple flex items-center justify-center text-xs font-bold">
+                        <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${getTokenGradient(index)} flex items-center justify-center text-xs font-bold text-white shadow-lg ring-2 ring-[#0a0a0f]`}>
                           {pool.token0.symbol.charAt(0)}
                         </div>
-                        <div className="w-8 h-8 rounded-full bg-stacks-orange flex items-center justify-center text-xs font-bold">
+                        <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${getTokenGradient(index + 1)} flex items-center justify-center text-xs font-bold text-white shadow-lg ring-2 ring-[#0a0a0f]`}>
                           {pool.token1.symbol.charAt(0)}
                         </div>
                       </div>
-                      <span className="font-medium">
-                        {pool.token0.symbol}/{pool.token1.symbol}
-                      </span>
+                      <div>
+                        <span className="font-medium text-white group-hover:text-purple-300 transition-colors">
+                          {pool.token0.symbol}/{pool.token1.symbol}
+                        </span>
+                        <p className="text-xs text-gray-500">{pool.name}</p>
+                      </div>
                     </div>
                   </td>
-                  <td className="p-4 text-right mono font-medium">
-                    {formatNumber(pool.tvlUsd)}
-                  </td>
-                  <td className="p-4 text-right mono text-stacks-text-muted">
-                    {formatNumber(pool.volume24h)}
-                  </td>
-                  <td className="p-4 text-right mono text-green-400">
-                    {formatNumber(pool.fees24h)}
+                  <td className="p-4 text-right">
+                    <span className="font-mono font-medium text-white">
+                      {formatNumber(pool.tvlUsd)}
+                    </span>
                   </td>
                   <td className="p-4 text-right">
-                    <span className="flex items-center justify-end gap-1 text-green-400 font-medium">
-                      <TrendingUp className="w-4 h-4" />
-                      {pool.apr.toFixed(2)}%
+                    <span className="font-mono text-gray-400">
+                      {formatNumber(pool.volume24h)}
                     </span>
+                  </td>
+                  <td className="p-4 text-right">
+                    <span className="font-mono text-emerald-400">
+                      {formatNumber(pool.fees24h)}
+                    </span>
+                  </td>
+                  <td className="p-4 text-right">
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg font-medium border border-emerald-500/20">
+                      <TrendingUp className="w-3 h-3" />
+                      {pool.apr.toFixed(2)}%
+                    </div>
                   </td>
                 </tr>
               ))
@@ -97,4 +127,3 @@ export function PoolsTable({ pools }: PoolsTableProps) {
     </div>
   );
 }
-

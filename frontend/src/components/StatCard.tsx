@@ -1,49 +1,82 @@
 import React from 'react';
+import { TrendingUp, TrendingDown } from 'lucide-react';
 
 interface StatCardProps {
   title: string;
   value: string | number;
-  change?: number;
   icon: React.ReactNode;
   color?: 'purple' | 'orange' | 'green' | 'blue';
+  trend?: number;
+  subtitle?: string;
 }
 
-export function StatCard({ title, value, change, icon, color = 'purple' }: StatCardProps) {
-  const colorClasses = {
-    purple: 'from-stacks-purple/20 to-transparent border-stacks-purple/30',
-    orange: 'from-stacks-orange/20 to-transparent border-stacks-orange/30',
-    green: 'from-green-500/20 to-transparent border-green-500/30',
-    blue: 'from-blue-500/20 to-transparent border-blue-500/30',
+export function StatCard({ title, value, icon, color = 'purple', trend, subtitle }: StatCardProps) {
+  const gradients = {
+    purple: 'from-purple-500/20 via-purple-500/5 to-transparent',
+    orange: 'from-orange-500/20 via-orange-500/5 to-transparent',
+    green: 'from-emerald-500/20 via-emerald-500/5 to-transparent',
+    blue: 'from-blue-500/20 via-blue-500/5 to-transparent',
   };
 
-  const iconColors = {
-    purple: 'text-stacks-purple',
-    orange: 'text-stacks-orange',
-    green: 'text-green-500',
-    blue: 'text-blue-500',
+  const iconBg = {
+    purple: 'bg-purple-500/10 text-purple-400 ring-purple-500/20',
+    orange: 'bg-orange-500/10 text-orange-400 ring-orange-500/20',
+    green: 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20',
+    blue: 'bg-blue-500/10 text-blue-400 ring-blue-500/20',
+  };
+
+  const glowColors = {
+    purple: 'hover:shadow-purple-500/10',
+    orange: 'hover:shadow-orange-500/10',
+    green: 'hover:shadow-emerald-500/10',
+    blue: 'hover:shadow-blue-500/10',
   };
 
   return (
     <div className={`
-      bg-gradient-to-br ${colorClasses[color]}
-      bg-stacks-bg-card rounded-2xl p-6 border
-      card-hover animate-fade-in
+      relative overflow-hidden
+      bg-white/[0.02] backdrop-blur-sm
+      rounded-2xl p-6 
+      border border-white/5
+      hover:border-white/10
+      transition-all duration-300
+      hover:shadow-2xl ${glowColors[color]}
+      group
     `}>
-      <div className="flex items-start justify-between">
-        <div>
-          <p className="text-stacks-text-muted text-sm font-medium mb-2">{title}</p>
-          <p className="text-3xl font-bold mono">{value}</p>
-          {change !== undefined && (
-            <p className={`text-sm mt-2 ${change >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-              {change >= 0 ? '↑' : '↓'} {Math.abs(change).toFixed(2)}%
-            </p>
+      {/* Gradient Background */}
+      <div className={`absolute inset-0 bg-gradient-to-br ${gradients[color]} opacity-50`} />
+      
+      {/* Glow Effect on Hover */}
+      <div className={`absolute -inset-1 bg-gradient-to-r ${gradients[color]} blur-xl opacity-0 group-hover:opacity-30 transition-opacity duration-500`} />
+      
+      <div className="relative">
+        <div className="flex items-start justify-between mb-4">
+          <div className={`p-3 rounded-xl ${iconBg[color]} ring-1`}>
+            {icon}
+          </div>
+          {trend !== undefined && (
+            <div className={`flex items-center gap-1 px-2 py-1 rounded-lg text-xs font-medium ${
+              trend >= 0 
+                ? 'bg-emerald-500/10 text-emerald-400' 
+                : 'bg-red-500/10 text-red-400'
+            }`}>
+              {trend >= 0 ? (
+                <TrendingUp className="w-3 h-3" />
+              ) : (
+                <TrendingDown className="w-3 h-3" />
+              )}
+              {Math.abs(trend).toFixed(1)}%
+            </div>
           )}
         </div>
-        <div className={`p-3 rounded-xl bg-stacks-bg-highlight ${iconColors[color]}`}>
-          {icon}
-        </div>
+        
+        <p className="text-gray-400 text-sm font-medium mb-1">{title}</p>
+        <p className="text-3xl font-bold text-white font-mono tracking-tight">{value}</p>
+        
+        {subtitle && (
+          <p className="text-xs text-gray-500 mt-2">{subtitle}</p>
+        )}
       </div>
     </div>
   );
 }
-

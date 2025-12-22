@@ -1,0 +1,11 @@
+{
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
+  "env": {
+    "VITE_API_URL": "https://stacks-defi-sentinel-production.up.railway.app",
+    "VITE_WS_URL": "wss://stacks-defi-sentinel-production.up.railway.app/ws"
+  }
+}
+

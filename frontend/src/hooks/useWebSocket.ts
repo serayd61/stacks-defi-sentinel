@@ -1,106 +1,91 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
-interface WebSocketMessage {
-  type: string;
-  channel?: string;
-  data?: any;
-  timestamp?: number;
+interface WebSocketEvents {
+  swaps: any[];
+  alerts: any[];
+  liquidity: any[];
 }
 
-interface UseWebSocketReturn {
-  isConnected: boolean;
-  lastMessage: WebSocketMessage | null;
-  subscribe: (channel: string) => void;
-  unsubscribe: (channel: string) => void;
-  events: {
-    swaps: any[];
-    liquidity: any[];
-    transfers: any[];
-    alerts: any[];
-  };
-}
-
-export function useWebSocket(url: string): UseWebSocketReturn {
+export function useWebSocket(wsUrl: string) {
   const [isConnected, setIsConnected] = useState(false);
-  const [lastMessage, setLastMessage] = useState<WebSocketMessage | null>(null);
-  const [events, setEvents] = useState({
-    swaps: [] as any[],
-    liquidity: [] as any[],
-    transfers: [] as any[],
-    alerts: [] as any[],
+  const [events, setEvents] = useState<WebSocketEvents>({
+    swaps: [],
+    alerts: [],
+    liquidity: [],
   });
   
   const wsRef = useRef<WebSocket | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectAttemptsRef = useRef(0);
+  const maxReconnectAttempts = 5;
 
   const connect = useCallback(() => {
-    try {
-      const ws = new WebSocket(url);
-      wsRef.current = ws;
+    if (wsRef.current?.readyState === WebSocket.OPEN) return;
 
+    try {
+      console.log('Connecting to WebSocket:', wsUrl);
+      const ws = new WebSocket(wsUrl);
+      
       ws.onopen = () => {
         console.log('WebSocket connected');
         setIsConnected(true);
+        reconnectAttemptsRef.current = 0;
         
-        // Subscribe to all events
-        ws.send(JSON.stringify({ type: 'subscribe', channel: 'all' }));
+        // Subscribe to channels
+        ws.send(JSON.stringify({ type: 'subscribe', channel: 'swaps' }));
+        ws.send(JSON.stringify({ type: 'subscribe', channel: 'alerts' }));
+        ws.send(JSON.stringify({ type: 'subscribe', channel: 'liquidity' }));
       };
 
       ws.onmessage = (event) => {
         try {
-          const message: WebSocketMessage = JSON.parse(event.data);
-          setLastMessage(message);
-
-          if (message.type === 'event' && message.data) {
+          const data = JSON.parse(event.data);
+          console.log('WebSocket message:', data);
+          
+          if (data.channel && data.data) {
             setEvents((prev) => {
-              const newEvents = { ...prev };
-              
-              switch (message.channel) {
-                case 'swap':
-                  newEvents.swaps = [message.data, ...prev.swaps].slice(0, 50);
-                  break;
-                case 'liquidity':
-                  newEvents.liquidity = [message.data, ...prev.liquidity].slice(0, 50);
-                  break;
-                case 'transfer':
-                  newEvents.transfers = [message.data, ...prev.transfers].slice(0, 50);
-                  break;
-                case 'whale-alert':
-                  newEvents.alerts = [message.data, ...prev.alerts].slice(0, 20);
-                  break;
-                case 'all':
-                  if (message.data.type === 'whale-alert') {
-                    newEvents.alerts = [message.data.data, ...prev.alerts].slice(0, 20);
-                  }
-                  break;
+              const channel = data.channel as keyof WebSocketEvents;
+              if (channel in prev) {
+                return {
+                  ...prev,
+                  [channel]: [data.data, ...prev[channel]].slice(0, 50),
+                };
               }
-              
-              return newEvents;
+              return prev;
             });
           }
-        } catch (e) {
-          console.error('Failed to parse WebSocket message', e);
+        } catch (err) {
+          console.error('Error parsing WebSocket message:', err);
         }
       };
 
       ws.onclose = () => {
         console.log('WebSocket disconnected');
         setIsConnected(false);
+        wsRef.current = null;
         
-        // Reconnect after 3 seconds
-        reconnectTimeoutRef.current = setTimeout(() => {
-          console.log('Attempting to reconnect...');
-          connect();
-        }, 3000);
+        // Attempt to reconnect
+        if (reconnectAttemptsRef.current < maxReconnectAttempts) {
+          const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
+          console.log(`Reconnecting in ${delay}ms...`);
+          
+          reconnectTimeoutRef.current = setTimeout(() => {
+            reconnectAttemptsRef.current++;
+            connect();
+          }, delay);
+        }
       };
 
       ws.onerror = (error) => {
         console.error('WebSocket error:', error);
       };
-    } catch (error) {
-      console.error('Failed to connect WebSocket:', error);
+
+      wsRef.current = ws;
+    } catch (err) {
+      console.error('Failed to create WebSocket:', err);
+      setIsConnected(false);
     }
-  }, [url]);
+  }, [wsUrl]);
 
   useEffect(() => {
     connect();
@@ -129,10 +114,8 @@ export function useWebSocket(url: string): UseWebSocketReturn {
 
   return {
     isConnected,
-    lastMessage,
+    events,
     subscribe,
     unsubscribe,
-    events,
   };
 }
-
