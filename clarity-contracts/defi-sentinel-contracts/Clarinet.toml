@@ -9,6 +9,14 @@ cache_dir = "./.cache"
 path = "contracts/defi-sentinel.clar"
 epoch = "3.1"
 
+[contracts.sip-010-trait]
+path = "contracts/sip-010-trait.clar"
+epoch = "3.1"
+
+[contracts.sentinel-token]
+path = "contracts/sentinel-token.clar"
+epoch = "3.1"
+
 [repl.analysis]
 passes = ["check_checker"]
 check_checker = { trusted_sender = false, trusted_caller = false, callee_filter = false }
