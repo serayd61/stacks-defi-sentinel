@@ -128,7 +128,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       return;
     }
 
-    // If no wallet type specified, show modal
+    // If no wallet type specified, show our custom modal
     if (!walletType) {
       setShowWalletModal(true);
       return;
@@ -136,30 +136,41 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
 
     setSelectedWallet(walletType);
     setShowWalletModal(false);
-    
-    showConnect({
-      appDetails: {
-        name: 'DeFi Sentinel',
-        icon: window.location.origin + '/favicon.svg',
-      },
-      onFinish: () => {
-        if (userSession) {
-          try {
-            const userData = userSession.loadUserData();
-            setIsConnected(true);
-            setUserAddress(userData.profile.stxAddress.mainnet);
-            console.log('Wallet connected:', userData.profile.stxAddress.mainnet);
-          } catch (error) {
-            console.error('Error after connect:', error);
+    setIsLoading(true);
+
+    // Use showConnect - it will show the appropriate wallet
+    // The wallet selection happens in our modal, then we trigger connection
+    try {
+      showConnect({
+        appDetails: {
+          name: 'DeFi Sentinel',
+          icon: window.location.origin + '/favicon.svg',
+        },
+        onFinish: (payload) => {
+          console.log('Connection finished:', payload);
+          if (userSession) {
+            try {
+              const userData = userSession.loadUserData();
+              setIsConnected(true);
+              setUserAddress(userData.profile.stxAddress.mainnet);
+              console.log('Wallet connected:', userData.profile.stxAddress.mainnet);
+            } catch (error) {
+              console.error('Error loading user data after connect:', error);
+            }
           }
-        }
-      },
-      onCancel: () => {
-        console.log('User cancelled wallet connection');
-        setSelectedWallet(null);
-      },
-      userSession,
-    });
+          setIsLoading(false);
+        },
+        onCancel: () => {
+          console.log('User cancelled wallet connection');
+          setSelectedWallet(null);
+          setIsLoading(false);
+        },
+        userSession,
+      });
+    } catch (error) {
+      console.error('Error calling showConnect:', error);
+      setIsLoading(false);
+    }
   }, []);
 
   // Disconnect wallet
