@@ -105,14 +105,33 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       try {
         // Check localStorage for saved addresses
         const storage = getLocalStorage();
+        console.log('Storage data:', storage);
+        
         if (storage && storage.addresses) {
           // New format: { stx: [...], btc: [...] }
           const stxAddresses = storage.addresses.stx;
           if (stxAddresses && stxAddresses.length > 0) {
             setWalletConnected(true);
             setUserAddress(stxAddresses[0].address);
+            console.log('Loaded STX address from storage:', stxAddresses[0].address);
+            return;
+          }
+          
+          // Fallback: check btc array for any STX-formatted address
+          const btcAddresses = storage.addresses.btc;
+          if (btcAddresses && btcAddresses.length > 0) {
+            const stxAddr = btcAddresses.find((a: any) => 
+              a.address.startsWith('SP') || a.address.startsWith('ST')
+            );
+            if (stxAddr) {
+              setWalletConnected(true);
+              setUserAddress(stxAddr.address);
+              console.log('Found STX address in btc array:', stxAddr.address);
+              return;
+            }
           }
         }
+        
         // Also check isConnected
         if (isConnected()) {
           setWalletConnected(true);
@@ -124,6 +143,11 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     
     checkConnection();
   }, []);
+
+  // Helper to check if address is STX format (starts with SP or ST)
+  const isStxAddress = (address: string): boolean => {
+    return address.startsWith('SP') || address.startsWith('ST');
+  };
 
   // Connect wallet using new v8 API
   const connectWalletHandler = useCallback(async (_walletType?: WalletType) => {
@@ -138,22 +162,46 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       });
       
       console.log('Connect result:', result);
+      console.log('All addresses:', JSON.stringify(result.addresses, null, 2));
       
       if (result && result.addresses && result.addresses.length > 0) {
-        // Find STX address (mainnet)
-        const stxAddress = result.addresses.find(
-          (addr) => addr.symbol === 'STX' || (addr as any).type === 'stacks'
+        // Method 1: Find by symbol
+        let stxAddress = result.addresses.find(
+          (addr) => addr.symbol === 'STX'
         );
+        
+        // Method 2: Find by address format (SP... or ST...)
+        if (!stxAddress) {
+          stxAddress = result.addresses.find(
+            (addr) => isStxAddress(addr.address)
+          );
+        }
+        
+        // Method 3: Check type field
+        if (!stxAddress) {
+          stxAddress = result.addresses.find(
+            (addr) => (addr as any).type === 'stacks' || (addr as any).type === 'stx'
+          );
+        }
         
         if (stxAddress) {
           setWalletConnected(true);
           setUserAddress(stxAddress.address);
-          console.log('Wallet connected:', stxAddress.address);
+          console.log('STX Wallet connected:', stxAddress.address);
         } else {
-          // Fallback: use first address
-          setWalletConnected(true);
-          setUserAddress(result.addresses[0].address);
-          console.log('Wallet connected (fallback):', result.addresses[0].address);
+          // Last fallback: find any SP/ST address in the list
+          const anyStxAddr = result.addresses.find(addr => isStxAddress(addr.address));
+          if (anyStxAddr) {
+            setWalletConnected(true);
+            setUserAddress(anyStxAddr.address);
+            console.log('STX Wallet connected (format check):', anyStxAddr.address);
+          } else {
+            // If still no STX address, log all and use first
+            console.warn('No STX address found, using first address');
+            console.log('Available addresses:', result.addresses.map(a => ({ address: a.address, symbol: a.symbol })));
+            setWalletConnected(true);
+            setUserAddress(result.addresses[0].address);
+          }
         }
       }
     } catch (error) {
