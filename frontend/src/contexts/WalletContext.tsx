@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
-import { AppConfig, UserSession, showConnect, openContractCall, getSelectedProvider } from '@stacks/connect';
+import { connect, disconnect, isConnected, request, getLocalStorage, clearLocalStorage } from '@stacks/connect';
 import { STACKS_MAINNET } from '@stacks/network';
 import { PostConditionMode } from '@stacks/transactions';
 
@@ -16,15 +16,6 @@ export const SUPPORTED_WALLETS = [
   { id: 'leather' as WalletType, name: 'Leather', icon: '🟤', installed: false },
   { id: 'okx' as WalletType, name: 'OKX Wallet', icon: '⚫', installed: false },
 ];
-
-// App config - must be created once
-const appConfig = new AppConfig(['store_write', 'publish_data']);
-
-// Create userSession only in browser
-let userSession: UserSession | null = null;
-if (typeof window !== 'undefined') {
-  userSession = new UserSession({ appConfig });
-}
 
 // Check which wallets are installed
 const checkInstalledWallets = (): WalletType[] => {
@@ -86,7 +77,7 @@ interface WalletProviderProps {
 }
 
 export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
-  const [isConnected, setIsConnected] = useState(false);
+  const [walletConnected, setWalletConnected] = useState(false);
   const [userAddress, setUserAddress] = useState<string | null>(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [subscriptionTier, setSubscriptionTier] = useState<'none' | 'basic' | 'premium'>('none');
@@ -108,70 +99,95 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Check if already connected on mount
+  // Check if already connected on mount using new API
   useEffect(() => {
-    if (userSession && userSession.isUserSignedIn()) {
+    const checkConnection = () => {
       try {
-        const userData = userSession.loadUserData();
-        setIsConnected(true);
-        setUserAddress(userData.profile.stxAddress.mainnet);
+        // Check localStorage for saved addresses
+        const storage = getLocalStorage();
+        if (storage && storage.addresses) {
+          // New format: { stx: [...], btc: [...] }
+          const stxAddresses = storage.addresses.stx;
+          if (stxAddresses && stxAddresses.length > 0) {
+            setWalletConnected(true);
+            setUserAddress(stxAddresses[0].address);
+          }
+        }
+        // Also check isConnected
+        if (isConnected()) {
+          setWalletConnected(true);
+        }
       } catch (error) {
-        console.error('Error loading user data:', error);
+        console.error('Error checking connection:', error);
       }
-    }
+    };
+    
+    checkConnection();
   }, []);
 
-  // Connect wallet
-  const connectWallet = useCallback(async (walletType?: WalletType) => {
-    if (!userSession) {
-      console.error('UserSession not available');
-      return;
-    }
-
-    // If no wallet type specified, show our custom modal
-    if (!walletType) {
-      setShowWalletModal(true);
-      return;
-    }
-
-    setSelectedWallet(walletType);
+  // Connect wallet using new v8 API
+  const connectWalletHandler = useCallback(async (_walletType?: WalletType) => {
+    // Close modal if open
     setShowWalletModal(false);
     setIsLoading(true);
 
     try {
-      // showConnect returns a Promise in v8
-      await showConnect({
-        appDetails: {
-          name: 'DeFi Sentinel',
-          icon: window.location.origin + '/favicon.svg',
-        },
-        userSession,
+      // Use the new connect() function - it shows wallet selection UI automatically
+      const result = await connect({
+        forceWalletSelect: true, // Force wallet selection UI
       });
       
-      // After showConnect resolves, check if user is signed in
-      if (userSession.isUserSignedIn()) {
-        const userData = userSession.loadUserData();
-        setIsConnected(true);
-        setUserAddress(userData.profile.stxAddress.mainnet);
-        console.log('Wallet connected:', userData.profile.stxAddress.mainnet);
+      console.log('Connect result:', result);
+      
+      if (result && result.addresses && result.addresses.length > 0) {
+        // Find STX address (mainnet)
+        const stxAddress = result.addresses.find(
+          (addr) => addr.symbol === 'STX' || (addr as any).type === 'stacks'
+        );
+        
+        if (stxAddress) {
+          setWalletConnected(true);
+          setUserAddress(stxAddress.address);
+          console.log('Wallet connected:', stxAddress.address);
+        } else {
+          // Fallback: use first address
+          setWalletConnected(true);
+          setUserAddress(result.addresses[0].address);
+          console.log('Wallet connected (fallback):', result.addresses[0].address);
+        }
       }
     } catch (error) {
-      console.error('Error calling showConnect:', error);
+      console.error('Error connecting wallet:', error);
       // User might have cancelled
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Disconnect wallet
-  const disconnectWallet = useCallback(() => {
-    if (userSession) {
-      userSession.signUserOut();
+  // Wrapper that shows modal first (for backward compatibility)
+  const connectWallet = useCallback(async (walletType?: WalletType) => {
+    if (!walletType) {
+      // If no wallet type, connect directly (new UI handles selection)
+      await connectWalletHandler();
+    } else {
+      setSelectedWallet(walletType);
+      await connectWalletHandler(walletType);
     }
-    setIsConnected(false);
+  }, [connectWalletHandler]);
+
+  // Disconnect wallet using new API
+  const disconnectWallet = useCallback(() => {
+    try {
+      disconnect();
+      clearLocalStorage();
+    } catch (e) {
+      console.error('Error disconnecting:', e);
+    }
+    setWalletConnected(false);
     setUserAddress(null);
     setIsSubscribed(false);
     setSubscriptionTier('none');
+    setSelectedWallet(null);
   }, []);
 
   // Subscribe to basic plan
@@ -181,22 +197,18 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     setIsLoading(true);
     
     try {
-      await openContractCall({
-        network: STACKS_MAINNET,
-        contractAddress: CONTRACT_ADDRESS,
-        contractName: CONTRACT_NAME,
+      // Use the new request API for contract calls
+      const result = await request('stx_callContract', {
+        contract: `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`,
         functionName: 'subscribe',
         functionArgs: [],
-        postConditionMode: PostConditionMode.Allow,
-        onFinish: (data) => {
-          console.log('Subscribe TX:', data.txId);
-          setIsSubscribed(true);
-          setSubscriptionTier('basic');
-        },
-        onCancel: () => {
-          console.log('Transaction cancelled');
-        },
+        postConditionMode: 'allow' as any,
+        network: 'mainnet',
       });
+      
+      console.log('Subscribe TX:', result);
+      setIsSubscribed(true);
+      setSubscriptionTier('basic');
     } catch (error) {
       console.error('Subscribe error:', error);
     } finally {
@@ -211,22 +223,17 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     setIsLoading(true);
     
     try {
-      await openContractCall({
-        network: STACKS_MAINNET,
-        contractAddress: CONTRACT_ADDRESS,
-        contractName: CONTRACT_NAME,
+      const result = await request('stx_callContract', {
+        contract: `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`,
         functionName: 'subscribe-premium',
         functionArgs: [],
-        postConditionMode: PostConditionMode.Allow,
-        onFinish: (data) => {
-          console.log('Premium Subscribe TX:', data.txId);
-          setIsSubscribed(true);
-          setSubscriptionTier('premium');
-        },
-        onCancel: () => {
-          console.log('Transaction cancelled');
-        },
+        postConditionMode: 'allow' as any,
+        network: 'mainnet',
       });
+      
+      console.log('Premium Subscribe TX:', result);
+      setIsSubscribed(true);
+      setSubscriptionTier('premium');
     } catch (error) {
       console.error('Premium subscribe error:', error);
     } finally {
@@ -269,7 +276,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   }, [userAddress, checkSubscription]);
 
   const value: WalletContextType = {
-    isConnected,
+    isConnected: walletConnected,
     userAddress,
     isSubscribed,
     subscriptionTier,
@@ -293,4 +300,3 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
 };
 
 export default WalletContext;
-
