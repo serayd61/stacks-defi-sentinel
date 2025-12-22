@@ -22,6 +22,7 @@ import { SwapTable } from './components/SwapTable';
 import { WhaleAlerts } from './components/WhaleAlerts';
 import { PoolsTable } from './components/PoolsTable';
 import SubscriptionPanel from './components/SubscriptionPanel';
+import WalletModal from './components/WalletModal';
 import { WalletProvider } from './contexts/WalletContext';
 import { useApi } from './hooks/useApi';
 import { useWebSocket } from './hooks/useWebSocket';
@@ -362,6 +363,7 @@ function App() {
 const AppWithWallet: React.FC = () => (
   <WalletProvider>
     <App />
+    <WalletModal />
   </WalletProvider>
 );
 

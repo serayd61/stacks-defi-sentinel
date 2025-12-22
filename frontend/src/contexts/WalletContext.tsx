@@ -7,6 +7,16 @@ import { PostConditionMode } from '@stacks/transactions';
 const CONTRACT_ADDRESS = 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB';
 const CONTRACT_NAME = 'defi-sentinel';
 
+// Supported wallets
+export type WalletType = 'hiro' | 'xverse' | 'leather' | 'okx';
+
+export const SUPPORTED_WALLETS = [
+  { id: 'hiro' as WalletType, name: 'Hiro Wallet', icon: '🟠', installed: false },
+  { id: 'xverse' as WalletType, name: 'Xverse', icon: '🔵', installed: false },
+  { id: 'leather' as WalletType, name: 'Leather', icon: '🟤', installed: false },
+  { id: 'okx' as WalletType, name: 'OKX Wallet', icon: '⚫', installed: false },
+];
+
 // App config - must be created once
 const appConfig = new AppConfig(['store_write', 'publish_data']);
 
@@ -16,6 +26,31 @@ if (typeof window !== 'undefined') {
   userSession = new UserSession({ appConfig });
 }
 
+// Check which wallets are installed
+const checkInstalledWallets = (): WalletType[] => {
+  if (typeof window === 'undefined') return [];
+  
+  const installed: WalletType[] = [];
+  
+  // Check for Hiro/Leather wallet
+  if ((window as any).StacksProvider) {
+    installed.push('hiro');
+    installed.push('leather');
+  }
+  
+  // Check for Xverse
+  if ((window as any).XverseProviders?.StacksProvider || (window as any).BitcoinProvider) {
+    installed.push('xverse');
+  }
+  
+  // Check for OKX
+  if ((window as any).okxwallet?.stacks) {
+    installed.push('okx');
+  }
+  
+  return installed;
+};
+
 interface WalletContextType {
   // State
   isConnected: boolean;
@@ -23,13 +58,17 @@ interface WalletContextType {
   isSubscribed: boolean;
   subscriptionTier: 'none' | 'basic' | 'premium';
   isLoading: boolean;
+  installedWallets: WalletType[];
+  selectedWallet: WalletType | null;
+  showWalletModal: boolean;
   
   // Actions
-  connectWallet: () => void;
+  connectWallet: (walletType?: WalletType) => void;
   disconnectWallet: () => void;
   subscribeBasic: () => Promise<void>;
   subscribePremium: () => Promise<void>;
   checkSubscription: () => Promise<void>;
+  setShowWalletModal: (show: boolean) => void;
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined);
@@ -52,6 +91,22 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [subscriptionTier, setSubscriptionTier] = useState<'none' | 'basic' | 'premium'>('none');
   const [isLoading, setIsLoading] = useState(false);
+  const [installedWallets, setInstalledWallets] = useState<WalletType[]>([]);
+  const [selectedWallet, setSelectedWallet] = useState<WalletType | null>(null);
+  const [showWalletModal, setShowWalletModal] = useState(false);
+
+  // Check installed wallets on mount
+  useEffect(() => {
+    const checkWallets = () => {
+      const installed = checkInstalledWallets();
+      setInstalledWallets(installed);
+    };
+    
+    // Check immediately and after a delay (wallets may inject late)
+    checkWallets();
+    const timer = setTimeout(checkWallets, 1000);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Check if already connected on mount
   useEffect(() => {
@@ -67,11 +122,20 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   }, []);
 
   // Connect wallet
-  const connectWallet = useCallback(() => {
+  const connectWallet = useCallback((walletType?: WalletType) => {
     if (!userSession) {
       console.error('UserSession not available');
       return;
     }
+
+    // If no wallet type specified, show modal
+    if (!walletType) {
+      setShowWalletModal(true);
+      return;
+    }
+
+    setSelectedWallet(walletType);
+    setShowWalletModal(false);
     
     showConnect({
       appDetails: {
@@ -92,6 +156,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       },
       onCancel: () => {
         console.log('User cancelled wallet connection');
+        setSelectedWallet(null);
       },
       userSession,
     });
@@ -208,11 +273,15 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     isSubscribed,
     subscriptionTier,
     isLoading,
+    installedWallets,
+    selectedWallet,
+    showWalletModal,
     connectWallet,
     disconnectWallet,
     subscribeBasic,
     subscribePremium,
     checkSubscription,
+    setShowWalletModal,
   };
 
   return (
