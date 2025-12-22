@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
-import { AppConfig, UserSession, showConnect, openContractCall } from '@stacks/connect';
+import { AppConfig, UserSession, showConnect, openContractCall, getSelectedProvider } from '@stacks/connect';
 import { STACKS_MAINNET } from '@stacks/network';
 import { PostConditionMode } from '@stacks/transactions';
 
@@ -63,7 +63,7 @@ interface WalletContextType {
   showWalletModal: boolean;
   
   // Actions
-  connectWallet: (walletType?: WalletType) => void;
+  connectWallet: (walletType?: WalletType) => Promise<void>;
   disconnectWallet: () => void;
   subscribeBasic: () => Promise<void>;
   subscribePremium: () => Promise<void>;
@@ -122,7 +122,7 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   }, []);
 
   // Connect wallet
-  const connectWallet = useCallback((walletType?: WalletType) => {
+  const connectWallet = useCallback(async (walletType?: WalletType) => {
     if (!userSession) {
       console.error('UserSession not available');
       return;
@@ -138,37 +138,27 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     setShowWalletModal(false);
     setIsLoading(true);
 
-    // Use showConnect - it will show the appropriate wallet
-    // The wallet selection happens in our modal, then we trigger connection
     try {
-      showConnect({
+      // showConnect returns a Promise in v8
+      await showConnect({
         appDetails: {
           name: 'DeFi Sentinel',
           icon: window.location.origin + '/favicon.svg',
         },
-        onFinish: (payload) => {
-          console.log('Connection finished:', payload);
-          if (userSession) {
-            try {
-              const userData = userSession.loadUserData();
-              setIsConnected(true);
-              setUserAddress(userData.profile.stxAddress.mainnet);
-              console.log('Wallet connected:', userData.profile.stxAddress.mainnet);
-            } catch (error) {
-              console.error('Error loading user data after connect:', error);
-            }
-          }
-          setIsLoading(false);
-        },
-        onCancel: () => {
-          console.log('User cancelled wallet connection');
-          setSelectedWallet(null);
-          setIsLoading(false);
-        },
         userSession,
       });
+      
+      // After showConnect resolves, check if user is signed in
+      if (userSession.isUserSignedIn()) {
+        const userData = userSession.loadUserData();
+        setIsConnected(true);
+        setUserAddress(userData.profile.stxAddress.mainnet);
+        console.log('Wallet connected:', userData.profile.stxAddress.mainnet);
+      }
     } catch (error) {
       console.error('Error calling showConnect:', error);
+      // User might have cancelled
+    } finally {
       setIsLoading(false);
     }
   }, []);
