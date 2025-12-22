@@ -1,8 +1,8 @@
 ;; SENTINEL Token - SIP-010 Fungible Token
 ;; The governance and utility token for DeFi Sentinel platform
 
-;; Traits - Use local trait for development, mainnet trait for production
-(impl-trait .sip-010-trait.sip-010-trait)
+;; Use mainnet SIP-010 trait (already deployed)
+;; (impl-trait 'SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-standard.sip-010-trait)
 
 ;; Constants
 (define-constant contract-owner tx-sender)
@@ -41,6 +41,28 @@
 (define-map staking-balances principal uint)
 (define-map staking-start-block principal uint)
 (define-data-var staking-reward-rate uint u100) ;; 1% per 1000 blocks
+
+;; ==========================================
+;; TEAM VESTING (12 month cliff, 24 month vesting)
+;; ==========================================
+
+;; Vesting schedule
+(define-data-var vesting-start-block uint u0)
+(define-data-var vesting-cliff-blocks uint u52560)   ;; ~6 months (144 blocks/day * 365 days / 2)
+(define-data-var vesting-total-blocks uint u105120)  ;; ~12 months total vesting
+(define-data-var team-wallet principal contract-owner)
+
+;; Track claimed vesting
+(define-data-var team-tokens-claimed uint u0)
+
+;; Team vesting info
+(define-map team-vesting-info principal
+  {
+    total-allocation: uint,
+    claimed: uint,
+    start-block: uint
+  }
+)
 
 ;; ==========================================
 ;; SIP-010 REQUIRED FUNCTIONS
@@ -269,6 +291,138 @@
     symbol: (var-get token-symbol),
     decimals: (var-get token-decimals),
     owner: contract-owner
+  }
+)
+
+;; ==========================================
+;; TEAM VESTING FUNCTIONS
+;; ==========================================
+
+;; Initialize team vesting (owner only, can only be called once)
+(define-public (initialize-team-vesting (team-address principal))
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+    (asserts! (is-eq (var-get vesting-start-block) u0) (err u200)) ;; Can only initialize once
+    
+    ;; Set vesting start
+    (var-set vesting-start-block stacks-block-height)
+    (var-set team-wallet team-address)
+    
+    ;; Record team vesting info
+    (map-set team-vesting-info team-address
+      {
+        total-allocation: (var-get team-allocation),
+        claimed: u0,
+        start-block: stacks-block-height
+      }
+    )
+    
+    (ok {
+      team-address: team-address,
+      total-allocation: (var-get team-allocation),
+      cliff-ends: (+ stacks-block-height (var-get vesting-cliff-blocks)),
+      fully-vested: (+ stacks-block-height (var-get vesting-total-blocks))
+    })
+  )
+)
+
+;; Calculate vested amount for team
+(define-read-only (get-vested-amount (team-address principal))
+  (let
+    (
+      (vesting-info (default-to 
+        { total-allocation: u0, claimed: u0, start-block: u0 }
+        (map-get? team-vesting-info team-address)))
+      (total-allocation (get total-allocation vesting-info))
+      (claimed (get claimed vesting-info))
+      (start-block (get start-block vesting-info))
+      (cliff-blocks (var-get vesting-cliff-blocks))
+      (total-blocks (var-get vesting-total-blocks))
+      (current-block stacks-block-height)
+      (blocks-elapsed (if (> current-block start-block) 
+                         (- current-block start-block) 
+                         u0))
+    )
+    ;; Before cliff: 0 vested
+    (if (< blocks-elapsed cliff-blocks)
+      {
+        total: total-allocation,
+        vested: u0,
+        claimed: claimed,
+        claimable: u0,
+        cliff-remaining: (- cliff-blocks blocks-elapsed)
+      }
+      ;; After full vesting: 100% vested
+      (if (>= blocks-elapsed total-blocks)
+        {
+          total: total-allocation,
+          vested: total-allocation,
+          claimed: claimed,
+          claimable: (- total-allocation claimed),
+          cliff-remaining: u0
+        }
+        ;; During vesting: linear unlock
+        (let
+          (
+            (vesting-blocks (- total-blocks cliff-blocks))
+            (blocks-since-cliff (- blocks-elapsed cliff-blocks))
+            (vested-amount (/ (* total-allocation blocks-since-cliff) vesting-blocks))
+          )
+          {
+            total: total-allocation,
+            vested: vested-amount,
+            claimed: claimed,
+            claimable: (if (> vested-amount claimed) (- vested-amount claimed) u0),
+            cliff-remaining: u0
+          }
+        )
+      )
+    )
+  )
+)
+
+;; Claim vested team tokens
+(define-public (claim-vested-tokens)
+  (let
+    (
+      (claimer tx-sender)
+      (vesting-info (get-vested-amount claimer))
+      (claimable (get claimable vesting-info))
+      (current-claimed (get claimed vesting-info))
+    )
+    ;; Must have claimable tokens
+    (asserts! (> claimable u0) (err u201))
+    
+    ;; Update claimed amount
+    (map-set team-vesting-info claimer
+      {
+        total-allocation: (get total vesting-info),
+        claimed: (+ current-claimed claimable),
+        start-block: (var-get vesting-start-block)
+      }
+    )
+    
+    ;; Mint vested tokens
+    (try! (ft-mint? sentinel claimable claimer))
+    
+    (ok {
+      claimed: claimable,
+      total-claimed: (+ current-claimed claimable),
+      remaining: (- (get total vesting-info) (+ current-claimed claimable))
+    })
+  )
+)
+
+;; Get team vesting schedule info
+(define-read-only (get-vesting-schedule)
+  {
+    start-block: (var-get vesting-start-block),
+    cliff-blocks: (var-get vesting-cliff-blocks),
+    total-blocks: (var-get vesting-total-blocks),
+    cliff-end-block: (+ (var-get vesting-start-block) (var-get vesting-cliff-blocks)),
+    fully-vested-block: (+ (var-get vesting-start-block) (var-get vesting-total-blocks)),
+    team-wallet: (var-get team-wallet),
+    team-allocation: (var-get team-allocation)
   }
 )
 

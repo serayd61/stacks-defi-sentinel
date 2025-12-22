@@ -1,23 +1,20 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
 import { AppConfig, UserSession, showConnect, openContractCall } from '@stacks/connect';
 import { STACKS_MAINNET } from '@stacks/network';
-import {
-  principalCV,
-  PostConditionMode,
-  Pc,
-} from '@stacks/transactions';
+import { PostConditionMode } from '@stacks/transactions';
 
 // Contract details
 const CONTRACT_ADDRESS = 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB';
 const CONTRACT_NAME = 'defi-sentinel';
 
-// Subscription prices in microSTX
-const BASIC_PRICE = 1_000_000; // 1 STX
-const PREMIUM_PRICE = 2_500_000; // 2.5 STX
-
-// App config
+// App config - must be created once
 const appConfig = new AppConfig(['store_write', 'publish_data']);
-const userSession = new UserSession({ appConfig });
+
+// Create userSession only in browser
+let userSession: UserSession | null = null;
+if (typeof window !== 'undefined') {
+  userSession = new UserSession({ appConfig });
+}
 
 interface WalletContextType {
   // State
@@ -57,26 +54,44 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   // Check if already connected on mount
-  React.useEffect(() => {
-    if (userSession.isUserSignedIn()) {
-      const userData = userSession.loadUserData();
-      setIsConnected(true);
-      setUserAddress(userData.profile.stxAddress.mainnet);
+  useEffect(() => {
+    if (userSession && userSession.isUserSignedIn()) {
+      try {
+        const userData = userSession.loadUserData();
+        setIsConnected(true);
+        setUserAddress(userData.profile.stxAddress.mainnet);
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      }
     }
   }, []);
 
   // Connect wallet
   const connectWallet = useCallback(() => {
+    if (!userSession) {
+      console.error('UserSession not available');
+      return;
+    }
+    
     showConnect({
       appDetails: {
         name: 'DeFi Sentinel',
-        icon: 'https://stacks-defi-sentinel-production.up.railway.app/logo.png',
+        icon: window.location.origin + '/favicon.svg',
       },
-      redirectTo: '/',
       onFinish: () => {
-        const userData = userSession.loadUserData();
-        setIsConnected(true);
-        setUserAddress(userData.profile.stxAddress.mainnet);
+        if (userSession) {
+          try {
+            const userData = userSession.loadUserData();
+            setIsConnected(true);
+            setUserAddress(userData.profile.stxAddress.mainnet);
+            console.log('Wallet connected:', userData.profile.stxAddress.mainnet);
+          } catch (error) {
+            console.error('Error after connect:', error);
+          }
+        }
+      },
+      onCancel: () => {
+        console.log('User cancelled wallet connection');
       },
       userSession,
     });
@@ -84,7 +99,9 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
 
   // Disconnect wallet
   const disconnectWallet = useCallback(() => {
-    userSession.signUserOut('/');
+    if (userSession) {
+      userSession.signUserOut();
+    }
     setIsConnected(false);
     setUserAddress(null);
     setIsSubscribed(false);

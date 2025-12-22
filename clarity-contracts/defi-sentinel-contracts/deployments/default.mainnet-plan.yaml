@@ -9,10 +9,10 @@ plan:
     - id: 0
       transactions:
         - contract-publish:
-            contract-name: defi-sentinel
+            contract-name: sentinel-token
             expected-sender: SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB
-            cost: 45025363
-            path: contracts/defi-sentinel.clar
+            cost: 2142148
+            path: contracts/sentinel-token-simple.clar
             anchor-block-only: true
             clarity-version: 3
       epoch: "3.1"
