@@ -31,9 +31,17 @@ export class EventProcessor extends EventEmitter {
   async processSwapEvent(payload: WebhookPayload): Promise<SwapEvent[]> {
     const swapEvents: SwapEvent[] = [];
 
+    // Defensive check for payload structure
+    if (!payload || !payload.apply || !Array.isArray(payload.apply)) {
+      logger.warn('Invalid swap payload structure', { payload });
+      return swapEvents;
+    }
+
     for (const block of payload.apply) {
+      if (!block || !block.transactions) continue;
+      
       for (const tx of block.transactions) {
-        if (!tx.metadata.success) continue;
+        if (!tx || !tx.metadata?.success) continue;
 
         const swapEvent = this.parseSwapTransaction(tx, block);
         if (swapEvent) {
@@ -64,9 +72,17 @@ export class EventProcessor extends EventEmitter {
   async processLiquidityEvent(payload: WebhookPayload): Promise<LiquidityEvent[]> {
     const liquidityEvents: LiquidityEvent[] = [];
 
+    // Defensive check for payload structure
+    if (!payload || !payload.apply || !Array.isArray(payload.apply)) {
+      logger.warn('Invalid liquidity payload structure', { payload });
+      return liquidityEvents;
+    }
+
     for (const block of payload.apply) {
+      if (!block || !block.transactions) continue;
+      
       for (const tx of block.transactions) {
-        if (!tx.metadata.success) continue;
+        if (!tx || !tx.metadata?.success) continue;
 
         const liquidityEvent = this.parseLiquidityTransaction(tx, block);
         if (liquidityEvent) {
@@ -97,8 +113,17 @@ export class EventProcessor extends EventEmitter {
   async processTransferEvent(payload: WebhookPayload): Promise<TokenTransfer[]> {
     const transfers: TokenTransfer[] = [];
 
+    // Defensive check for payload structure
+    if (!payload || !payload.apply || !Array.isArray(payload.apply)) {
+      logger.warn('Invalid transfer payload structure', { payload });
+      return transfers;
+    }
+
     for (const block of payload.apply) {
+      if (!block || !block.transactions) continue;
+      
       for (const tx of block.transactions) {
+        if (!tx) continue;
         const transferEvents = this.parseTransferTransaction(tx, block);
         
         for (const transfer of transferEvents) {
@@ -129,40 +154,54 @@ export class EventProcessor extends EventEmitter {
   async processStxTransferEvent(payload: WebhookPayload): Promise<TokenTransfer[]> {
     const transfers: TokenTransfer[] = [];
 
+    // Defensive check for payload structure
+    if (!payload || !payload.apply || !Array.isArray(payload.apply)) {
+      logger.warn('Invalid STX transfer payload structure', { payload });
+      return transfers;
+    }
+
     for (const block of payload.apply) {
+      if (!block || !block.transactions) continue;
+      
       for (const tx of block.transactions) {
+        if (!tx) continue;
+        
         // Parse STX transfers from events
-        const events = tx.metadata.receipt?.events || [];
+        const events = tx.metadata?.receipt?.events || [];
         
         for (const event of events) {
-          if (event.type === 'stx_transfer_event') {
-            const amount = BigInt(event.data.amount);
-            const amountStx = Number(amount) / 1_000_000; // Convert to STX
-            const isWhale = amountStx >= this.whaleThresholdStx;
+          if (event?.type === 'stx_transfer_event' && event?.data) {
+            try {
+              const amount = BigInt(event.data.amount || '0');
+              const amountStx = Number(amount) / 1_000_000; // Convert to STX
+              const isWhale = amountStx >= this.whaleThresholdStx;
 
-            const transfer: TokenTransfer = {
-              txId: tx.transaction_identifier.hash,
-              blockHeight: block.block_identifier.index,
-              blockHash: block.block_identifier.hash,
-              timestamp: block.timestamp,
-              sender: event.data.sender,
-              recipient: event.data.recipient,
-              token: {
-                contract: 'STX',
-                symbol: 'STX',
-                decimals: 6,
-              },
-              amount: amountStx.toString(),
-              isWhaleTransaction: isWhale,
-            };
+              const transfer: TokenTransfer = {
+                txId: tx.transaction_identifier?.hash || 'unknown',
+                blockHeight: block.block_identifier?.index || 0,
+                blockHash: block.block_identifier?.hash || 'unknown',
+                timestamp: block.timestamp || Date.now(),
+                sender: event.data.sender || 'unknown',
+                recipient: event.data.recipient || 'unknown',
+                token: {
+                  contract: 'STX',
+                  symbol: 'STX',
+                  decimals: 6,
+                },
+                amount: amountStx.toString(),
+                isWhaleTransaction: isWhale,
+              };
 
-            transfers.push(transfer);
-            this.emit('transfer', transfer);
+              transfers.push(transfer);
+              this.emit('transfer', transfer);
 
-            if (isWhale) {
-              const alert = this.createWhaleAlert('large_transfer', transfer);
-              this.emit('whale-alert', alert);
-              logger.warn(`🐋 Whale Alert: ${amountStx} STX transferred!`);
+              if (isWhale) {
+                const alert = this.createWhaleAlert('large_transfer', transfer);
+                this.emit('whale-alert', alert);
+                logger.warn(`🐋 Whale Alert: ${amountStx} STX transferred!`);
+              }
+            } catch (parseError) {
+              logger.error('Failed to parse STX transfer event', parseError);
             }
           }
         }

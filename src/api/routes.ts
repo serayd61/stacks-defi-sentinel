@@ -166,6 +166,8 @@ export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (
   fastify.post('/webhooks/stx-transfers', async (req: FastifyRequest, reply: FastifyReply) => {
     try {
       const payload = req.body as WebhookPayload;
+      logger.info('Received STX transfer webhook', { payloadKeys: Object.keys(payload || {}) });
+      
       const events = await eventProcessor.processStxTransferEvent(payload);
       
       for (const event of events) {
@@ -176,6 +178,46 @@ export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (
       return reply.send({ success: true, processed: events.length });
     } catch (error) {
       logger.error('Failed to process STX transfer webhook', error);
+      return reply.status(500).send({ error: 'Failed to process webhook' });
+    }
+  });
+
+  // Webhook: NFT Transfers
+  fastify.post('/webhooks/nft-transfers', async (req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const payload = req.body as WebhookPayload;
+      logger.info('Received NFT transfer webhook', { payloadKeys: Object.keys(payload || {}) });
+      
+      const events = await eventProcessor.processTransferEvent(payload);
+      
+      for (const event of events) {
+        analytics.recordTransfer(event);
+      }
+
+      logger.info(`Processed ${events.length} NFT transfer events`);
+      return reply.send({ success: true, processed: events.length });
+    } catch (error) {
+      logger.error('Failed to process NFT transfer webhook', error);
+      return reply.status(500).send({ error: 'Failed to process webhook' });
+    }
+  });
+
+  // Webhook: FT (Token) Transfers
+  fastify.post('/webhooks/ft-transfers', async (req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const payload = req.body as WebhookPayload;
+      logger.info('Received FT transfer webhook', { payloadKeys: Object.keys(payload || {}) });
+      
+      const events = await eventProcessor.processTransferEvent(payload);
+      
+      for (const event of events) {
+        analytics.recordTransfer(event);
+      }
+
+      logger.info(`Processed ${events.length} FT transfer events`);
+      return reply.send({ success: true, processed: events.length });
+    } catch (error) {
+      logger.error('Failed to process FT transfer webhook', error);
       return reply.status(500).send({ error: 'Failed to process webhook' });
     }
   });
