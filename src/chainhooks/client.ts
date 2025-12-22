@@ -1,8 +1,6 @@
 import {
   ChainhooksClient,
-  ChainhookDefinition,
   CHAINHOOKS_BASE_URL,
-  Chainhook,
 } from '@hirosystems/chainhooks-client';
 import { logger } from '../utils/logger';
 
@@ -12,7 +10,7 @@ import { logger } from '../utils/logger';
  */
 export class DeFiChainhooksManager {
   private client: ChainhooksClient;
-  private registeredHooks: Map<string, Chainhook> = new Map();
+  private registeredHooks: Map<string, any> = new Map();
   private webhookBaseUrl: string;
   private network: 'mainnet' | 'testnet';
 
@@ -52,21 +50,18 @@ export class DeFiChainhooksManager {
   /**
    * Register a DEX swap monitoring chainhook
    */
-  async registerDexSwapHook(dexContracts: string[]): Promise<Chainhook> {
-    const definition: ChainhookDefinition = {
+  async registerDexSwapHook(dexContracts: string[]): Promise<any> {
+    const definition: any = {
       name: 'DeFi Monitor - DEX Swaps',
       chain: 'stacks',
       network: this.network,
-      version: 1,
-      // Filter for contract calls to DEX contracts
+      version: '1',
       predicate: {
         scope: 'contract_call',
         contract_identifier: {
-          // Watch all provided DEX contracts
           values: dexContracts,
         },
         method: {
-          // Common swap function names across DEXes
           values: [
             'swap-exact-tokens-for-tokens',
             'swap-tokens-for-exact-tokens',
@@ -78,10 +73,9 @@ export class DeFiChainhooksManager {
         },
       },
       action: {
-        http_post: {
-          url: `${this.webhookBaseUrl}/webhooks/swaps`,
-          authorization_header: `Bearer ${process.env.WEBHOOK_SECRET || 'default-secret'}`,
-        },
+        type: 'http_post',
+        url: `${this.webhookBaseUrl}/api/webhooks/swaps`,
+        authorization_header: `Bearer ${process.env.WEBHOOK_SECRET || 'default-secret'}`,
       },
     };
 
@@ -99,12 +93,12 @@ export class DeFiChainhooksManager {
   /**
    * Register liquidity pool events monitoring
    */
-  async registerLiquidityHook(poolContracts: string[]): Promise<Chainhook> {
-    const definition: ChainhookDefinition = {
+  async registerLiquidityHook(poolContracts: string[]): Promise<any> {
+    const definition: any = {
       name: 'DeFi Monitor - Liquidity Events',
       chain: 'stacks',
       network: this.network,
-      version: 1,
+      version: '1',
       predicate: {
         scope: 'contract_call',
         contract_identifier: {
@@ -122,10 +116,9 @@ export class DeFiChainhooksManager {
         },
       },
       action: {
-        http_post: {
-          url: `${this.webhookBaseUrl}/webhooks/liquidity`,
-          authorization_header: `Bearer ${process.env.WEBHOOK_SECRET || 'default-secret'}`,
-        },
+        type: 'http_post',
+        url: `${this.webhookBaseUrl}/api/webhooks/liquidity`,
+        authorization_header: `Bearer ${process.env.WEBHOOK_SECRET || 'default-secret'}`,
       },
     };
 
@@ -143,12 +136,12 @@ export class DeFiChainhooksManager {
   /**
    * Register token transfer monitoring for whale alerts
    */
-  async registerTokenTransferHook(tokenContracts: string[]): Promise<Chainhook> {
-    const definition: ChainhookDefinition = {
+  async registerTokenTransferHook(tokenContracts: string[]): Promise<any> {
+    const definition: any = {
       name: 'DeFi Monitor - Token Transfers',
       chain: 'stacks',
       network: this.network,
-      version: 1,
+      version: '1',
       predicate: {
         scope: 'ft_event',
         asset_identifier: {
@@ -157,10 +150,9 @@ export class DeFiChainhooksManager {
         actions: ['transfer', 'mint', 'burn'],
       },
       action: {
-        http_post: {
-          url: `${this.webhookBaseUrl}/webhooks/transfers`,
-          authorization_header: `Bearer ${process.env.WEBHOOK_SECRET || 'default-secret'}`,
-        },
+        type: 'http_post',
+        url: `${this.webhookBaseUrl}/api/webhooks/transfers`,
+        authorization_header: `Bearer ${process.env.WEBHOOK_SECRET || 'default-secret'}`,
       },
     };
 
@@ -178,23 +170,21 @@ export class DeFiChainhooksManager {
   /**
    * Register STX transfer monitoring for large transactions
    */
-  async registerStxTransferHook(minAmount?: number): Promise<Chainhook> {
-    const definition: ChainhookDefinition = {
+  async registerStxTransferHook(minAmount?: number): Promise<any> {
+    const definition: any = {
       name: 'DeFi Monitor - STX Whale Transfers',
       chain: 'stacks',
       network: this.network,
-      version: 1,
+      version: '1',
       predicate: {
         scope: 'stx_event',
         actions: ['transfer'],
-        // Optional: filter by minimum amount
         ...(minAmount && { amount: { greater_than: minAmount } }),
       },
       action: {
-        http_post: {
-          url: `${this.webhookBaseUrl}/webhooks/stx-transfers`,
-          authorization_header: `Bearer ${process.env.WEBHOOK_SECRET || 'default-secret'}`,
-        },
+        type: 'http_post',
+        url: `${this.webhookBaseUrl}/api/webhooks/stx-transfers`,
+        authorization_header: `Bearer ${process.env.WEBHOOK_SECRET || 'default-secret'}`,
       },
     };
 
@@ -212,12 +202,12 @@ export class DeFiChainhooksManager {
   /**
    * Register NFT marketplace monitoring
    */
-  async registerNftMarketplaceHook(marketplaceContracts: string[]): Promise<Chainhook> {
-    const definition: ChainhookDefinition = {
+  async registerNftMarketplaceHook(marketplaceContracts: string[]): Promise<any> {
+    const definition: any = {
       name: 'DeFi Monitor - NFT Marketplace',
       chain: 'stacks',
       network: this.network,
-      version: 1,
+      version: '1',
       predicate: {
         scope: 'contract_call',
         contract_identifier: {
@@ -228,10 +218,9 @@ export class DeFiChainhooksManager {
         },
       },
       action: {
-        http_post: {
-          url: `${this.webhookBaseUrl}/webhooks/nft-sales`,
-          authorization_header: `Bearer ${process.env.WEBHOOK_SECRET || 'default-secret'}`,
-        },
+        type: 'http_post',
+        url: `${this.webhookBaseUrl}/api/webhooks/nft-sales`,
+        authorization_header: `Bearer ${process.env.WEBHOOK_SECRET || 'default-secret'}`,
       },
     };
 
@@ -249,7 +238,7 @@ export class DeFiChainhooksManager {
   /**
    * Get all registered chainhooks
    */
-  async listChainhooks(limit = 50): Promise<Chainhook[]> {
+  async listChainhooks(limit = 50): Promise<any[]> {
     try {
       const response = await this.client.getChainhooks({ limit });
       return response.results;
@@ -262,7 +251,7 @@ export class DeFiChainhooksManager {
   /**
    * Get a specific chainhook by UUID
    */
-  async getChainhook(uuid: string): Promise<Chainhook> {
+  async getChainhook(uuid: string): Promise<any> {
     try {
       return await this.client.getChainhook(uuid);
     } catch (error) {
@@ -300,7 +289,7 @@ export class DeFiChainhooksManager {
   /**
    * Get registered hooks map
    */
-  getRegisteredHooks(): Map<string, Chainhook> {
+  getRegisteredHooks(): Map<string, any> {
     return this.registeredHooks;
   }
 
@@ -355,4 +344,3 @@ export class DeFiChainhooksManager {
     this.registeredHooks.clear();
   }
 }
-

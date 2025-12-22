@@ -232,7 +232,7 @@ export class WebSocketManager {
  * Setup WebSocket routes for Fastify
  */
 export async function setupWebSocket(
-  fastify: FastifyInstance,
+  fastify: any,
   eventProcessor: EventProcessor
 ): Promise<WebSocketManager> {
   const wsManager = new WebSocketManager(eventProcessor);
