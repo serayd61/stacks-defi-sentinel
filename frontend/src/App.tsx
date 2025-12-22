@@ -61,7 +61,8 @@ function App() {
   const combinedSwaps = [
     ...events.swaps,
     ...(dashboardStats?.recentSwaps || []),
-  ].slice(0, 20);
+    ...((dashboardStats as any)?.recentTransactions || []),
+  ].slice(0, 30);
 
   const combinedAlerts = [
     ...events.alerts,
