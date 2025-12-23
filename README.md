@@ -1,25 +1,75 @@
 # 🛡️ Stacks DeFi Sentinel
 
-Real-time DeFi monitoring & whale tracking platform for the Stacks blockchain, powered by **@hirosystems/chainhooks-client**.
+Real-time DeFi monitoring & whale tracking platform for the Stacks blockchain, powered by **Chainhooks** and **Reown AppKit**.
 
 [![Stacks](https://img.shields.io/badge/Stacks-5546FF?style=for-the-badge&logo=bitcoin&logoColor=white)](https://www.stacks.co/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://react.dev/)
-[![Fastify](https://img.shields.io/badge/Fastify-000000?style=for-the-badge&logo=fastify&logoColor=white)](https://fastify.dev/)
+[![WalletConnect](https://img.shields.io/badge/WalletConnect-3B99FC?style=for-the-badge&logo=walletconnect&logoColor=white)](https://walletconnect.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/serkanaydin/stacks-defi-sentinel/main/assets/banner.png" alt="Stacks DeFi Sentinel Banner" width="800"/>
-</p>
+## 🌐 Live Demo
+
+- **Dashboard:** [https://defi-sentinel.xyz](https://defi-sentinel.xyz)
+- **API:** [https://stacks-defi-sentinel-production.up.railway.app](https://stacks-defi-sentinel-production.up.railway.app)
+
+## 🏆 Stacks Builder Challenge
+
+This project is built for the **Stacks Builder Challenge** and demonstrates:
+
+- ✅ **WalletKit SDK / Reown AppKit** integration
+- ✅ **On-chain smart contracts** with real users and fees
+- ✅ **Active GitHub development** with multiple contributions
 
 ## ✨ Features
 
-- **🔗 Real-time Event Streaming** - Uses Chainhooks to monitor blockchain events in real-time
-- **💱 DEX Swap Tracking** - Monitor swaps across Velar, Arkadiko, ALEX, and other DEXes
-- **💧 Liquidity Pool Analytics** - Track liquidity add/remove events and pool TVL
-- **🐋 Whale Alerts** - Get notified about large transactions and suspicious activity
-- **📊 Dashboard** - Beautiful, responsive dashboard with live updates
-- **🔌 WebSocket Support** - Real-time updates pushed to connected clients
+### Core Features
+- **🔗 Real-time Event Streaming** - Uses Chainhooks to monitor blockchain events
+- **💱 DEX Swap Tracking** - Monitor swaps across Velar, Arkadiko, ALEX
+- **💧 Liquidity Pool Analytics** - Track liquidity events and pool TVL
+- **🐋 Whale Alerts** - Large transaction notifications (10K+ STX)
+- **📊 Live Dashboard** - Beautiful, responsive UI with real-time updates
+
+### Web3 Integration
+- **🔐 Reown AppKit / WalletConnect** - Connect with any Stacks wallet
+- **📱 Multi-wallet Support** - Xverse, Leather, Hiro Wallet, OKX
+- **⚡ Mobile Wallet Support** - WalletConnect QR code for mobile
+
+### Subscription System
+- **💳 On-chain Subscriptions** - Pay with STX for premium features
+- **🎟️ Basic Plan** - 1 STX/month for standard alerts
+- **👑 Premium Plan** - 2.5 STX/month for whale alerts + API access
+
+### SENTINEL Token (SNTL)
+- **🪙 Governance Token** - Vote on platform decisions
+- **📈 Staking Rewards** - Earn SNTL by staking
+- **🎁 Airdrops** - Early adopter rewards
+- **🔒 Team Vesting** - 6-month cliff, 12-month vesting
+
+## 📜 Smart Contracts
+
+| Contract | Address | Description |
+|----------|---------|-------------|
+| `defi-sentinel` | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB` | Subscription & alerts |
+| `sentinel-token` | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB` | SNTL token (SIP-010) |
+
+### Contract Functions
+
+**defi-sentinel:**
+```clarity
+(define-public (subscribe)) ;; Subscribe for 1 STX/month
+(define-public (subscribe-premium)) ;; Premium for 2.5 STX/month
+(define-read-only (is-subscribed (user principal)))
+(define-read-only (get-subscription (user principal)))
+```
+
+**sentinel-token:**
+```clarity
+(define-public (transfer (amount uint) (sender principal) (recipient principal) (memo (optional (buff 34)))))
+(define-public (mint (amount uint) (to principal))) ;; Owner only
+(define-public (init-vesting)) ;; Start team vesting
+(define-public (claim-vested)) ;; Claim vested tokens
+```
 
 ## 📦 Architecture
 
@@ -36,20 +86,30 @@ Real-time DeFi monitoring & whale tracking platform for the Stacks blockchain, p
                  │  REST API    │                │  WebSocket   │                 │   Frontend   │
                  │  Endpoints   │                │   Server     │                 │  Dashboard   │
                  └──────────────┘                └──────────────┘                 └──────────────┘
+                                                                                          │
+                                                                                          ▼
+                                                                                 ┌──────────────┐
+                                                                                 │ Reown AppKit │
+                                                                                 │ WalletConnect│
+                                                                                 └──────────────┘
 ```
 
-## 🛠️ Prerequisites
+## 🛠️ Tech Stack
 
-- Node.js 20+
-- A Chainhooks API key (get one at [platform.hiro.so](https://platform.hiro.so))
-- (Optional) Redis for caching
+- **Frontend:** React, Vite, TypeScript, Tailwind CSS
+- **Backend:** Fastify, Node.js, TypeScript
+- **Blockchain:** Stacks, Clarity Smart Contracts
+- **Wallet:** @stacks/connect, Reown AppKit, WalletConnect
+- **Deployment:** Vercel (frontend), Railway (backend)
+- **Monitoring:** Hiro Chainhooks
 
 ## 🚀 Quick Start
 
 ### 1. Clone and Install
 
 ```bash
-cd defi-monitor
+git clone https://github.com/serayd61/stacks-defi-sentinel.git
+cd stacks-defi-sentinel/defi-monitor
 npm install
 ```
 
@@ -68,18 +128,12 @@ HOST=0.0.0.0
 # Network
 STACKS_NETWORK=mainnet
 
-# Webhook URL (where chainhooks will send events)
+# Webhook URL
 WEBHOOK_BASE_URL=https://your-server.com
 
 # Alert Thresholds
 WHALE_ALERT_THRESHOLD_STX=100000
 LARGE_SWAP_THRESHOLD_USD=50000
-
-# DEX Contracts to Monitor
-MONITORED_DEX_CONTRACTS=SP1Y5YSTAHZ88XYK1VPDH24GY0HPX5J4JECTMY4A1.univ2-router,SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR.arkadiko-swap-v2-1
-
-# Token Contracts to Monitor
-MONITORED_TOKENS=SP4SZE494VC2YC5JYG7AYFQ44F5Q4PYV7DVMDPBG.ststx-token
 ```
 
 ### 3. Start the Backend
@@ -98,159 +152,76 @@ npm run dev
 
 Open http://localhost:3000 to view the dashboard!
 
-## 📡 API Endpoints
+## 📡 Active Chainhooks
+
+| Hook Name | Status | Description |
+|-----------|--------|-------------|
+| USDA Stablecoin Tracker | ✅ Active | Track USDA transfers |
+| VELAR Token Tracker | ✅ Active | Monitor VELAR activity |
+| DeFi Sentinel Subscriptions | ✅ Active | Track subscription events |
+| Arkadiko Swaps | ✅ Active | Monitor Arkadiko DEX |
+| ALEX DEX Swaps | ✅ Active | Monitor ALEX DEX |
+| NFT Transfer Monitor | ✅ Active | Track NFT transfers |
+| Liquidity Pool Events | ✅ Active | Monitor liquidity |
+| DEX Swap Monitor | ✅ Active | General DEX tracking |
+
+## 📊 API Endpoints
 
 ### Dashboard & Analytics
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /api/dashboard` | Get aggregated dashboard statistics |
-| `GET /api/volume` | Get trading volume by time period |
+| `GET /api/dashboard` | Aggregated statistics |
+| `GET /api/volume` | Trading volume by period |
 
-### Swaps
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/swaps` | Get recent swap transactions |
-| Query params: `limit`, `offset`, `dex`, `token`, `minAmount` |
-
-### Liquidity
+### Swaps & Liquidity
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /api/liquidity` | Get liquidity add/remove events |
-| `GET /api/pools` | Get top pools by TVL |
+| `GET /api/swaps` | Recent swap transactions |
+| `GET /api/liquidity` | Liquidity events |
+| `GET /api/pools` | Top pools by TVL |
 
-### Tokens & Transfers
-
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/tokens` | Get top tokens by volume |
-| `GET /api/transfers` | Get token transfers |
-
-### Alerts
+### Tokens & Alerts
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /api/alerts` | Get whale activity alerts |
+| `GET /api/tokens` | Top tokens by volume |
+| `GET /api/transfers` | Token transfers |
+| `GET /api/alerts` | Whale activity alerts |
 
 ### WebSocket
 
 Connect to `/ws` for real-time updates:
 
 ```javascript
-const ws = new WebSocket('ws://localhost:4000/ws');
+const ws = new WebSocket('wss://stacks-defi-sentinel-production.up.railway.app/ws');
 
-// Subscribe to events
-ws.send(JSON.stringify({ type: 'subscribe', channel: 'swap' }));
-ws.send(JSON.stringify({ type: 'subscribe', channel: 'whale-alert' }));
-
-// Receive events
 ws.onmessage = (event) => {
   const data = JSON.parse(event.data);
   console.log('Event:', data);
 };
 ```
 
-Available channels: `all`, `swap`, `liquidity`, `transfer`, `whale-alert`
+## 🔐 Security
 
-## 🔧 Using Chainhooks Client
+1. **API Key Protection** - Never expose Chainhooks API key
+2. **Webhook Verification** - Validate webhook payloads
+3. **Rate Limiting** - Implemented for public endpoints
+4. **Smart Contract Auditing** - Clarity best practices
 
-This project uses `@hirosystems/chainhooks-client` to register and manage chainhooks:
+## 🗺️ Roadmap
 
-```typescript
-import { 
-  ChainhooksClient, 
-  CHAINHOOKS_BASE_URL 
-} from '@hirosystems/chainhooks-client';
-
-// Initialize the client
-const client = new ChainhooksClient({
-  baseUrl: CHAINHOOKS_BASE_URL.mainnet,
-  apiKey: process.env.CHAINHOOKS_API_KEY,
-});
-
-// Register a swap monitoring chainhook
-const chainhook = await client.registerChainhook({
-  name: 'DEX Swaps Monitor',
-  chain: 'stacks',
-  network: 'mainnet',
-  version: 1,
-  predicate: {
-    scope: 'contract_call',
-    contract_identifier: {
-      values: ['SP1Y5YSTAHZ88XYK1VPDH24GY0HPX5J4JECTMY4A1.univ2-router'],
-    },
-    method: {
-      values: ['swap-exact-tokens-for-tokens'],
-    },
-  },
-  action: {
-    http_post: {
-      url: 'https://your-server.com/webhooks/swaps',
-      authorization_header: 'Bearer your-secret',
-    },
-  },
-});
-
-console.log('Registered chainhook:', chainhook.uuid);
-```
-
-## 📊 Monitored Events
-
-### DEX Swaps
-- Token swap transactions
-- Price impact calculation
-- Volume tracking
-
-### Liquidity Events
-- Add/remove liquidity
-- Pool TVL changes
-- LP token minting/burning
-
-### Token Transfers
-- Large STX transfers
-- FT transfers (stSTX, USDA, etc.)
-- Whale wallet tracking
-
-### NFT Marketplace (Optional)
-- Listings
-- Sales
-- Offers
-
-## 🏗️ Project Structure
-
-```
-defi-monitor/
-├── src/
-│   ├── index.ts              # Main entry point
-│   ├── chainhooks/
-│   │   └── client.ts         # Chainhooks manager
-│   ├── services/
-│   │   ├── event-processor.ts # Event parsing & processing
-│   │   └── analytics.ts       # Data aggregation
-│   ├── api/
-│   │   ├── routes.ts         # REST API endpoints
-│   │   └── websocket.ts      # WebSocket server
-│   ├── types/
-│   │   └── index.ts          # TypeScript types
-│   └── utils/
-│       └── logger.ts         # Logging utility
-├── frontend/
-│   └── src/
-│       ├── App.tsx           # Main React app
-│       ├── components/       # UI components
-│       └── hooks/            # Custom React hooks
-├── package.json
-└── README.md
-```
-
-## 🔐 Security Considerations
-
-1. **API Key Protection** - Never expose your Chainhooks API key in client code
-2. **Webhook Verification** - Validate webhook payloads using the authorization header
-3. **Rate Limiting** - Implement rate limiting for public endpoints
-4. **Input Validation** - Always validate and sanitize user inputs
+- [x] Real-time dashboard
+- [x] Chainhooks integration
+- [x] Multi-wallet support
+- [x] Subscription system
+- [x] SENTINEL token
+- [x] Reown AppKit integration
+- [ ] Telegram/Discord bot
+- [ ] DEX listing (ALEX, Velar)
+- [ ] Mobile app
+- [ ] Advanced analytics
 
 ## 🤝 Contributing
 
@@ -262,12 +233,13 @@ MIT License - see [LICENSE](LICENSE) for details.
 
 ## 🔗 Links
 
+- [Live Dashboard](https://defi-sentinel.xyz)
+- [GitHub Repository](https://github.com/serayd61/stacks-defi-sentinel)
 - [Chainhooks Documentation](https://docs.hiro.so/chainhooks)
 - [Stacks Blockchain](https://www.stacks.co/)
 - [Hiro Platform](https://platform.hiro.so/)
-- [@hirosystems/chainhooks-client](https://www.npmjs.com/package/@hirosystems/chainhooks-client)
+- [Reown AppKit](https://docs.reown.com/)
 
 ---
 
-Built with ❤️ for the Stacks ecosystem
-
+Built with ❤️ for the Stacks ecosystem | Stacks Builder Challenge 2024
