@@ -155,10 +155,17 @@ const TokenAnalytics: React.FC = () => {
   };
 
   const formatPrice = (price: number) => {
-    if (price >= 1000) return `$${price.toLocaleString()}`;
+    if (price >= 1000) return `$${price.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
     if (price >= 1) return `$${price.toFixed(2)}`;
-    if (price >= 0.01) return `$${price.toFixed(4)}`;
-    return `$${price.toFixed(8)}`;
+    if (price >= 0.001) return `$${price.toFixed(4)}`;
+    return `$${price.toFixed(6)}`;
+  };
+
+  const formatCompact = (num: number) => {
+    if (num >= 1000000000) return `${(num / 1000000000).toFixed(1)}B`;
+    if (num >= 1000000) return `${(num / 1000000).toFixed(1)}M`;
+    if (num >= 1000) return `${(num / 1000).toFixed(1)}K`;
+    return num.toLocaleString();
   };
 
   if (loading) {
@@ -208,16 +215,16 @@ const TokenAnalytics: React.FC = () => {
 
       {/* Token List */}
       <div className="overflow-x-auto">
-        <table className="w-full">
+        <table className="w-full table-fixed">
           <thead>
-            <tr className="text-left text-cyan-300/70 text-sm border-b border-cyan-500/20">
-              <th className="pb-3 pl-2">#</th>
-              <th className="pb-3">Token</th>
-              <th className="pb-3 text-right">Price</th>
-              <th className="pb-3 text-right">24h</th>
-              <th className="pb-3 text-right hidden md:table-cell">Volume</th>
-              <th className="pb-3 text-right hidden md:table-cell">Market Cap</th>
-              <th className="pb-3 text-right hidden lg:table-cell">Holders</th>
+            <tr className="text-left text-cyan-300/70 text-xs border-b border-cyan-500/20">
+              <th className="pb-2 w-6">#</th>
+              <th className="pb-2 w-24">Token</th>
+              <th className="pb-2 text-right w-20">Price</th>
+              <th className="pb-2 text-right w-16">24h</th>
+              <th className="pb-2 text-right w-16 hidden md:table-cell">Vol</th>
+              <th className="pb-2 text-right w-16 hidden md:table-cell">MCap</th>
+              <th className="pb-2 text-right w-14 hidden lg:table-cell">Holders</th>
             </tr>
           </thead>
           <tbody>
@@ -226,39 +233,38 @@ const TokenAnalytics: React.FC = () => {
                 key={token.symbol}
                 className="border-b border-cyan-500/10 hover:bg-cyan-500/5 transition-colors"
               >
-                <td className="py-4 pl-2 text-cyan-300/50">{index + 1}</td>
-                <td className="py-4">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{token.icon}</span>
-                    <div>
-                      <p className="text-white font-medium">{token.name}</p>
-                      <p className="text-sm text-cyan-300/50">{token.symbol}</p>
+                <td className="py-2 text-cyan-300/50 text-xs">{index + 1}</td>
+                <td className="py-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{token.icon}</span>
+                    <div className="min-w-0">
+                      <p className="text-white font-medium text-sm truncate">{token.symbol}</p>
                     </div>
                   </div>
                 </td>
-                <td className="py-4 text-right">
-                  <p className="text-white font-mono">{formatPrice(token.price)}</p>
+                <td className="py-2 text-right">
+                  <p className="text-white font-mono text-xs">{formatPrice(token.price)}</p>
                 </td>
-                <td className="py-4 text-right">
+                <td className="py-2 text-right">
                   <span
-                    className={`px-2 py-1 rounded text-sm font-medium ${
+                    className={`text-xs font-medium ${
                       token.priceChange24h >= 0
-                        ? 'text-green-400 bg-green-400/10'
-                        : 'text-red-400 bg-red-400/10'
+                        ? 'text-green-400'
+                        : 'text-red-400'
                     }`}
                   >
                     {token.priceChange24h >= 0 ? '+' : ''}
-                    {token.priceChange24h.toFixed(2)}%
+                    {token.priceChange24h.toFixed(1)}%
                   </span>
                 </td>
-                <td className="py-4 text-right hidden md:table-cell">
-                  <p className="text-cyan-300/70">{formatNumber(token.volume24h)}</p>
+                <td className="py-2 text-right hidden md:table-cell">
+                  <p className="text-cyan-300/70 text-xs">${formatCompact(token.volume24h)}</p>
                 </td>
-                <td className="py-4 text-right hidden md:table-cell">
-                  <p className="text-cyan-300/70">{formatNumber(token.marketCap)}</p>
+                <td className="py-2 text-right hidden md:table-cell">
+                  <p className="text-cyan-300/70 text-xs">${formatCompact(token.marketCap)}</p>
                 </td>
-                <td className="py-4 text-right hidden lg:table-cell">
-                  <p className="text-cyan-300/70">{token.holders.toLocaleString()}</p>
+                <td className="py-2 text-right hidden lg:table-cell">
+                  <p className="text-cyan-300/70 text-xs">{formatCompact(token.holders)}</p>
                 </td>
               </tr>
             ))}
