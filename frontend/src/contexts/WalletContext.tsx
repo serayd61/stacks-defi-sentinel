@@ -1,11 +1,14 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
-import { connect, disconnect, isConnected, request, getLocalStorage, clearLocalStorage } from '@stacks/connect';
+import { connect, disconnect, isConnected, request, getLocalStorage, clearLocalStorage, WalletConnect } from '@stacks/connect';
 import { STACKS_MAINNET } from '@stacks/network';
 import { PostConditionMode } from '@stacks/transactions';
 
 // Contract details
 const CONTRACT_ADDRESS = 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB';
 const CONTRACT_NAME = 'defi-sentinel';
+
+// Reown/WalletConnect Project ID - Get yours at https://cloud.reown.com
+const WALLETCONNECT_PROJECT_ID = 'c4f79cc821944d9680842e34466bfb';
 
 // Supported wallets
 export type WalletType = 'hiro' | 'xverse' | 'leather' | 'okx';
@@ -156,9 +159,20 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     setIsLoading(true);
 
     try {
-      // Use the new connect() function - it shows wallet selection UI automatically
+      // Use the new connect() function with WalletConnect/Reown support
       const result = await connect({
         forceWalletSelect: true, // Force wallet selection UI
+        // Enable WalletConnect/Reown AppKit for mobile wallets
+        walletConnect: {
+          projectId: WALLETCONNECT_PROJECT_ID,
+          metadata: {
+            name: 'DeFi Sentinel',
+            description: 'Real-time DeFi monitoring on Stacks blockchain',
+            url: 'https://defi-sentinel.xyz',
+            icons: ['https://defi-sentinel.xyz/favicon.svg'],
+          },
+          networks: [WalletConnect.Networks.Stacks],
+        },
       });
       
       console.log('Connect result:', result);
@@ -245,8 +259,12 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     setIsLoading(true);
     
     try {
-      // Use the new request API for contract calls
-      const result = await request('stx_callContract', {
+      // Use the new request API for contract calls with WalletConnect support
+      const result = await request({
+        walletConnect: {
+          projectId: WALLETCONNECT_PROJECT_ID,
+        },
+      }, 'stx_callContract', {
         contract: `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`,
         functionName: 'subscribe',
         functionArgs: [],
@@ -271,7 +289,11 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     setIsLoading(true);
     
     try {
-      const result = await request('stx_callContract', {
+      const result = await request({
+        walletConnect: {
+          projectId: WALLETCONNECT_PROJECT_ID,
+        },
+      }, 'stx_callContract', {
         contract: `${CONTRACT_ADDRESS}.${CONTRACT_NAME}`,
         functionName: 'subscribe-premium',
         functionArgs: [],
