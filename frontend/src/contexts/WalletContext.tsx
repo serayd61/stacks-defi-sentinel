@@ -311,30 +311,78 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
     }
   }, [userAddress]);
 
-  // Check subscription status
+  // Check subscription status from blockchain
   const checkSubscription = useCallback(async () => {
     if (!userAddress) return;
     
     try {
+      // First, try to get subscription info directly
       const response = await fetch(
-        `https://api.hiro.so/v2/contracts/call-read/${CONTRACT_ADDRESS}/${CONTRACT_NAME}/is-subscribed`,
+        `https://api.hiro.so/v2/contracts/call-read/${CONTRACT_ADDRESS}/${CONTRACT_NAME}/get-subscription`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             sender: userAddress,
-            arguments: [`0x${Buffer.from(userAddress).toString('hex')}`],
+            arguments: [
+              // Encode principal as Clarity value: 0x05 prefix for standard principal
+              `0x0516${userAddress.slice(2).split('').map(c => c.charCodeAt(0).toString(16).padStart(2, '0')).join('')}`.slice(0, 44)
+            ],
           }),
         }
       );
       
       const data = await response.json();
-      if (data.result) {
-        // Parse the result to check subscription status
-        setIsSubscribed(data.result === '0x03'); // true in Clarity
+      console.log('Subscription check response:', data);
+      
+      if (data.okay && data.result) {
+        // Check if result is not (none) - which would be 0x09
+        if (data.result !== '0x09') {
+          // User has a subscription record
+          setIsSubscribed(true);
+          // Check if it's premium (tier field in the tuple)
+          if (data.result.includes('premium')) {
+            setSubscriptionTier('premium');
+          } else {
+            setSubscriptionTier('basic');
+          }
+          console.log('User is subscribed!');
+        } else {
+          setIsSubscribed(false);
+          setSubscriptionTier('none');
+        }
       }
     } catch (error) {
       console.error('Check subscription error:', error);
+      
+      // Fallback: Check via transaction history
+      try {
+        const txResponse = await fetch(
+          `https://api.hiro.so/extended/v1/address/${userAddress}/transactions?limit=50`
+        );
+        const txData = await txResponse.json();
+        
+        // Look for successful subscribe transactions to our contract
+        const subscriptions = txData.results?.filter((tx: any) => 
+          tx.tx_status === 'success' &&
+          tx.tx_type === 'contract_call' &&
+          tx.contract_call?.contract_id === `${CONTRACT_ADDRESS}.${CONTRACT_NAME}` &&
+          (tx.contract_call?.function_name === 'subscribe' || tx.contract_call?.function_name === 'subscribe-premium')
+        );
+        
+        if (subscriptions && subscriptions.length > 0) {
+          setIsSubscribed(true);
+          const latestSub = subscriptions[0];
+          if (latestSub.contract_call?.function_name === 'subscribe-premium') {
+            setSubscriptionTier('premium');
+          } else {
+            setSubscriptionTier('basic');
+          }
+          console.log('Found subscription in transaction history!');
+        }
+      } catch (txError) {
+        console.error('Transaction history check error:', txError);
+      }
     }
   }, [userAddress]);
 
