@@ -64,18 +64,19 @@ const StackingTracker: React.FC = () => {
         nextCycleIn = `${minutesRemaining}m`;
       }
 
-      // Format total stacked
-      const totalStackedSTX = parseInt(cycleData.stacked_ustx) / 1000000;
+      // Format total stacked - handle undefined/null values
+      const stackedUstx = cycleData.stacked_ustx || cycleData.total_ustx || poxData.current_cycle?.stacked_ustx || 0;
+      const totalStackedSTX = parseInt(stackedUstx) / 1000000 || 0;
       const stxPrice = 0.24; // Approximate STX price
       const totalStackedUSD = totalStackedSTX * stxPrice;
 
       setStackingInfo({
-        currentCycle: poxData.current_cycle.id,
-        cycleProgress: progress,
-        totalStacked: totalStackedSTX.toLocaleString('en-US', { maximumFractionDigits: 0 }),
-        totalStackedUSD: totalStackedUSD.toLocaleString('en-US', { style: 'currency', currency: 'USD' }),
-        nextCycleIn,
-        rewardAddresses: cycleData.total_signers || 500,
+        currentCycle: poxData.current_cycle?.id || 0,
+        cycleProgress: isNaN(progress) ? 0 : progress,
+        totalStacked: isNaN(totalStackedSTX) ? '0' : totalStackedSTX.toLocaleString('en-US', { maximumFractionDigits: 0 }),
+        totalStackedUSD: isNaN(totalStackedUSD) ? '$0' : totalStackedUSD.toLocaleString('en-US', { style: 'currency', currency: 'USD' }),
+        nextCycleIn: nextCycleIn || '---',
+        rewardAddresses: cycleData.total_signers || poxData.current_cycle?.total_signers || 36,
         averageAPY: 8.5, // Approximate APY
         btcRewards: '12.5', // Approximate BTC rewards per cycle
       });
@@ -169,26 +170,26 @@ const StackingTracker: React.FC = () => {
           </div>
 
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-black/30 rounded-lg p-4 border border-purple-500/20">
-              <p className="text-purple-300/70 text-sm">Total Stacked</p>
-              <p className="text-xl font-bold text-white">{stackingInfo.totalStacked}</p>
-              <p className="text-sm text-purple-300/50">STX</p>
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            <div className="bg-black/30 rounded-lg p-3 border border-purple-500/20">
+              <p className="text-purple-300/70 text-xs mb-1">Total Stacked</p>
+              <p className="text-base font-bold text-white truncate">{stackingInfo.totalStacked}</p>
+              <p className="text-xs text-purple-300/50">STX</p>
             </div>
-            <div className="bg-black/30 rounded-lg p-4 border border-purple-500/20">
-              <p className="text-purple-300/70 text-sm">Value Locked</p>
-              <p className="text-xl font-bold text-white">{stackingInfo.totalStackedUSD}</p>
-              <p className="text-sm text-purple-300/50">USD</p>
+            <div className="bg-black/30 rounded-lg p-3 border border-purple-500/20">
+              <p className="text-purple-300/70 text-xs mb-1">Value Locked</p>
+              <p className="text-base font-bold text-white truncate">{stackingInfo.totalStackedUSD}</p>
+              <p className="text-xs text-purple-300/50">USD</p>
             </div>
-            <div className="bg-black/30 rounded-lg p-4 border border-purple-500/20">
-              <p className="text-purple-300/70 text-sm">Stackers</p>
-              <p className="text-xl font-bold text-white">{stackingInfo.rewardAddresses}</p>
-              <p className="text-sm text-purple-300/50">addresses</p>
+            <div className="bg-black/30 rounded-lg p-3 border border-purple-500/20">
+              <p className="text-purple-300/70 text-xs mb-1">Stackers</p>
+              <p className="text-base font-bold text-white">{stackingInfo.rewardAddresses}</p>
+              <p className="text-xs text-purple-300/50">addresses</p>
             </div>
-            <div className="bg-black/30 rounded-lg p-4 border border-purple-500/20">
-              <p className="text-purple-300/70 text-sm">Est. APY</p>
-              <p className="text-xl font-bold text-green-400">{stackingInfo.averageAPY}%</p>
-              <p className="text-sm text-purple-300/50">in BTC</p>
+            <div className="bg-black/30 rounded-lg p-3 border border-purple-500/20">
+              <p className="text-purple-300/70 text-xs mb-1">Est. APY</p>
+              <p className="text-base font-bold text-green-400">{stackingInfo.averageAPY}%</p>
+              <p className="text-xs text-purple-300/50">in BTC</p>
             </div>
           </div>
 

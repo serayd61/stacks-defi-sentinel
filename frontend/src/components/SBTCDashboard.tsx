@@ -102,11 +102,20 @@ const SBTCDashboard: React.FC = () => {
   };
 
   const formatBTC = (sats: string) => {
-    return (parseInt(sats) / 100000000).toFixed(8);
+    const btc = parseInt(sats) / 100000000;
+    if (isNaN(btc)) return '0.00';
+    if (btc >= 1000) return btc.toLocaleString('en-US', { maximumFractionDigits: 2 });
+    if (btc >= 1) return btc.toFixed(4);
+    return btc.toFixed(8);
   };
 
   const formatUSD = (btc: number, price: number) => {
-    return (btc * price).toLocaleString('en-US', { style: 'currency', currency: 'USD' });
+    if (isNaN(btc) || isNaN(price)) return '$0.00';
+    const value = btc * price;
+    if (value >= 1000000000) return `$${(value / 1000000000).toFixed(2)}B`;
+    if (value >= 1000000) return `$${(value / 1000000).toFixed(2)}M`;
+    if (value >= 1000) return `$${(value / 1000).toFixed(2)}K`;
+    return value.toLocaleString('en-US', { style: 'currency', currency: 'USD' });
   };
 
   const formatTime = (timestamp: string) => {
@@ -199,28 +208,28 @@ const SBTCDashboard: React.FC = () => {
       {activeTab === 'overview' && stats && (
         <>
           {/* Stats Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          <div className="grid grid-cols-2 gap-3 mb-6">
             <div className="bg-black/30 rounded-lg p-4 border border-orange-500/20">
-              <p className="text-orange-300/70 text-sm">Total BTC Locked</p>
-              <p className="text-2xl font-bold text-white">{stats.btcLocked} ₿</p>
-              <p className="text-sm text-green-400">
+              <p className="text-orange-300/70 text-xs mb-1">Total BTC Locked</p>
+              <p className="text-lg font-bold text-white truncate">{parseFloat(stats.btcLocked).toFixed(2)} ₿</p>
+              <p className="text-xs text-green-400">
                 {formatUSD(parseFloat(stats.btcLocked), stats.price)}
               </p>
             </div>
             <div className="bg-black/30 rounded-lg p-4 border border-orange-500/20">
-              <p className="text-orange-300/70 text-sm">sBTC Supply</p>
-              <p className="text-2xl font-bold text-white">{formatBTC(stats.totalSupply)}</p>
-              <p className="text-sm text-orange-300/50">sBTC tokens</p>
+              <p className="text-orange-300/70 text-xs mb-1">sBTC Supply</p>
+              <p className="text-lg font-bold text-white truncate">{formatBTC(stats.totalSupply)}</p>
+              <p className="text-xs text-orange-300/50">sBTC tokens</p>
             </div>
             <div className="bg-black/30 rounded-lg p-4 border border-orange-500/20">
-              <p className="text-orange-300/70 text-sm">Holders</p>
-              <p className="text-2xl font-bold text-white">{stats.holders.toLocaleString()}</p>
-              <p className="text-sm text-orange-300/50">unique addresses</p>
+              <p className="text-orange-300/70 text-xs mb-1">Holders</p>
+              <p className="text-lg font-bold text-white">{(stats.holders || 0).toLocaleString()}</p>
+              <p className="text-xs text-orange-300/50">unique addresses</p>
             </div>
             <div className="bg-black/30 rounded-lg p-4 border border-orange-500/20">
-              <p className="text-orange-300/70 text-sm">BTC Price</p>
-              <p className="text-2xl font-bold text-white">${stats.price.toLocaleString()}</p>
-              <p className="text-sm text-green-400">+2.4% 24h</p>
+              <p className="text-orange-300/70 text-xs mb-1">BTC Price</p>
+              <p className="text-lg font-bold text-white">${(stats.price || 0).toLocaleString()}</p>
+              <p className="text-xs text-green-400">+2.4% 24h</p>
             </div>
           </div>
 
