@@ -23,6 +23,10 @@ import { WhaleAlerts } from './components/WhaleAlerts';
 import { PoolsTable } from './components/PoolsTable';
 import SubscriptionPanel from './components/SubscriptionPanel';
 import WalletModal from './components/WalletModal';
+import SBTCDashboard from './components/SBTCDashboard';
+import StackingTracker from './components/StackingTracker';
+import BlockExplorer from './components/BlockExplorer';
+import TokenAnalytics from './components/TokenAnalytics';
 import { WalletProvider } from './contexts/WalletContext';
 import { useApi } from './hooks/useApi';
 import { useWebSocket } from './hooks/useWebSocket';
@@ -33,7 +37,7 @@ const WS_URL = import.meta.env.VITE_WS_URL || 'wss://stacks-defi-sentinel-produc
 function App() {
   const { dashboardStats, isLoading, error, fetchDashboard } = useApi();
   const { isConnected, events } = useWebSocket(WS_URL);
-  const [activeTab, setActiveTab] = useState<'overview' | 'swaps' | 'alerts' | 'subscribe'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'swaps' | 'alerts' | 'ecosystem' | 'subscribe'>('overview');
   const [lastUpdate, setLastUpdate] = useState(new Date());
 
   useEffect(() => {
@@ -161,6 +165,7 @@ function App() {
               { id: 'overview', label: 'Overview', icon: BarChart3 },
               { id: 'swaps', label: 'Swaps', icon: ArrowRightLeft },
               { id: 'alerts', label: 'Whale Alerts', icon: Bell },
+              { id: 'ecosystem', label: 'Ecosystem', icon: Activity },
               { id: 'subscribe', label: 'Subscribe', icon: CreditCard },
             ].map((tab) => (
               <button
@@ -293,6 +298,20 @@ function App() {
                       </span>
                     </div>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {/* Ecosystem Section */}
+            {activeTab === 'ecosystem' && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <SBTCDashboard />
+                  <StackingTracker />
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <TokenAnalytics />
+                  <BlockExplorer />
                 </div>
               </div>
             )}
