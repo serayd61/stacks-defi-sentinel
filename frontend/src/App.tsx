@@ -27,6 +27,8 @@ import SBTCDashboard from './components/SBTCDashboard';
 import StackingTracker from './components/StackingTracker';
 import BlockExplorer from './components/BlockExplorer';
 import TokenAnalytics from './components/TokenAnalytics';
+import SwapInterface from './components/SwapInterface';
+import NFTGallery from './components/NFTGallery';
 import { WalletProvider } from './contexts/WalletContext';
 import { useApi } from './hooks/useApi';
 import { useWebSocket } from './hooks/useWebSocket';
@@ -305,12 +307,21 @@ function App() {
             {/* Ecosystem Section */}
             {activeTab === 'ecosystem' && (
               <div className="space-y-6">
+                {/* Swap Interface - Full Width */}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  <SwapInterface />
+                  <div className="lg:col-span-2">
+                    <TokenAnalytics />
+                  </div>
+                </div>
+                {/* sBTC and Stacking */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   <SBTCDashboard />
                   <StackingTracker />
                 </div>
+                {/* NFT and Block Explorer */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <TokenAnalytics />
+                  <NFTGallery />
                   <BlockExplorer />
                 </div>
               </div>
