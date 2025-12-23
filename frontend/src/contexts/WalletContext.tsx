@@ -7,8 +7,8 @@ import { PostConditionMode } from '@stacks/transactions';
 const CONTRACT_ADDRESS = 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB';
 const CONTRACT_NAME = 'defi-sentinel';
 
-// Reown/WalletConnect Project ID - Get yours at https://cloud.reown.com
-const WALLETCONNECT_PROJECT_ID = 'c4f79cc821944d9680842e34466bfb';
+// Reown/WalletConnect Project ID - https://cloud.reown.com
+const WALLETCONNECT_PROJECT_ID = 'e5f06d0d893851277f61878bdf812cbd';
 
 // Supported wallets
 export type WalletType = 'hiro' | 'xverse' | 'leather' | 'okx';
