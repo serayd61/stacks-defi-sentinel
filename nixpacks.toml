@@ -10,6 +10,3 @@ cmds = ["npm run build"]
 [start]
 cmd = "npm start"
 
-[variables]
-CHAINHOOKS_API_KEY = ""
-
