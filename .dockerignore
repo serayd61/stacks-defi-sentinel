@@ -1,0 +1,14 @@
+node_modules
+npm-debug.log
+.git
+.gitignore
+.env
+.env.*
+dist
+frontend/node_modules
+frontend/dist
+*.md
+*.log
+.DS_Store
+clarity-contracts
+
