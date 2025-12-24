@@ -13,6 +13,10 @@ epoch = "3.1"
 path = "contracts/sentinel-token-simple.clar"
 epoch = "3.1"
 
+[contracts.token-sale]
+path = "contracts/token-sale.clar"
+epoch = "3.1"
+
 [repl.analysis]
 passes = ["check_checker"]
 check_checker = { trusted_sender = false, trusted_caller = false, callee_filter = false }

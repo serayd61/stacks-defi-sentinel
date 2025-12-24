@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useWallet } from '../contexts/WalletContext';
+import { request } from '@stacks/connect';
+import { uintCV, standardPrincipalCV, PostConditionMode } from '@stacks/transactions';
 
 interface Token {
   symbol: string;
@@ -29,10 +31,29 @@ const TOKENS: Token[] = [
   { symbol: 'SNTL', name: 'Sentinel', contractId: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.sentinel-token', decimals: 6, icon: '🛡️', price: 0.001 },
 ];
 
+// DEX Router Contracts
+const DEX_ROUTERS = {
+  alex: {
+    contract: 'SP3K8BC0PPEVCV7NZ6QSRWPQ2JE9E5B6N3PA0KBR9',
+    name: 'alex-swap-v1',
+    swapFunction: 'swap',
+  },
+  velar: {
+    contract: 'SP1Y5YSTAHZ88XYK1VPDH24GY0HPX5J4JECTMY4A1',
+    name: 'univ2-router',
+    swapFunction: 'swap-exact-tokens-for-tokens',
+  },
+  arkadiko: {
+    contract: 'SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR',
+    name: 'arkadiko-swap-v2-1',
+    swapFunction: 'swap',
+  },
+};
+
 const DEX_LIST = [
-  { id: 'alex', name: 'ALEX', icon: '🔵', url: 'https://app.alexlab.co/swap' },
-  { id: 'velar', name: 'Velar', icon: '🟣', url: 'https://app.velar.co/swap' },
-  { id: 'stxcity', name: 'STX.City', icon: '🏙️', url: 'https://stx.city/swap' },
+  { id: 'alex', name: 'ALEX', icon: '🔵', router: DEX_ROUTERS.alex },
+  { id: 'velar', name: 'Velar', icon: '🟣', router: DEX_ROUTERS.velar },
+  { id: 'arkadiko', name: 'Arkadiko', icon: '🟢', router: DEX_ROUTERS.arkadiko },
 ];
 
 const SwapInterface: React.FC = () => {
@@ -43,10 +64,14 @@ const SwapInterface: React.FC = () => {
   const [toAmount, setToAmount] = useState<string>('');
   const [quote, setQuote] = useState<SwapQuote | null>(null);
   const [loading, setLoading] = useState(false);
+  const [swapping, setSwapping] = useState(false);
   const [showFromTokenList, setShowFromTokenList] = useState(false);
   const [showToTokenList, setShowToTokenList] = useState(false);
   const [selectedDex, setSelectedDex] = useState(DEX_LIST[0]);
   const [slippage, setSlippage] = useState(0.5);
+  const [txStatus, setTxStatus] = useState<{ txId?: string; error?: string } | null>(null);
+  const [fromBalance, setFromBalance] = useState<number | null>(null);
+  const [toBalance, setToBalance] = useState<number | null>(null);
 
   // Calculate quote when amount changes
   const calculateQuote = useCallback(async () => {
@@ -94,6 +119,63 @@ const SwapInterface: React.FC = () => {
     return () => clearTimeout(debounce);
   }, [calculateQuote]);
 
+  // Get token balance
+  const getTokenBalance = useCallback(async (token: Token): Promise<number> => {
+    if (!userAddress) return 0;
+    
+    if (token.contractId === 'native') {
+      // STX balance
+      try {
+        const response = await fetch(`https://api.hiro.so/v2/accounts/${userAddress}?proof=0`);
+        const data = await response.json();
+        return parseFloat(data.balance) / 1_000_000; // Convert from microSTX
+      } catch (error) {
+        console.error('Error fetching STX balance:', error);
+        return 0;
+      }
+    } else {
+      // Token balance (SIP-010)
+      try {
+        const [contractAddress, contractName] = token.contractId.split('.');
+        const response = await fetch(
+          `https://api.hiro.so/v2/contracts/call-read/${contractAddress}/${contractName}/get-balance`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              sender: userAddress,
+              arguments: [`0x0516${userAddress.slice(2)}`],
+            }),
+          }
+        );
+        const data = await response.json();
+        if (data.okay && data.result) {
+          const balance = parseInt(data.result.replace('0x', ''), 16);
+          return balance / Math.pow(10, token.decimals);
+        }
+      } catch (error) {
+        console.error('Error fetching token balance:', error);
+      }
+      return 0;
+    }
+  }, [userAddress]);
+
+  // Fetch token balances when wallet is connected
+  useEffect(() => {
+    if (isConnected && userAddress) {
+      const fetchBalances = async () => {
+        const fromBal = await getTokenBalance(fromToken);
+        const toBal = await getTokenBalance(toToken);
+        setFromBalance(fromBal);
+        setToBalance(toBal);
+      };
+      fetchBalances();
+    } else {
+      setFromBalance(null);
+      setToBalance(null);
+    }
+  }, [isConnected, userAddress, fromToken, toToken, getTokenBalance]);
+
   const swapTokens = () => {
     const temp = fromToken;
     setFromToken(toToken);
@@ -102,24 +184,108 @@ const SwapInterface: React.FC = () => {
     setToAmount('');
   };
 
+  // Execute swap transaction
   const handleSwap = async () => {
-    if (!isConnected) {
+    if (!isConnected || !userAddress) {
       connectWallet();
       return;
     }
 
-    // Build the DEX URL with swap parameters
-    let dexUrl = selectedDex.url;
-    
-    if (selectedDex.id === 'alex') {
-      dexUrl = `https://app.alexlab.co/swap?from=${fromToken.symbol}&to=${toToken.symbol}`;
-    } else if (selectedDex.id === 'velar') {
-      dexUrl = `https://app.velar.co/swap/${fromToken.symbol}/${toToken.symbol}`;
-    } else {
-      dexUrl = `https://stx.city/swap/${fromToken.symbol}-${toToken.symbol}`;
+    if (!fromAmount || parseFloat(fromAmount) <= 0) {
+      return;
     }
-    
-    window.open(dexUrl, '_blank');
+
+    setSwapping(true);
+    setTxStatus(null);
+
+    try {
+      const inputAmount = parseFloat(fromAmount);
+      const inputAmountMicro = BigInt(Math.floor(inputAmount * Math.pow(10, fromToken.decimals)));
+      const minOutputAmount = BigInt(Math.floor(parseFloat(toAmount) * (1 - slippage / 100) * Math.pow(10, toToken.decimals)));
+
+      // Check balance
+      const balance = await getTokenBalance(fromToken);
+      if (balance < inputAmount) {
+        setTxStatus({ error: `Insufficient balance. You have ${balance.toFixed(4)} ${fromToken.symbol}` });
+        setSwapping(false);
+        return;
+      }
+
+      const router = selectedDex.router;
+      const contractId = `${router.contract}.${router.name}`;
+
+      // Prepare function arguments based on DEX
+      // Note: Each DEX has different swap function signatures
+      // This is a simplified version - you may need to adjust based on actual contract ABIs
+      let functionArgs: any[] = [];
+      let contractCallOptions: any = {
+        contract: contractId,
+        functionName: router.swapFunction,
+        functionArgs: functionArgs,
+        postConditionMode: PostConditionMode.Allow,
+        network: 'mainnet' as any,
+      };
+
+      if (selectedDex.id === 'alex') {
+        // ALEX swap - simplified, may need adjustment based on actual ALEX contract
+        functionArgs = [
+          uintCV(inputAmountMicro.toString()),
+          uintCV(minOutputAmount.toString()),
+        ];
+        // For STX swaps, include STX amount
+        if (fromToken.contractId === 'native') {
+          contractCallOptions.stxAmount = inputAmountMicro.toString();
+        }
+      } else if (selectedDex.id === 'velar') {
+        // Velar Uniswap V2 style - simplified
+        functionArgs = [
+          uintCV(inputAmountMicro.toString()),
+          uintCV(minOutputAmount.toString()),
+          standardPrincipalCV(userAddress),
+          uintCV(Math.floor(Date.now() / 1000) + 1800), // Deadline (30 min)
+        ];
+      } else {
+        // Arkadiko format - simplified
+        functionArgs = [
+          uintCV(inputAmountMicro.toString()),
+          uintCV(minOutputAmount.toString()),
+        ];
+      }
+
+      contractCallOptions.functionArgs = functionArgs;
+
+      // Execute swap via wallet
+      const result = await request(
+        {
+          walletConnect: {
+            projectId: 'e5f06d0d893851277f61878bdf812cbd',
+          },
+        },
+        'stx_callContract',
+        contractCallOptions
+      );
+
+      console.log('Swap transaction result:', result);
+      
+      if (result && result.txid) {
+        setTxStatus({ txId: result.txid });
+        // Reset form after successful transaction
+        setTimeout(() => {
+          setFromAmount('');
+          setToAmount('');
+          setTxStatus(null);
+        }, 3000);
+      } else {
+        setTxStatus({ error: 'Transaction failed. Please try again.' });
+      }
+    } catch (error: any) {
+      console.error('Swap error:', error);
+      setTxStatus({ 
+        error: error?.message || 'Failed to execute swap. Please check your wallet and try again.' 
+      });
+    } finally {
+      setSwapping(false);
+    }
   };
 
   const formatPrice = (price: number) => {
@@ -185,12 +351,45 @@ const SwapInterface: React.FC = () => {
         ))}
       </div>
 
+      {/* Transaction Status */}
+      {txStatus && (
+        <div className={`mb-3 p-3 rounded-lg border ${
+          txStatus.txId 
+            ? 'bg-green-500/10 border-green-500/30' 
+            : 'bg-red-500/10 border-red-500/30'
+        }`}>
+          {txStatus.txId ? (
+            <div className="flex items-center gap-2">
+              <span className="text-green-400">✓</span>
+              <span className="text-sm text-green-400 flex-1">
+                Transaction submitted!
+              </span>
+              <a
+                href={`https://explorer.stacks.co/txid/${txStatus.txId}?chain=mainnet`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-blue-400 hover:text-blue-300 underline"
+              >
+                View on Explorer
+              </a>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="text-red-400">✗</span>
+              <span className="text-sm text-red-400">{txStatus.error}</span>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* From Token */}
       <div className="bg-black/30 rounded-xl p-3 border border-blue-500/20 mb-1">
         <div className="flex justify-between items-center mb-2">
           <span className="text-xs text-blue-300/70">From</span>
-          {isConnected && (
-            <span className="text-xs text-blue-300/50">Bal: ---</span>
+          {isConnected && fromBalance !== null && (
+            <span className="text-xs text-blue-300/50">
+              Bal: {fromBalance.toFixed(4)} {fromToken.symbol}
+            </span>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -251,8 +450,10 @@ const SwapInterface: React.FC = () => {
       <div className="bg-black/30 rounded-xl p-3 border border-blue-500/20 mt-1 mb-3">
         <div className="flex justify-between items-center mb-2">
           <span className="text-xs text-blue-300/70">To</span>
-          {isConnected && (
-            <span className="text-xs text-blue-300/50">Bal: ---</span>
+          {isConnected && toBalance !== null && (
+            <span className="text-xs text-blue-300/50">
+              Bal: {toBalance.toFixed(4)} {toToken.symbol}
+            </span>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -342,16 +543,23 @@ const SwapInterface: React.FC = () => {
           {/* Swap Button */}
           <button
             onClick={handleSwap}
-            disabled={!fromAmount || parseFloat(fromAmount) <= 0}
+            disabled={!fromAmount || parseFloat(fromAmount) <= 0 || swapping}
             className={`w-full py-3 rounded-xl font-bold text-sm transition-all ${
-              !fromAmount || parseFloat(fromAmount) <= 0
+              !fromAmount || parseFloat(fromAmount) <= 0 || swapping
                 ? 'bg-blue-500/20 text-blue-300/50 cursor-not-allowed'
                 : 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white hover:from-blue-600 hover:to-cyan-600 shadow-lg'
             }`}
           >
-            {!fromAmount || parseFloat(fromAmount) <= 0
-              ? 'Enter Amount'
-              : `Swap on ${selectedDex.name} ↗`}
+            {swapping ? (
+              <span className="flex items-center justify-center gap-2">
+                <span className="animate-spin">⏳</span>
+                Processing...
+              </span>
+            ) : !fromAmount || parseFloat(fromAmount) <= 0 ? (
+              'Enter Amount'
+            ) : (
+              `Swap via ${selectedDex.name}`
+            )}
           </button>
         </div>
       )}

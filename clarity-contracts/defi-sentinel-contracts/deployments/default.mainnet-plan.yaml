@@ -9,10 +9,10 @@ plan:
     - id: 0
       transactions:
         - contract-publish:
-            contract-name: sentinel-token
+            contract-name: token-sale
             expected-sender: SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB
-            cost: 2142148
-            path: contracts/sentinel-token-simple.clar
+            cost: 133210
+            path: contracts/token-sale.clar
             anchor-block-only: true
             clarity-version: 3
-      epoch: "3.1"
+  epoch: "3.1"

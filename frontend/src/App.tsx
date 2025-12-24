@@ -29,6 +29,8 @@ import BlockExplorer from './components/BlockExplorer';
 import TokenAnalytics from './components/TokenAnalytics';
 import SwapInterface from './components/SwapInterface';
 import NFTGallery from './components/NFTGallery';
+import TokenSale from './components/TokenSale';
+import StakePanel from './components/StakePanel';
 import { WalletProvider } from './contexts/WalletContext';
 import { useApi } from './hooks/useApi';
 import { useWebSocket } from './hooks/useWebSocket';
@@ -39,7 +41,7 @@ const WS_URL = import.meta.env.VITE_WS_URL || 'wss://stacks-defi-sentinel-produc
 function App() {
   const { dashboardStats, isLoading, error, fetchDashboard } = useApi();
   const { isConnected, events } = useWebSocket(WS_URL);
-  const [activeTab, setActiveTab] = useState<'overview' | 'swaps' | 'alerts' | 'ecosystem' | 'subscribe'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'swaps' | 'alerts' | 'ecosystem' | 'subscribe' | 'token-sale' | 'stake'>('overview');
   const [lastUpdate, setLastUpdate] = useState(new Date());
 
   useEffect(() => {
@@ -168,6 +170,8 @@ function App() {
               { id: 'swaps', label: 'Swaps', icon: ArrowRightLeft },
               { id: 'alerts', label: 'Whale Alerts', icon: Bell },
               { id: 'ecosystem', label: 'Ecosystem', icon: Activity },
+              { id: 'token-sale', label: 'Token Sale', icon: CreditCard },
+              { id: 'stake', label: 'Stake & Earn', icon: Droplets },
               { id: 'subscribe', label: 'Subscribe', icon: CreditCard },
             ].map((tab) => (
               <button
@@ -324,6 +328,20 @@ function App() {
                   <NFTGallery />
                   <BlockExplorer />
                 </div>
+              </div>
+            )}
+
+            {/* Token Sale Section */}
+            {activeTab === 'token-sale' && (
+              <div className="max-w-4xl mx-auto">
+                <TokenSale />
+              </div>
+            )}
+
+            {/* Stake & Earn Section */}
+            {activeTab === 'stake' && (
+              <div className="max-w-4xl mx-auto">
+                <StakePanel />
               </div>
             )}
 

@@ -1,7 +1,9 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
+import staticFiles from '@fastify/static';
 import { TypeBoxTypeProvider } from '@fastify/type-provider-typebox';
+import path from 'path';
 import { DeFiChainhooksManager } from './chainhooks/client';
 import { EventProcessor } from './services/event-processor';
 import { AnalyticsService } from './services/analytics';
@@ -95,8 +97,32 @@ async function main() {
   // Setup WebSocket
   await setupWebSocket(fastify, eventProcessor);
 
-  // Swagger documentation
-  fastify.get('/', async (req, reply) => {
+  // Serve frontend static files
+  const frontendPath = path.join(process.cwd(), 'frontend', 'dist');
+  
+  try {
+    await fastify.register(staticFiles, {
+      root: frontendPath,
+      prefix: '/',
+    });
+
+    // Fallback to index.html for SPA routing
+    fastify.setNotFoundHandler(async (req, reply) => {
+      // Don't serve index.html for API routes
+      if (req.url.startsWith('/api') || req.url.startsWith('/ws')) {
+        return reply.code(404).send({ error: 'Not found' });
+      }
+      return reply.sendFile('index.html');
+    });
+
+    logger.info('✅ Frontend static files registered');
+  } catch (error) {
+    logger.warn('⚠️ Frontend static files not found, serving API only');
+    logger.warn('   Frontend path:', frontendPath);
+  }
+
+  // API documentation endpoint
+  fastify.get('/api', async (req, reply) => {
     return reply.send({
       name: 'Stacks DeFi Monitor',
       version: '1.0.0',

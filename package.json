@@ -27,13 +27,14 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn src/index.ts",
-    "build": "tsc",
+    "build": "tsc && cd frontend && npm install && npm run build",
     "start": "node dist/index.js",
     "lint": "eslint src --ext .ts",
     "test": "jest"
   },
   "dependencies": {
     "@fastify/cors": "^9.0.1",
+    "@fastify/static": "^6.12.0",
     "@fastify/type-provider-typebox": "^6.1.0",
     "@fastify/websocket": "^8.3.1",
     "@hirosystems/chainhooks-client": "^1.0.0",
