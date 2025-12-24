@@ -394,7 +394,7 @@ const TokenSale: React.FC = () => {
             <div className="text-sm text-purple-300/70 mb-1">Total Sold</div>
             <div className="text-2xl font-bold text-white">{formatSNTL(saleInfo.sold)} SNTL</div>
             <div className="text-xs text-purple-400 mt-1">
-              {((parseInt(saleInfo.sold) / parseInt(saleInfo.totalAmount)) * 100).toFixed(1)}% of supply
+              {((parseInt(saleInfo.sold) / (parseInt(saleInfo.totalAmount) || 1)) * 100).toFixed(1)}% of supply
             </div>
           </div>
           <div className="bg-black/30 rounded-lg p-4 border border-purple-500/20">
@@ -441,9 +441,9 @@ const TokenSale: React.FC = () => {
             max="100"
             className="w-full bg-black/50 rounded-lg px-4 py-3 text-white border border-purple-500/30 focus:border-purple-500 focus:outline-none"
           />
-          {purchaseAmount && currentTier && (
+          {purchaseAmount && currentTier && parseInt(currentTier.price) > 0 && (
             <div className="mt-2 text-sm text-purple-400">
-              You will receive: ~{formatSNTL((BigInt(Math.floor(parseFloat(purchaseAmount) * 1_000_000)) * BigInt(1_000_000) / BigInt(parseInt(currentTier.price))).toString())} SNTL
+              You will receive: ~{formatSNTL((BigInt(Math.floor(parseFloat(purchaseAmount) * 1_000_000)) * BigInt(1_000_000) / BigInt(parseInt(currentTier.price) || 1)).toString())} SNTL
             </div>
           )}
         </div>
@@ -540,7 +540,7 @@ const TokenSale: React.FC = () => {
                 <div
                   className="h-full bg-gradient-to-r from-purple-500 to-orange-500"
                   style={{
-                    width: `${(parseInt(tier.sold) / parseInt(tier.total)) * 100}%`,
+                    width: `${(parseInt(tier.sold) / (parseInt(tier.total) || 1)) * 100}%`,
                   }}
                 />
               </div>
