@@ -82,7 +82,7 @@ export async function fetchSBTCSupply(): Promise<string> {
         }),
       }
     );
-    const data = await response.json();
+    const data = await response.json() as { okay?: boolean; result?: string };
     if (data.okay && data.result) {
       // Parse the Clarity response
       const hexValue = data.result.replace('0x', '');
@@ -105,7 +105,7 @@ export async function fetchPegStatus(): Promise<PegStatus> {
     const btcResponse = await fetch(
       'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd'
     );
-    const btcData = await btcResponse.json();
+    const btcData = await btcResponse.json() as { bitcoin?: { usd?: number } };
     const btcPrice = btcData.bitcoin?.usd || 0;
 
     // sBTC should be 1:1 with BTC, but check DEX prices
@@ -149,7 +149,7 @@ export async function fetchRecentSBTCTransactions(limit: number = 50): Promise<S
     const response = await fetch(
       `https://api.hiro.so/extended/v1/address/${SBTC_CONTRACTS.token}/transactions?limit=${limit}`
     );
-    const data = await response.json();
+    const data = await response.json() as { results?: any[] };
     
     const events: SBTCEvent[] = [];
     

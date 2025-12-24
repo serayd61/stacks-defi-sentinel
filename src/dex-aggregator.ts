@@ -123,7 +123,7 @@ async function fetchALEXPrice(tokenIn: string, tokenOut: string, amount: string)
   try {
     // ALEX uses pool-based pricing
     const response = await fetch('https://api.alexgo.io/v1/pool_token_stats');
-    const data = await response.json();
+    const data = await response.json() as { data?: any[] };
     
     // Find relevant pool
     const pools = data.data || [];
@@ -165,9 +165,9 @@ async function fetchALEXPrice(tokenIn: string, tokenOut: string, amount: string)
 async function fetchVelarPrice(tokenIn: string, tokenOut: string, amount: string): Promise<PriceQuote | null> {
   try {
     const response = await fetch('https://api.velar.co/pools');
-    const data = await response.json();
+    const data = await response.json() as { data?: any[] } | any[];
     
-    const pools = data.data || data || [];
+    const pools = (Array.isArray(data) ? data : data.data) || [];
     const relevantPool = pools.find((p: any) => 
       (p.token0?.symbol === tokenIn && p.token1?.symbol === tokenOut) ||
       (p.token1?.symbol === tokenIn && p.token0?.symbol === tokenOut)
@@ -216,7 +216,7 @@ async function fetchArkadikoPrice(tokenIn: string, tokenOut: string, amount: str
   try {
     // Arkadiko API for swap quotes
     const response = await fetch('https://api.arkadiko.finance/api/v1/pools');
-    const data = await response.json();
+    const data = await response.json() as any[];
     
     const pools = data || [];
     const relevantPool = pools.find((p: any) => 
@@ -397,7 +397,7 @@ export async function getTokenPriceUSD(token: string): Promise<number> {
     const response = await fetch(
       `https://api.coingecko.com/api/v3/simple/price?ids=${geckoId}&vs_currencies=usd`
     );
-    const data = await response.json();
+    const data = await response.json() as Record<string, { usd?: number }>;
     const price = data[geckoId]?.usd || 0;
 
     priceCache.set(cacheKey, { price, timestamp: Date.now() });
