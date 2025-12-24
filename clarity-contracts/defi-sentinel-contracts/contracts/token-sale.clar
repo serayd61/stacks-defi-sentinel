@@ -56,6 +56,85 @@
 (define-map total-rewards-earned principal uint)
 
 ;; ==========================================
+;; PRO MEMBERSHIP TIERS
+;; ==========================================
+;; Tier thresholds (in SNTL micro-units, 6 decimals)
+(define-data-var pro-threshold uint u10000000000) ;; 10,000 SNTL for Pro
+(define-data-var vip-threshold uint u50000000000) ;; 50,000 SNTL for VIP
+(define-data-var whale-threshold uint u100000000000) ;; 100,000 SNTL for Whale
+
+;; Tier names: 0 = Basic, 1 = Pro, 2 = VIP, 3 = Whale
+(define-read-only (get-user-tier (user principal))
+  (let
+    (
+      (staked (default-to u0 (map-get? staked-amount user)))
+    )
+    (if (>= staked (var-get whale-threshold))
+      { tier: u3, name: "whale", staked: staked, required: (var-get whale-threshold) }
+      (if (>= staked (var-get vip-threshold))
+        { tier: u2, name: "vip", staked: staked, required: (var-get vip-threshold) }
+        (if (>= staked (var-get pro-threshold))
+          { tier: u1, name: "pro", staked: staked, required: (var-get pro-threshold) }
+          { tier: u0, name: "basic", staked: staked, required: (var-get pro-threshold) }
+        )
+      )
+    )
+  )
+)
+
+;; Check if user has Pro or higher access
+(define-read-only (is-pro-member (user principal))
+  (let
+    (
+      (staked (default-to u0 (map-get? staked-amount user)))
+    )
+    (>= staked (var-get pro-threshold))
+  )
+)
+
+;; Check if user has VIP or higher access
+(define-read-only (is-vip-member (user principal))
+  (let
+    (
+      (staked (default-to u0 (map-get? staked-amount user)))
+    )
+    (>= staked (var-get vip-threshold))
+  )
+)
+
+;; Check if user is a Whale
+(define-read-only (is-whale-member (user principal))
+  (let
+    (
+      (staked (default-to u0 (map-get? staked-amount user)))
+    )
+    (>= staked (var-get whale-threshold))
+  )
+)
+
+;; Get all tier thresholds
+(define-read-only (get-tier-thresholds)
+  {
+    pro: (var-get pro-threshold),
+    vip: (var-get vip-threshold),
+    whale: (var-get whale-threshold)
+  }
+)
+
+;; Owner can update tier thresholds
+(define-public (set-tier-thresholds (pro uint) (vip uint) (whale uint))
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+    (asserts! (< pro vip) (err u700))
+    (asserts! (< vip whale) (err u701))
+    (var-set pro-threshold pro)
+    (var-set vip-threshold vip)
+    (var-set whale-threshold whale)
+    (ok true)
+  )
+)
+
+;; ==========================================
 ;; SALE MANAGEMENT (Owner only)
 ;; ==========================================
 
