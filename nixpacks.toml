@@ -2,11 +2,12 @@
 nixPkgs = ["nodejs-20_x"]
 
 [phases.install]
-cmds = ["npm ci"]
+cmds = ["npm ci --prefer-offline --no-audit"]
 
 [phases.build]
 cmds = ["npm run build"]
 # CHAINHOOKS_API_KEY is only needed at runtime, not during build
+# Frontend build is done in postinstall, but can fail without blocking
 
 [start]
 cmd = "npm start"
