@@ -30,7 +30,7 @@
     "build": "tsc",
     "build:frontend": "cd frontend && npm ci --prefer-offline --no-audit && npm run build",
     "build:all": "npm run build && npm run build:frontend",
-    "postinstall": "cd frontend && npm ci --prefer-offline --no-audit && npm run build || echo 'Frontend build failed, continuing...'",
+    "postinstall": "cd frontend && (npm ci --prefer-offline --no-audit && npm run build) || echo 'Frontend build skipped'",
     "start": "node dist/index.js",
     "lint": "eslint src --ext .ts",
     "test": "jest"
