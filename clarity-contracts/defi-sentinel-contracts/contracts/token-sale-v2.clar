@@ -1,5 +1,6 @@
-;; Token Sale Contract - SNTL Token Sale & Distribution
+;; Token Sale Contract V2 - SNTL Token Sale & Distribution
 ;; Multiple sale mechanisms: ICO, DEX listing, Stake-to-Earn
+;; V2: Added extend-sale and reset-sale functions
 
 ;; Constants
 (define-constant contract-owner tx-sender)
@@ -38,8 +39,8 @@
 
 ;; Purchase limits
 (define-data-var min-purchase-stx uint u1000000) ;; 1 STX minimum
-(define-data-var max-purchase-stx uint u100000000) ;; 100 STX maximum per address
-(define-data-var max-purchase-per-address uint u100000000)
+(define-data-var max-purchase-stx uint u100000000) ;; 100 STX maximum per tx
+(define-data-var max-purchase-per-address uint u1000000000) ;; 1000 STX max per address
 
 ;; Purchase tracking
 (define-map purchases principal uint) ;; Total STX spent per address
@@ -142,7 +143,7 @@
 (define-public (initialize-sale (start-block uint) (end-block uint))
   (begin
     (asserts! (is-eq tx-sender contract-owner) err-owner-only)
-    (asserts! (is-eq (var-get sale-active) false) (err u200))
+    (asserts! (> end-block start-block) (err u200))
     (var-set sale-start-block start-block)
     (var-set sale-end-block end-block)
     (var-set sale-active true)
@@ -151,6 +152,37 @@
       start: start-block,
       end: end-block,
       total-amount: (var-get total-sale-amount)
+    })
+  )
+)
+
+;; Extend sale end block (owner only)
+(define-public (extend-sale (new-end-block uint))
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+    (asserts! (> new-end-block stacks-block-height) (err u800))
+    (var-set sale-end-block new-end-block)
+    (var-set sale-active true)
+    (var-set sale-paused false)
+    (ok {
+      new-end-block: new-end-block,
+      current-block: stacks-block-height
+    })
+  )
+)
+
+;; Reset sale completely (owner only)
+(define-public (reset-sale (start-block uint) (end-block uint))
+  (begin
+    (asserts! (is-eq tx-sender contract-owner) err-owner-only)
+    (asserts! (> end-block start-block) (err u802))
+    (var-set sale-start-block start-block)
+    (var-set sale-end-block end-block)
+    (var-set sale-active true)
+    (var-set sale-paused false)
+    (ok {
+      start: start-block,
+      end: end-block
     })
   )
 )
@@ -212,7 +244,6 @@
 )
 
 ;; Purchase SNTL tokens with STX
-;; Amount parameter specifies how much STX to spend
 (define-public (purchase-tokens (amount uint))
   (let
     (
@@ -232,7 +263,7 @@
     ;; Validate user has enough STX
     (asserts! (>= (stx-get-balance buyer) amount) err-insufficient-funds)
     
-    ;; Calculate how much STX user will spend
+    ;; Calculate purchase
     (let
       (
         (stx-to-spend amount)
@@ -240,12 +271,8 @@
         (tier-price (get price tier-info))
         (tier-remaining (get remaining tier-info))
         (tier-num (get tier tier-info))
-        
-        ;; Calculate tokens to receive
-        (tokens-received (/ (* stx-to-spend u1000000) tier-price)) ;; price is per 1000 tokens
+        (tokens-received (/ (* stx-to-spend u1000000) tier-price))
         (tokens-received-adjusted (/ tokens-received u1000))
-        
-        ;; Check purchase limits
         (user-total-spent (default-to u0 (map-get? purchases buyer)))
         (user-new-total (+ user-total-spent stx-to-spend))
       )
@@ -274,15 +301,15 @@
       (map-set purchases buyer user-new-total)
       (map-set tokens-purchased buyer (+ (default-to u0 (map-get? tokens-purchased buyer)) tokens-received-adjusted))
       
-      ;; Transfer reward pool percentage to stake pool (50% of STX goes to rewards)
+      ;; 50% of STX goes to staking rewards
       (let
         (
-          (reward-amount (/ stx-to-spend u2)) ;; 50% to rewards
+          (reward-amount (/ stx-to-spend u2))
         )
         (var-set stake-reward-pool (+ (var-get stake-reward-pool) reward-amount))
       )
       
-      ;; Mint and transfer SNTL tokens to buyer
+      ;; Mint SNTL tokens to buyer
       (try! (contract-call? sentinel-token mint tokens-received-adjusted buyer))
       
       (ok {
@@ -299,12 +326,11 @@
 ;; STAKE-TO-EARN
 ;; ==========================================
 
-;; Stake SNTL tokens to earn STX rewards
+;; Stake SNTL tokens
 (define-public (stake-tokens (amount uint))
   (begin
     (asserts! (>= amount (var-get stake-min-amount)) err-invalid-amount)
     
-    ;; Check user has tokens
     (let
       (
         (user-balance (unwrap! (contract-call? sentinel-token get-balance tx-sender) (err u600)))
@@ -338,13 +364,12 @@
     (asserts! (>= staked amount) err-insufficient-funds)
     (asserts! (> amount u0) err-invalid-amount)
     
-    ;; Calculate STX rewards
     (let
       (
         (reward-rate (var-get stake-reward-rate))
         (reward-pool (var-get stake-reward-pool))
-        (stake-portion (/ (* amount u1000000) staked)) ;; Percentage of total stake
-        (blocks-reward (/ (* blocks-staked reward-rate) u1000000)) ;; Reward per block
+        (stake-portion (/ (* amount u1000000) staked))
+        (blocks-reward (/ (* blocks-staked reward-rate) u1000000))
         (stx-reward (/ (* stake-portion blocks-reward reward-pool) u1000000000000))
       )
       
@@ -363,7 +388,7 @@
       ;; Transfer SNTL back
       (try! (as-contract (contract-call? sentinel-token transfer amount (as-contract tx-sender) staker none)))
       
-      ;; Transfer STX rewards if available
+      ;; Transfer STX rewards
       (if (and (> stx-reward u0) (>= reward-pool stx-reward))
         (begin
           (var-set stake-reward-pool (- reward-pool stx-reward))
@@ -468,38 +493,6 @@
     (try! (stx-transfer? amount tx-sender (as-contract tx-sender)))
     (var-set stake-reward-pool (+ (var-get stake-reward-pool) amount))
     (ok true)
-  )
-)
-
-;; Extend or reset sale (owner only)
-(define-public (extend-sale (new-end-block uint))
-  (begin
-    (asserts! (is-eq tx-sender contract-owner) err-owner-only)
-    (asserts! (> new-end-block stacks-block-height) (err u800))
-    (var-set sale-end-block new-end-block)
-    (var-set sale-active true)
-    (var-set sale-paused false)
-    (ok {
-      new-end-block: new-end-block,
-      current-block: stacks-block-height
-    })
-  )
-)
-
-;; Reset sale completely (owner only) - for restarting after sale ended
-(define-public (reset-sale (start-block uint) (end-block uint))
-  (begin
-    (asserts! (is-eq tx-sender contract-owner) err-owner-only)
-    (asserts! (>= start-block stacks-block-height) (err u801))
-    (asserts! (> end-block start-block) (err u802))
-    (var-set sale-start-block start-block)
-    (var-set sale-end-block end-block)
-    (var-set sale-active true)
-    (var-set sale-paused false)
-    (ok {
-      start: start-block,
-      end: end-block
-    })
   )
 )
 

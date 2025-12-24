@@ -4,7 +4,7 @@ import { request } from '@stacks/connect';
 import { uintCV, principalCV, cvToValue, fetchCallReadOnlyFunction } from '@stacks/transactions';
 
 const CONTRACT_ADDRESS = 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB';
-const CONTRACT_NAME = 'token-sale';
+const CONTRACT_NAME = 'token-sale-v2';
 
 interface TierInfo {
   tier: number;
