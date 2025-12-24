@@ -6,6 +6,7 @@ cmds = ["npm ci"]
 
 [phases.build]
 cmds = ["npm run build"]
+# CHAINHOOKS_API_KEY is only needed at runtime, not during build
 
 [start]
 cmd = "npm start"
