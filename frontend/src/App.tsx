@@ -33,6 +33,8 @@ import NFTGallery from './components/NFTGallery';
 import TokenSale from './components/TokenSale';
 import StakePanel from './components/StakePanel';
 import ProMembership from './components/ProMembership';
+import SBTCBridgeMonitor from './components/SBTCBridgeMonitor';
+import DEXAggregator from './components/DEXAggregator';
 import { WalletProvider } from './contexts/WalletContext';
 import { useApi } from './hooks/useApi';
 import { useWebSocket } from './hooks/useWebSocket';
@@ -43,7 +45,7 @@ const WS_URL = import.meta.env.VITE_WS_URL || 'wss://stacks-defi-sentinel-produc
 function App() {
   const { dashboardStats, isLoading, error, fetchDashboard } = useApi();
   const { isConnected, events } = useWebSocket(WS_URL);
-  const [activeTab, setActiveTab] = useState<'overview' | 'swaps' | 'alerts' | 'ecosystem' | 'subscribe' | 'token-sale' | 'stake' | 'membership'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'swaps' | 'alerts' | 'ecosystem' | 'subscribe' | 'token-sale' | 'stake' | 'membership' | 'sbtc' | 'aggregator'>('overview');
   const [lastUpdate, setLastUpdate] = useState(new Date());
 
   useEffect(() => {
@@ -169,6 +171,8 @@ function App() {
           <div className="flex gap-1 mt-4 -mb-4">
             {[
               { id: 'overview', label: 'Overview', icon: BarChart3 },
+              { id: 'sbtc', label: 'sBTC Bridge', icon: Wallet },
+              { id: 'aggregator', label: 'DEX Aggregator', icon: Zap },
               { id: 'swaps', label: 'Swaps', icon: ArrowRightLeft },
               { id: 'alerts', label: 'Whale Alerts', icon: Bell },
               { id: 'ecosystem', label: 'Ecosystem', icon: Activity },
@@ -331,6 +335,20 @@ function App() {
                   <NFTGallery />
                   <BlockExplorer />
                 </div>
+              </div>
+            )}
+
+            {/* sBTC Bridge Monitor */}
+            {activeTab === 'sbtc' && (
+              <div className="max-w-5xl mx-auto">
+                <SBTCBridgeMonitor />
+              </div>
+            )}
+
+            {/* DEX Aggregator */}
+            {activeTab === 'aggregator' && (
+              <div className="max-w-4xl mx-auto">
+                <DEXAggregator />
               </div>
             )}
 
