@@ -272,24 +272,40 @@ export const DEXAggregator: React.FC = () => {
 
       const contractId = `${router.contract}.${router.name}`;
       
+      // Helper to get contract principal for token (handle native STX)
+      const getTokenContract = (token: Token): [string, string] => {
+        if (token.contract === 'native') {
+          // STX uses wrapped-stx on DEXes
+          return ['SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM', 'token-wstx'];
+        }
+        const parts = token.contract.split('.');
+        return [parts[0], parts[1]];
+      };
+
       // Build function args based on DEX
       let functionArgs: any[] = [];
+      const [fromContractAddr, fromContractName] = getTokenContract(fromToken);
+      const [toContractAddr, toContractName] = getTokenContract(toToken);
       
       if (bestQuote.dex === 'ALEX') {
         functionArgs = [
-          contractPrincipalCV(fromToken.contract.split('.')[0], fromToken.contract.split('.')[1] || 'wrapped-stx-token'),
-          contractPrincipalCV(toToken.contract.split('.')[0], toToken.contract.split('.')[1] || 'token-alex'),
+          contractPrincipalCV(fromContractAddr, fromContractName),
+          contractPrincipalCV(toContractAddr, toContractName),
           uintCV(inputAmountMicro.toString()),
           uintCV(minOutputAmount.toString()),
         ];
       } else if (bestQuote.dex === 'Arkadiko') {
         functionArgs = [
-          contractPrincipalCV(router.contract, 'arkadiko-token'),
+          contractPrincipalCV(fromContractAddr, fromContractName),
+          contractPrincipalCV(toContractAddr, toContractName),
           uintCV(inputAmountMicro.toString()),
           uintCV(minOutputAmount.toString()),
         ];
       } else {
+        // Velar
         functionArgs = [
+          contractPrincipalCV(fromContractAddr, fromContractName),
+          contractPrincipalCV(toContractAddr, toContractName),
           uintCV(inputAmountMicro.toString()),
           uintCV(minOutputAmount.toString()),
         ];
