@@ -5,34 +5,10 @@ authors = []
 telemetry = true
 cache_dir = "./.cache"
 
-[contracts.defi-sentinel]
-path = "contracts/defi-sentinel.clar"
-epoch = "3.1"
-
-[contracts.sentinel-token]
-path = "contracts/sentinel-token-simple.clar"
-epoch = "3.1"
-
-[contracts.token-sale]
-path = "contracts/token-sale.clar"
-epoch = "3.1"
-
-[contracts.token-sale-v2]
-path = "contracts/token-sale-v2.clar"
-epoch = "3.1"
-
-[contracts.token-sale-v3]
-path = "contracts/token-sale-v3.clar"
+[contracts.token-sale-v5]
+path = "contracts/token-sale-v5.clar"
 epoch = "3.1"
 
 [repl.analysis]
 passes = ["check_checker"]
 check_checker = { trusted_sender = false, trusted_caller = false, callee_filter = false }
-
-# Check-checker settings:
-# trusted_sender: if true, inputs are trusted after tx_sender has been checked.
-# trusted_caller: if true, inputs are trusted after contract-caller has been checked.
-# callee_filter: if true, untrusted data may be passed into a private function without a
-# warning, if it gets checked inside. This check will also propagate up to the
-# caller.
-# More informations: https://www.hiro.so/blog/new-safety-checks-in-clarinet
