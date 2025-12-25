@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useWallet } from '../contexts/WalletContext';
 import { request } from '@stacks/connect';
-import { uintCV } from '@stacks/transactions';
+import { uintCV, cvToJSON, hexToCV } from '@stacks/transactions';
 
 interface SaleInfo {
   active: boolean;
@@ -65,36 +65,40 @@ const TokenSale: React.FC = () => {
         }
       );
       const data = await response.json();
+      console.log('Sale info raw response:', data);
+      
       if (data.okay && data.result) {
-        // Parse Clarity response
-        const result = data.result;
+        // Parse hex Clarity response using cvToJSON
+        const cv = hexToCV(data.result);
+        const result = cvToJSON(cv);
+        console.log('Parsed sale info:', result);
+        
+        const getValue = (obj: any, key: string) => {
+          return obj?.value?.[key]?.value ?? obj?.[key]?.value ?? '0';
+        };
+        
+        const getTierData = (obj: any, tierKey: string) => {
+          const tier = obj?.value?.[tierKey]?.value ?? obj?.[tierKey]?.value ?? {};
+          return {
+            price: tier?.price?.value ?? tier?.price ?? '0',
+            total: tier?.total?.value ?? tier?.total ?? '0',
+            sold: tier?.sold?.value ?? tier?.sold ?? '0',
+            remaining: tier?.remaining?.value ?? tier?.remaining ?? '0',
+          };
+        };
+        
         setSaleInfo({
-          active: result.value?.['active']?.value === 'true',
-          paused: result.value?.['paused']?.value === 'true',
-          startBlock: parseInt(result.value?.['start-block']?.value || '0'),
-          endBlock: parseInt(result.value?.['end-block']?.value || '0'),
-          totalAmount: result.value?.['total-amount']?.value || '0',
-          sold: result.value?.['sold']?.value || '0',
-          remaining: result.value?.['remaining']?.value || '0',
-          stxCollected: result.value?.['stx-collected']?.value || '0',
-          tier1: {
-            price: result.value?.['tier1']?.value?.['price']?.value || '0',
-            total: result.value?.['tier1']?.value?.['total']?.value || '0',
-            sold: result.value?.['tier1']?.value?.['sold']?.value || '0',
-            remaining: result.value?.['tier1']?.value?.['remaining']?.value || '0',
-          },
-          tier2: {
-            price: result.value?.['tier2']?.value?.['price']?.value || '0',
-            total: result.value?.['tier2']?.value?.['total']?.value || '0',
-            sold: result.value?.['tier2']?.value?.['sold']?.value || '0',
-            remaining: result.value?.['tier2']?.value?.['remaining']?.value || '0',
-          },
-          tier3: {
-            price: result.value?.['tier3']?.value?.['price']?.value || '0',
-            total: result.value?.['tier3']?.value?.['total']?.value || '0',
-            sold: result.value?.['tier3']?.value?.['sold']?.value || '0',
-            remaining: result.value?.['tier3']?.value?.['remaining']?.value || '0',
-          },
+          active: getValue(result, 'active') === true || getValue(result, 'active') === 'true',
+          paused: getValue(result, 'paused') === true || getValue(result, 'paused') === 'true',
+          startBlock: parseInt(getValue(result, 'start-block')) || 0,
+          endBlock: parseInt(getValue(result, 'end-block')) || 0,
+          totalAmount: getValue(result, 'total-amount'),
+          sold: getValue(result, 'sold'),
+          remaining: getValue(result, 'remaining'),
+          stxCollected: getValue(result, 'stx-collected'),
+          tier1: getTierData(result, 'tier1'),
+          tier2: getTierData(result, 'tier2'),
+          tier3: getTierData(result, 'tier3'),
         });
       }
     } catch (error) {
