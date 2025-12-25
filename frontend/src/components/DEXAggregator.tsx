@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { ArrowRightLeft, TrendingUp, Zap, RefreshCw, ChevronDown, ExternalLink, AlertTriangle } from 'lucide-react';
+import { ArrowRightLeft, TrendingUp, Zap, RefreshCw, ChevronDown, ExternalLink, AlertTriangle, Loader2 } from 'lucide-react';
 import { useWallet } from '../contexts/WalletContext';
+import { request } from '@stacks/connect';
+import { uintCV, contractPrincipalCV } from '@stacks/transactions';
 
 interface Token {
   symbol: string;
@@ -64,6 +66,8 @@ export const DEXAggregator: React.FC = () => {
   const [showFromTokens, setShowFromTokens] = useState(false);
   const [showToTokens, setShowToTokens] = useState(false);
   const [balances, setBalances] = useState<Record<string, string>>({});
+  const [swapping, setSwapping] = useState(false);
+  const [txStatus, setTxStatus] = useState<{ txId?: string; error?: string } | null>(null);
 
   // Fetch token balances
   const fetchBalances = useCallback(async () => {
@@ -218,13 +222,105 @@ export const DEXAggregator: React.FC = () => {
     setToToken(temp);
   };
 
-  const handleSwap = () => {
-    if (!isConnected) {
+  const handleSwap = async () => {
+    if (!isConnected || !userAddress) {
       connectWallet();
       return;
     }
-    // In production, this would execute the swap via the best DEX
-    alert(`Would swap ${amount} ${fromToken.symbol} for ~${bestQuote?.outputAmount} ${toToken.symbol} on ${bestQuote?.dex}`);
+
+    const inputAmount = parseFloat(amount);
+    if (isNaN(inputAmount) || inputAmount <= 0) {
+      setTxStatus({ error: 'Please enter a valid positive amount' });
+      return;
+    }
+
+    if (!bestQuote) {
+      setTxStatus({ error: 'No route available for this swap' });
+      return;
+    }
+
+    setSwapping(true);
+    setTxStatus(null);
+
+    try {
+      const inputAmountMicro = BigInt(Math.floor(inputAmount * Math.pow(10, fromToken.decimals)));
+      const minOutputAmount = BigInt(Math.floor(parseFloat(bestQuote.outputAmount) * 0.97 * Math.pow(10, toToken.decimals))); // 3% slippage
+
+      // DEX Router contracts
+      const DEX_ROUTERS: Record<string, { contract: string; name: string; swapFunction: string }> = {
+        'ALEX': {
+          contract: 'SP102V8P0F7JX67ARQ77WEA3D3CFB5XW39REDT0AM',
+          name: 'amm-swap-pool-v1-1',
+          swapFunction: 'swap-helper',
+        },
+        'Velar': {
+          contract: 'SP1Y5YSTAHZ88XYK1VPDH24GY0HPX5J4JECTMY4A1',
+          name: 'velar-v2',
+          swapFunction: 'swap',
+        },
+        'Arkadiko': {
+          contract: 'SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR',
+          name: 'arkadiko-swap-v2-1',
+          swapFunction: 'swap-x-for-y',
+        },
+      };
+
+      const router = DEX_ROUTERS[bestQuote.dex];
+      if (!router) {
+        throw new Error(`Unsupported DEX: ${bestQuote.dex}`);
+      }
+
+      const contractId = `${router.contract}.${router.name}`;
+      
+      // Build function args based on DEX
+      let functionArgs: any[] = [];
+      
+      if (bestQuote.dex === 'ALEX') {
+        functionArgs = [
+          contractPrincipalCV(fromToken.contract.split('.')[0], fromToken.contract.split('.')[1] || 'wrapped-stx-token'),
+          contractPrincipalCV(toToken.contract.split('.')[0], toToken.contract.split('.')[1] || 'token-alex'),
+          uintCV(inputAmountMicro.toString()),
+          uintCV(minOutputAmount.toString()),
+        ];
+      } else if (bestQuote.dex === 'Arkadiko') {
+        functionArgs = [
+          contractPrincipalCV(router.contract, 'arkadiko-token'),
+          uintCV(inputAmountMicro.toString()),
+          uintCV(minOutputAmount.toString()),
+        ];
+      } else {
+        functionArgs = [
+          uintCV(inputAmountMicro.toString()),
+          uintCV(minOutputAmount.toString()),
+        ];
+      }
+
+      const result = await request(
+        { walletConnect: { projectId: 'e5f06d0d893851277f61878bdf812cbd' } },
+        'stx_callContract',
+        {
+          contract: contractId as `${string}.${string}`,
+          functionName: router.swapFunction,
+          functionArgs: functionArgs,
+          postConditionMode: 'allow' as const,
+          network: 'mainnet' as any,
+        }
+      );
+
+      if (result && result.txid) {
+        setTxStatus({ txId: result.txid });
+        setAmount('');
+        // Refresh balances
+        setTimeout(() => fetchBalances(), 5000);
+      } else {
+        setTxStatus({ error: 'Transaction failed or was cancelled' });
+      }
+    } catch (error: any) {
+      console.error('Swap error:', error);
+      setTxStatus({ error: error?.message || 'Failed to execute swap' });
+    } finally {
+      setSwapping(false);
+    }
   };
 
   return (
@@ -271,8 +367,15 @@ export const DEXAggregator: React.FC = () => {
           <div className="flex items-center gap-4">
             <input
               type="number"
+              min="0"
+              step="0.01"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '' || parseFloat(val) >= 0) {
+                  setAmount(val);
+                }
+              }}
               className="flex-1 bg-transparent text-3xl font-bold text-white outline-none"
               placeholder="0.0"
             />
@@ -391,15 +494,37 @@ export const DEXAggregator: React.FC = () => {
         {/* Swap Button */}
         <button
           onClick={handleSwap}
-          disabled={!bestQuote || loading}
-          className={`w-full mt-4 py-4 rounded-xl font-bold text-lg transition-all ${
-            bestQuote && !loading
+          disabled={!bestQuote || loading || swapping || parseFloat(amount) <= 0}
+          className={`w-full mt-4 py-4 rounded-xl font-bold text-lg transition-all flex items-center justify-center gap-2 ${
+            bestQuote && !loading && !swapping && parseFloat(amount) > 0
               ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white hover:opacity-90'
               : 'bg-gray-600/50 text-gray-400 cursor-not-allowed'
           }`}
         >
-          {!isConnected ? 'Connect Wallet' : loading ? 'Finding Best Price...' : 'Swap'}
+          {swapping && <Loader2 className="w-5 h-5 animate-spin" />}
+          {!isConnected ? 'Connect Wallet' : swapping ? 'Swapping...' : loading ? 'Finding Best Price...' : 'Swap'}
         </button>
+
+        {/* Transaction Status */}
+        {txStatus && (
+          <div className={`mt-4 p-4 rounded-xl ${txStatus.error ? 'bg-red-500/20 border border-red-500/30' : 'bg-green-500/20 border border-green-500/30'}`}>
+            {txStatus.error ? (
+              <p className="text-red-400 text-sm">{txStatus.error}</p>
+            ) : (
+              <div className="text-green-400 text-sm">
+                <p className="font-semibold">Swap submitted! 🎉</p>
+                <a
+                  href={`https://explorer.stacks.co/txid/${txStatus.txId}?chain=mainnet`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 mt-1 text-green-300 hover:text-green-200"
+                >
+                  View on Explorer <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* All Quotes Comparison */}
