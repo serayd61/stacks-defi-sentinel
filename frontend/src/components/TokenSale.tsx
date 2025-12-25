@@ -33,7 +33,7 @@ interface SaleInfo {
 }
 
 const CONTRACT_ADDRESS = 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB';
-const CONTRACT_NAME = 'token-sale-v2';
+const CONTRACT_NAME = 'token-sale-v3';
 const CONTRACT_OWNER = 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB'; // Contract owner address
 
 const TokenSale: React.FC = () => {
