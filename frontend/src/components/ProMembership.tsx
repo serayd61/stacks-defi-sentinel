@@ -119,11 +119,18 @@ export const ProMembership: React.FC = () => {
         
         if (tierResult) {
           const tierValue = cvToValue(tierResult);
+          console.log('Tier value from contract:', tierValue);
+          // Handle both direct value and nested value structures
+          const getName = (val: any): string => {
+            if (typeof val === 'string') return val;
+            if (val?.value) return String(val.value);
+            return 'basic';
+          };
           setUserTier({
-            tier: Number(tierValue.tier),
-            name: tierValue.name,
-            staked: Number(tierValue.staked) / 1_000_000,
-            required: Number(tierValue.required) / 1_000_000,
+            tier: Number(tierValue.tier?.value ?? tierValue.tier ?? 0),
+            name: getName(tierValue.name),
+            staked: Number(tierValue.staked?.value ?? tierValue.staked ?? 0) / 1_000_000,
+            required: Number(tierValue.required?.value ?? tierValue.required ?? 0) / 1_000_000,
           });
         }
 

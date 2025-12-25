@@ -21,6 +21,10 @@ epoch = "3.1"
 path = "contracts/token-sale-v2.clar"
 epoch = "3.1"
 
+[contracts.token-sale-v3]
+path = "contracts/token-sale-v3.clar"
+epoch = "3.1"
+
 [repl.analysis]
 passes = ["check_checker"]
 check_checker = { trusted_sender = false, trusted_caller = false, callee_filter = false }
