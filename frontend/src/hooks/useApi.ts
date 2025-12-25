@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://stacks-defi-sentinel-production.up.railway.app';
 const HIRO_API = 'https://api.hiro.so';
@@ -153,12 +153,13 @@ export function useApi() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const hasLoadedOnce = useRef(false);
 
-  const fetchDashboard = useCallback(async (isInitialLoad = false) => {
+  const fetchDashboard = useCallback(async () => {
     try {
       setError(null);
       // Only show loading spinner on initial load, not on refreshes
-      if (isInitialLoad || !dashboardStats) {
+      if (!hasLoadedOnce.current) {
         setIsLoading(true);
       } else {
         setIsRefreshing(true);
@@ -243,6 +244,7 @@ export function useApi() {
         })),
       });
     setLastUpdated(new Date());
+      hasLoadedOnce.current = true;
     } catch (err) {
       console.error('Error fetching dashboard:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch data');
@@ -250,13 +252,13 @@ export function useApi() {
       setIsLoading(false);
       setIsRefreshing(false);
     }
-  }, [dashboardStats]);
+  }, []);
 
   useEffect(() => {
-    fetchDashboard(true); // Initial load
+    fetchDashboard();
     
     // Refresh every 30 seconds in background
-    const interval = setInterval(() => fetchDashboard(false), 30000);
+    const interval = setInterval(fetchDashboard, 30000);
     return () => clearInterval(interval);
   }, [fetchDashboard]);
 
@@ -266,6 +268,6 @@ export function useApi() {
     isRefreshing,
     error,
     lastUpdated,
-    fetchDashboard: () => fetchDashboard(false),
+    fetchDashboard,
   };
 }
