@@ -52,7 +52,7 @@ const DEXES = [
 const API_URL = import.meta.env.VITE_API_URL || 'https://stacks-defi-sentinel-production.up.railway.app';
 
 export const DEXAggregator: React.FC = () => {
-  const { isConnected, connectWallet } = useWallet();
+  const { isConnected, connectWallet, userAddress } = useWallet();
   const [fromToken, setFromToken] = useState<Token>(TOKENS[0]);
   const [toToken, setToToken] = useState<Token>(TOKENS[1]);
   const [amount, setAmount] = useState('100');
@@ -63,6 +63,63 @@ export const DEXAggregator: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showFromTokens, setShowFromTokens] = useState(false);
   const [showToTokens, setShowToTokens] = useState(false);
+  const [balances, setBalances] = useState<Record<string, string>>({});
+
+  // Fetch token balances
+  const fetchBalances = useCallback(async () => {
+    if (!userAddress) return;
+    
+    const newBalances: Record<string, string> = {};
+    
+    try {
+      // Fetch STX balance
+      const stxResponse = await fetch(
+        `https://api.hiro.so/extended/v1/address/${userAddress}/stx`
+      );
+      if (stxResponse.ok) {
+        const stxData = await stxResponse.json();
+        newBalances['STX'] = (parseInt(stxData.balance) / 1_000_000).toFixed(2);
+      }
+      
+      // Fetch SIP-010 token balances
+      for (const token of TOKENS.filter(t => t.contract !== 'native')) {
+        try {
+          const [contractAddress, contractName] = token.contract.split('.');
+          const response = await fetch(
+            `https://api.hiro.so/v2/contracts/call-read/${contractAddress}/${contractName}/get-balance`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                sender: userAddress,
+                arguments: [`0x0516${userAddress.slice(2).padStart(40, '0')}`],
+              }),
+            }
+          );
+          if (response.ok) {
+            const data = await response.json();
+            if (data.okay && data.result) {
+              const hexValue = data.result.replace(/^0x0[0-9a-f]/, '');
+              const balance = parseInt(hexValue, 16) || 0;
+              newBalances[token.symbol] = (balance / Math.pow(10, token.decimals)).toFixed(4);
+            }
+          }
+        } catch (e) {
+          // Token balance fetch failed, continue
+        }
+      }
+      
+      setBalances(newBalances);
+    } catch (error) {
+      console.error('Error fetching balances:', error);
+    }
+  }, [userAddress]);
+
+  useEffect(() => {
+    if (isConnected && userAddress) {
+      fetchBalances();
+    }
+  }, [isConnected, userAddress, fetchBalances]);
 
   const fetchQuotes = useCallback(async () => {
     if (!amount || parseFloat(amount) <= 0) return;
@@ -199,7 +256,17 @@ export const DEXAggregator: React.FC = () => {
         <div className="bg-black/30 rounded-xl p-4 mb-2">
           <div className="flex justify-between text-sm text-gray-400 mb-2">
             <span>From</span>
-            <span>Balance: --</span>
+            <div className="flex items-center gap-2">
+              <span>Balance: {balances[fromToken.symbol] || '--'} {fromToken.symbol}</span>
+              {balances[fromToken.symbol] && (
+                <button
+                  onClick={() => setAmount(balances[fromToken.symbol])}
+                  className="text-xs px-2 py-0.5 bg-purple-500/30 rounded text-purple-300 hover:bg-purple-500/50"
+                >
+                  MAX
+                </button>
+              )}
+            </div>
           </div>
           <div className="flex items-center gap-4">
             <input
@@ -255,7 +322,7 @@ export const DEXAggregator: React.FC = () => {
         <div className="bg-black/30 rounded-xl p-4 mt-2">
           <div className="flex justify-between text-sm text-gray-400 mb-2">
             <span>To (estimated)</span>
-            <span>Balance: --</span>
+            <span>Balance: {balances[toToken.symbol] || '--'} {toToken.symbol}</span>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex-1 text-3xl font-bold text-white">
