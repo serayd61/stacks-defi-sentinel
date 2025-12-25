@@ -43,7 +43,7 @@ const API_URL = import.meta.env.VITE_API_URL || 'https://stacks-defi-sentinel-pr
 const WS_URL = import.meta.env.VITE_WS_URL || 'wss://stacks-defi-sentinel-production.up.railway.app/ws';
 
 function App() {
-  const { dashboardStats, isLoading, error, fetchDashboard } = useApi();
+  const { dashboardStats, isLoading, isRefreshing, error, fetchDashboard } = useApi();
   const { isConnected, events } = useWebSocket(WS_URL);
   const [activeTab, setActiveTab] = useState<'overview' | 'swaps' | 'alerts' | 'ecosystem' | 'subscribe' | 'token-sale' | 'stake' | 'membership' | 'sbtc' | 'aggregator'>('overview');
   const [lastUpdate, setLastUpdate] = useState(new Date());
@@ -114,7 +114,11 @@ function App() {
             <div className="flex items-center gap-4">
               {/* Last Update */}
               <div className="hidden md:flex items-center gap-2 text-xs text-gray-500">
-                <Clock className="w-3 h-3" />
+                {isRefreshing ? (
+                  <RefreshCw className="w-3 h-3 animate-spin text-purple-400" />
+                ) : (
+                  <Clock className="w-3 h-3" />
+                )}
                 <span>Updated {lastUpdate.toLocaleTimeString()}</span>
               </div>
 

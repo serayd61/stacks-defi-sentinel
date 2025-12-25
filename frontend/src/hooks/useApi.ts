@@ -150,12 +150,19 @@ function formatTransaction(tx: any, stxPrice: number): any {
 export function useApi() {
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
-  const fetchDashboard = useCallback(async () => {
+  const fetchDashboard = useCallback(async (isInitialLoad = false) => {
     try {
       setError(null);
-      setIsLoading(true);
+      // Only show loading spinner on initial load, not on refreshes
+      if (isInitialLoad || !dashboardStats) {
+        setIsLoading(true);
+      } else {
+        setIsRefreshing(true);
+      }
       
       // Fetch data in parallel
       const [stxPrice, recentTxs, largeTransfers, dexActivity, mempoolTxs] = await Promise.all([
@@ -235,26 +242,30 @@ export function useApi() {
           recipient: tx.recipient,
         })),
       });
+    setLastUpdated(new Date());
     } catch (err) {
       console.error('Error fetching dashboard:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch data');
     } finally {
       setIsLoading(false);
+      setIsRefreshing(false);
     }
-  }, []);
+  }, [dashboardStats]);
 
   useEffect(() => {
-    fetchDashboard();
+    fetchDashboard(true); // Initial load
     
-    // Refresh every 30 seconds
-    const interval = setInterval(fetchDashboard, 30000);
+    // Refresh every 30 seconds in background
+    const interval = setInterval(() => fetchDashboard(false), 30000);
     return () => clearInterval(interval);
   }, [fetchDashboard]);
 
   return {
     dashboardStats,
     isLoading,
+    isRefreshing,
     error,
-    fetchDashboard,
+    lastUpdated,
+    fetchDashboard: () => fetchDashboard(false),
   };
 }
