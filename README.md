@@ -46,22 +46,29 @@ This project is built for the **Stacks Builder Challenge** and demonstrates:
 - **🎁 Airdrops** - Early adopter rewards
 - **🔒 Team Vesting** - 6-month cliff, 12-month vesting
 
-### NEW: Advanced Features
+### NEW: Advanced DeFi Features
+- **🏦 Lending Protocol** - Collateralized borrowing with STX
+- **📈 Price Oracle** - Real-time price feeds for STX, sBTC, SNTL
+- **🔐 Multisig Treasury** - N-of-M signature DAO treasury
+- **💰 Token Sale (ICO)** - 3-tier pricing with 50M SNTL supply
+- **⚡ Liquidation Engine** - Automatic unhealthy loan liquidation
 - **🏆 Builder Leaderboard** - Track your rank in Stacks Builder Challenge
 - **💼 Portfolio Tracker** - Monitor your tokens and NFTs
-- **⛽ Gas Tracker** - Real-time transaction fee monitoring
 - **🗳️ DAO Voting** - On-chain governance proposals
 - **🎁 Referral System** - Earn rewards by inviting friends
-- **📊 Advanced Analytics** - Portfolio allocation & performance
 
-## 📜 Smart Contracts
+## 📜 Smart Contracts (Mainnet)
 
 | Contract | Address | Description |
 |----------|---------|-------------|
 | `defi-sentinel` | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB` | Subscription & alerts |
 | `sentinel-token` | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB` | SNTL token (SIP-010) |
-| `sentinel-staking` | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB` | Staking with tiered APY |
-| `sentinel-dao` | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB` | DAO governance voting |
+| `sentinel-staking-v2` | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB` | Staking with tiered APY |
+| `sentinel-dao-v2` | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB` | DAO governance voting |
+| `token-sale-v8` | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB` | ICO with 3-tier pricing |
+| `sentinel-lending` | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB` | Collateralized lending |
+| `sentinel-oracle` | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB` | Price feeds for STX/sBTC/SNTL |
+| `sentinel-multisig-v2` | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB` | Multi-sig treasury |
 
 ### Contract Functions
 
@@ -97,8 +104,33 @@ This project is built for the **Stacks Builder Challenge** and demonstrates:
 (define-public (cast-vote (proposal-id uint) (vote-for bool)))
 (define-public (execute-proposal (proposal-id uint)))
 (define-public (delegate-voting-power (delegate principal)))
-(define-read-only (get-proposal (proposal-id uint)))
-(define-read-only (is-proposal-passed (proposal-id uint)))
+```
+
+**sentinel-lending:**
+```clarity
+(define-public (borrow (collateral-stx uint) (borrow-amount uint))) ;; Deposit STX, borrow SNTL
+(define-public (add-collateral (amount uint))) ;; Add more collateral
+(define-public (record-repayment (repay-amount uint))) ;; Repay loan
+(define-public (liquidate (borrower principal))) ;; Liquidate unhealthy position
+(define-read-only (get-health-factor (user principal))) ;; Check loan health
+(define-read-only (get-max-borrow (collateral-stx uint))) ;; Max borrowable amount
+```
+
+**sentinel-oracle:**
+```clarity
+(define-public (submit-prices (stx-price uint) (sbtc-price uint) (sntl-price uint)))
+(define-read-only (get-stx-price)) ;; Get STX/USD price
+(define-read-only (get-sbtc-price)) ;; Get sBTC/USD price
+(define-read-only (get-all-prices)) ;; Get all prices
+(define-read-only (is-price-fresh (asset-id uint))) ;; Check if price is fresh
+```
+
+**sentinel-multisig:**
+```clarity
+(define-public (propose-stx-transfer (recipient principal) (amount uint) (memo ...)))
+(define-public (sign-transaction (tx-id uint))) ;; Sign pending tx
+(define-public (execute-transaction (tx-id uint))) ;; Execute when threshold met
+(define-read-only (can-execute (tx-id uint))) ;; Check if ready to execute
 ```
 
 ## 📦 Architecture
