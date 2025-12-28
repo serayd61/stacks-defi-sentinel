@@ -46,12 +46,22 @@ This project is built for the **Stacks Builder Challenge** and demonstrates:
 - **🎁 Airdrops** - Early adopter rewards
 - **🔒 Team Vesting** - 6-month cliff, 12-month vesting
 
+### NEW: Advanced Features
+- **🏆 Builder Leaderboard** - Track your rank in Stacks Builder Challenge
+- **💼 Portfolio Tracker** - Monitor your tokens and NFTs
+- **⛽ Gas Tracker** - Real-time transaction fee monitoring
+- **🗳️ DAO Voting** - On-chain governance proposals
+- **🎁 Referral System** - Earn rewards by inviting friends
+- **📊 Advanced Analytics** - Portfolio allocation & performance
+
 ## 📜 Smart Contracts
 
 | Contract | Address | Description |
 |----------|---------|-------------|
 | `defi-sentinel` | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB` | Subscription & alerts |
 | `sentinel-token` | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB` | SNTL token (SIP-010) |
+| `sentinel-staking` | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB` | Staking with tiered APY |
+| `sentinel-dao` | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB` | DAO governance voting |
 
 ### Contract Functions
 
@@ -69,6 +79,26 @@ This project is built for the **Stacks Builder Challenge** and demonstrates:
 (define-public (mint (amount uint) (to principal))) ;; Owner only
 (define-public (init-vesting)) ;; Start team vesting
 (define-public (claim-vested)) ;; Claim vested tokens
+```
+
+**sentinel-staking:**
+```clarity
+(define-public (stake (amount uint) (lock-period uint) (referrer (optional principal))))
+(define-public (claim-rewards)) ;; Claim staking rewards
+(define-public (unstake)) ;; Withdraw staked tokens
+(define-public (add-to-stake (additional-amount uint))) ;; Add more tokens
+(define-read-only (get-stake (staker principal))) ;; Get stake info
+(define-read-only (calculate-pending-rewards (staker principal))) ;; Calculate rewards
+```
+
+**sentinel-dao:**
+```clarity
+(define-public (create-proposal (title ...) (description ...) (proposal-type uint)))
+(define-public (cast-vote (proposal-id uint) (vote-for bool)))
+(define-public (execute-proposal (proposal-id uint)))
+(define-public (delegate-voting-power (delegate principal)))
+(define-read-only (get-proposal (proposal-id uint)))
+(define-read-only (is-proposal-passed (proposal-id uint)))
 ```
 
 ## 📦 Architecture
@@ -212,16 +242,29 @@ ws.onmessage = (event) => {
 
 ## 🗺️ Roadmap
 
+### Phase 1 - Core ✅
 - [x] Real-time dashboard
 - [x] Chainhooks integration
 - [x] Multi-wallet support
 - [x] Subscription system
 - [x] SENTINEL token
 - [x] Reown AppKit integration
-- [ ] Telegram/Discord bot
+
+### Phase 2 - Advanced Features ✅
+- [x] Builder Challenge Leaderboard
+- [x] Portfolio Tracker with NFT support
+- [x] Gas/Fee Tracker
+- [x] DAO Governance Voting
+- [x] Referral Reward System
+- [x] Advanced Staking Contract
+- [x] DEX Aggregator
+
+### Phase 3 - Expansion 🚀
+- [ ] Telegram/Discord bot notifications
 - [ ] DEX listing (ALEX, Velar)
-- [ ] Mobile app
-- [ ] Advanced analytics
+- [ ] Mobile app (React Native)
+- [ ] Cross-chain analytics
+- [ ] AI-powered alerts
 
 ## 🤝 Contributing
 

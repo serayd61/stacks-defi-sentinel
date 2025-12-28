@@ -16,7 +16,11 @@ import {
   Clock,
   RefreshCw,
   CreditCard,
-  Crown
+  Crown,
+  Trophy,
+  Gift,
+  Vote,
+  Gauge
 } from 'lucide-react';
 import { StatCard } from './components/StatCard';
 import { SwapTable } from './components/SwapTable';
@@ -35,6 +39,14 @@ import StakePanel from './components/StakePanel';
 import ProMembership from './components/ProMembership';
 import SBTCBridgeMonitor from './components/SBTCBridgeMonitor';
 import DEXAggregator from './components/DEXAggregator';
+import StacksBadge from './components/StacksBadge';
+import StacksPredict from './components/StacksPredict';
+import StacksPassport from './components/StacksPassport';
+import StacksLeaderboard from './components/StacksLeaderboard';
+import PortfolioTracker from './components/PortfolioTracker';
+import GasTracker from './components/GasTracker';
+import DAOVoting from './components/DAOVoting';
+import ReferralSystem from './components/ReferralSystem';
 import { WalletProvider } from './contexts/WalletContext';
 import { useApi } from './hooks/useApi';
 import { useWebSocket } from './hooks/useWebSocket';
@@ -45,7 +57,7 @@ const WS_URL = import.meta.env.VITE_WS_URL || 'wss://stacks-defi-sentinel-produc
 function App() {
   const { dashboardStats, isLoading, isRefreshing, error, fetchDashboard } = useApi();
   const { isConnected, events } = useWebSocket(WS_URL);
-  const [activeTab, setActiveTab] = useState<'overview' | 'swaps' | 'alerts' | 'ecosystem' | 'subscribe' | 'token-sale' | 'stake' | 'membership' | 'sbtc' | 'aggregator'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'swaps' | 'alerts' | 'ecosystem' | 'subscribe' | 'token-sale' | 'stake' | 'membership' | 'sbtc' | 'aggregator' | 'badges' | 'predict' | 'passport' | 'leaderboard' | 'portfolio' | 'gas' | 'dao' | 'referral'>('overview');
   const [lastUpdate, setLastUpdate] = useState(new Date());
 
   useEffect(() => {
@@ -183,6 +195,14 @@ function App() {
               { id: 'token-sale', label: 'Token Sale', icon: CreditCard },
               { id: 'stake', label: 'Stake & Earn', icon: Droplets },
               { id: 'membership', label: 'Pro Access', icon: Crown },
+              { id: 'passport', label: 'Passport', icon: Users },
+              { id: 'badges', label: 'Badges', icon: Crown },
+              { id: 'predict', label: 'Predict', icon: TrendingUp },
+              { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
+              { id: 'portfolio', label: 'Portfolio', icon: Wallet },
+              { id: 'gas', label: 'Gas', icon: Zap },
+              { id: 'dao', label: 'DAO', icon: Users },
+              { id: 'referral', label: 'Referral', icon: Users },
               { id: 'subscribe', label: 'Subscribe', icon: CreditCard },
             ].map((tab) => (
               <button
@@ -374,6 +394,62 @@ function App() {
             {activeTab === 'membership' && (
               <div className="max-w-5xl mx-auto">
                 <ProMembership />
+              </div>
+            )}
+
+            {/* StacksPassport Section */}
+            {activeTab === 'passport' && (
+              <div className="max-w-5xl mx-auto">
+                <StacksPassport />
+              </div>
+            )}
+
+            {/* StacksBadge Section */}
+            {activeTab === 'badges' && (
+              <div className="max-w-5xl mx-auto">
+                <StacksBadge />
+              </div>
+            )}
+
+            {/* StacksPredict Section */}
+            {activeTab === 'predict' && (
+              <div className="max-w-4xl mx-auto">
+                <StacksPredict />
+              </div>
+            )}
+
+            {/* Leaderboard Section */}
+            {activeTab === 'leaderboard' && (
+              <div className="max-w-5xl mx-auto">
+                <StacksLeaderboard />
+              </div>
+            )}
+
+            {/* Portfolio Section */}
+            {activeTab === 'portfolio' && (
+              <div className="max-w-4xl mx-auto">
+                <PortfolioTracker />
+              </div>
+            )}
+
+            {/* Gas Tracker Section */}
+            {activeTab === 'gas' && (
+              <div className="max-w-4xl mx-auto">
+                <GasTracker />
+              </div>
+            )}
+
+            {/* DAO Voting Section */}
+            {activeTab === 'dao' && (
+              <div className="max-w-5xl mx-auto">
+                <DAOVoting />
+              </div>
+            )}
+
+            {/* Referral Section */}
+            {activeTab === 'referral' && (
+              <div className="max-w-4xl mx-auto">
+                <ReferralSystem />
               </div>
             )}
 

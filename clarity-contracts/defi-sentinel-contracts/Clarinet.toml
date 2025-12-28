@@ -5,8 +5,8 @@ authors = []
 telemetry = true
 cache_dir = "./.cache"
 
-[contracts.token-sale-v5]
-path = "contracts/token-sale-v5.clar"
+[contracts.stacks-passport]
+path = "contracts/stacks-passport.clar"
 epoch = "3.1"
 
 [repl.analysis]

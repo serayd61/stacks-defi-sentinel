@@ -33,3 +33,5 @@ Railway'de aşağıdaki environment variable'ları ekleyin:
 ## Not:
 `CHAINHOOKS_API_KEY` opsiyoneldir. Eğer set edilmezse, server çalışmaya devam eder ancak real-time chainhook events aktif olmaz.
 
+
+

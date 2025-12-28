@@ -322,3 +322,5 @@ const NFTGallery: React.FC = () => {
 export default NFTGallery;
 
 
+
+
