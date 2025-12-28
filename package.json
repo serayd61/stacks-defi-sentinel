@@ -42,6 +42,8 @@
     "@fastify/websocket": "^8.3.1",
     "@hirosystems/chainhooks-client": "^1.0.0",
     "@sinclair/typebox": "^0.32.35",
+    "@stacks/network": "^7.3.1",
+    "@stacks/transactions": "^7.3.1",
     "dotenv": "^16.3.1",
     "fastify": "^4.29.1",
     "ioredis": "^5.6.1",
