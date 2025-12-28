@@ -8,43 +8,50 @@ cache_dir = "./.cache"
 # SIP-010 Trait (must be first)
 [contracts.sip-010-trait]
 path = "contracts/sip-010-trait.clar"
-epoch = "3.1"
+clarity_version = 3
+epoch = 3.0
 
 # Simple Token (standalone, no dependencies)
 [contracts.sentinel-token-simple]
 path = "contracts/sentinel-token-simple.clar"
-epoch = "3.1"
-depends_on = ["sip-010-trait"]
+clarity_version = 3
+epoch = 3.0
 
 # Main DeFi Sentinel
 [contracts.defi-sentinel]
 path = "contracts/defi-sentinel.clar"
-epoch = "3.1"
+clarity_version = 3
+epoch = 3.0
 
 # Staking System
 [contracts.sentinel-staking]
 path = "contracts/sentinel-staking.clar"
-epoch = "3.1"
+clarity_version = 3
+epoch = 3.0
 
 # DAO Governance
 [contracts.sentinel-dao]
 path = "contracts/sentinel-dao.clar"
-epoch = "3.1"
+clarity_version = 3
+epoch = 3.0
 
 # Stacks Passport
 [contracts.stacks-passport]
 path = "contracts/stacks-passport.clar"
-epoch = "3.1"
+clarity_version = 3
+epoch = 3.0
 
 # Stacks Badge
 [contracts.stacks-badge]
 path = "contracts/stacks-badge.clar"
-epoch = "3.1"
+clarity_version = 3
+epoch = 3.0
 
 # Stacks Predict
 [contracts.stacks-predict]
 path = "contracts/stacks-predict.clar"
-epoch = "3.1"
+clarity_version = 3
+epoch = 3.0
 
 [repl.analysis]
 passes = ["check_checker"]
