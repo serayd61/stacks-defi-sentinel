@@ -18,9 +18,24 @@ import {
   CreditCard,
   Crown,
   Trophy,
-  Gift,
   Vote,
-  Gauge
+  ChevronRight,
+  Menu,
+  X,
+  Landmark,
+  Shield,
+  Coins,
+  Target,
+  Award,
+  BookOpen,
+  PieChart,
+  Fuel,
+  Gift,
+  Layers,
+  Database,
+  LineChart,
+  Star,
+  ChevronDown
 } from 'lucide-react';
 import { StatCard } from './components/StatCard';
 import { SwapTable } from './components/SwapTable';
@@ -48,18 +63,82 @@ import GasTracker from './components/GasTracker';
 import DAOVoting from './components/DAOVoting';
 import ReferralSystem from './components/ReferralSystem';
 import LendingPool from './components/LendingPool';
-import { WalletProvider } from './contexts/WalletContext';
+import { WalletProvider, useWallet } from './contexts/WalletContext';
 import { useApi } from './hooks/useApi';
 import { useWebSocket } from './hooks/useWebSocket';
 
 const API_URL = import.meta.env.VITE_API_URL || 'https://stacks-defi-sentinel-production.up.railway.app';
 const WS_URL = import.meta.env.VITE_WS_URL || 'wss://stacks-defi-sentinel-production.up.railway.app/ws';
 
+type TabType = 'overview' | 'swaps' | 'alerts' | 'ecosystem' | 'subscribe' | 'token-sale' | 'stake' | 'lending' | 'membership' | 'sbtc' | 'aggregator' | 'badges' | 'predict' | 'passport' | 'leaderboard' | 'portfolio' | 'gas' | 'dao' | 'referral';
+
+// Navigation categories
+const navCategories = [
+  {
+    name: 'Overview',
+    icon: BarChart3,
+    items: [
+      { id: 'overview', label: 'Dashboard', icon: BarChart3, description: 'Platform overview & stats' },
+      { id: 'portfolio', label: 'Portfolio', icon: PieChart, description: 'Track your assets' },
+      { id: 'leaderboard', label: 'Leaderboard', icon: Trophy, description: 'Top performers' },
+    ]
+  },
+  {
+    name: 'Trading',
+    icon: ArrowRightLeft,
+    items: [
+      { id: 'aggregator', label: 'DEX Aggregator', icon: Zap, description: 'Best swap rates', hot: true },
+      { id: 'swaps', label: 'Swap History', icon: ArrowRightLeft, description: 'Recent trades' },
+      { id: 'alerts', label: 'Whale Alerts', icon: Bell, description: 'Large transactions' },
+    ]
+  },
+  {
+    name: 'DeFi',
+    icon: Landmark,
+    items: [
+      { id: 'lending', label: 'Lending', icon: Landmark, description: 'Borrow & lend', new: true },
+      { id: 'stake', label: 'Staking', icon: Coins, description: 'Earn rewards' },
+      { id: 'sbtc', label: 'sBTC Bridge', icon: Database, description: 'Bitcoin bridge' },
+    ]
+  },
+  {
+    name: 'Token',
+    icon: Coins,
+    items: [
+      { id: 'token-sale', label: 'Token Sale', icon: CreditCard, description: 'Buy SNTL tokens', hot: true },
+      { id: 'membership', label: 'Pro Access', icon: Crown, description: 'Premium features' },
+      { id: 'gas', label: 'Gas Tracker', icon: Fuel, description: 'Transaction fees' },
+    ]
+  },
+  {
+    name: 'Governance',
+    icon: Shield,
+    items: [
+      { id: 'dao', label: 'DAO Voting', icon: Vote, description: 'Governance proposals' },
+      { id: 'passport', label: 'Passport', icon: BookOpen, description: 'Digital identity' },
+      { id: 'badges', label: 'Badges', icon: Award, description: 'Achievement NFTs' },
+    ]
+  },
+  {
+    name: 'Ecosystem',
+    icon: Layers,
+    items: [
+      { id: 'ecosystem', label: 'Explore', icon: Activity, description: 'Full ecosystem' },
+      { id: 'predict', label: 'Predictions', icon: Target, description: 'Market predictions' },
+      { id: 'referral', label: 'Referrals', icon: Gift, description: 'Earn rewards' },
+    ]
+  },
+];
+
 function App() {
   const { dashboardStats, isLoading, isRefreshing, error, fetchDashboard } = useApi();
-  const { isConnected, events } = useWebSocket(WS_URL);
-  const [activeTab, setActiveTab] = useState<'overview' | 'swaps' | 'alerts' | 'ecosystem' | 'subscribe' | 'token-sale' | 'stake' | 'lending' | 'membership' | 'sbtc' | 'aggregator' | 'badges' | 'predict' | 'passport' | 'leaderboard' | 'portfolio' | 'gas' | 'dao' | 'referral'>('overview');
+  const { isConnected: wsConnected, events } = useWebSocket(WS_URL);
+  const { isConnected: walletConnected, userAddress, connectWallet, stxBalance } = useWallet();
+  const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [expandedCategory, setExpandedCategory] = useState<string | null>('Overview');
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -82,7 +161,6 @@ function App() {
     return num.toString();
   };
 
-  // Combine API data with real-time WebSocket events
   const combinedSwaps = [
     ...events.swaps,
     ...(dashboardStats?.recentSwaps || []),
@@ -96,430 +174,444 @@ function App() {
 
   const totalAlerts = combinedAlerts.length + events.alerts.length;
 
+  const currentNavItem = navCategories.flatMap(c => c.items).find(i => i.id === activeTab);
+
   return (
-    <div className="min-h-screen bg-[#0a0a0f]">
+    <div className="min-h-screen bg-[#0a0a0f] flex">
       {/* Animated Background */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-600/20 rounded-full blur-[100px] animate-pulse-slow" />
-        <div className="absolute top-1/2 -left-40 w-80 h-80 bg-orange-500/10 rounded-full blur-[100px] animate-pulse-slow" />
-        <div className="absolute -bottom-40 right-1/3 w-80 h-80 bg-blue-600/10 rounded-full blur-[100px] animate-pulse-slow" />
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-600/20 rounded-full blur-[100px] animate-pulse" />
+        <div className="absolute top-1/2 -left-40 w-80 h-80 bg-orange-500/10 rounded-full blur-[100px] animate-pulse" />
+        <div className="absolute -bottom-40 right-1/3 w-80 h-80 bg-blue-600/10 rounded-full blur-[100px] animate-pulse" />
       </div>
 
-      {/* Header */}
-      <header className="relative border-b border-white/5 bg-black/40 backdrop-blur-xl sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-[#5546FF] via-purple-500 to-[#FC6432] flex items-center justify-center shadow-lg shadow-purple-500/25">
-                  <Zap className="w-7 h-7 text-white" />
-                </div>
-                <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 rounded-full border-2 border-[#0a0a0f] animate-pulse" />
+      {/* Sidebar - Desktop */}
+      <aside className={`hidden lg:flex flex-col fixed left-0 top-0 h-full bg-[#0d0d14]/95 backdrop-blur-xl border-r border-white/5 z-40 transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-20'}`}>
+        {/* Logo */}
+        <div className="p-4 border-b border-white/5">
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#5546FF] via-purple-500 to-[#FC6432] flex items-center justify-center shadow-lg shadow-purple-500/25">
+                <Zap className="w-5 h-5 text-white" />
               </div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-[#0d0d14]" />
+            </div>
+            {sidebarOpen && (
               <div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-white via-purple-200 to-orange-200 bg-clip-text text-transparent">
-                  Stacks DeFi Sentinel
-                </h1>
-                <p className="text-xs text-gray-500 font-mono">Powered by Chainhooks</p>
+                <h1 className="font-bold text-white">DeFi Sentinel</h1>
+                <p className="text-[10px] text-gray-500 font-mono">Stacks Mainnet</p>
               </div>
+            )}
+          </div>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto py-4 px-2">
+          {navCategories.map((category) => (
+            <div key={category.name} className="mb-2">
+              {sidebarOpen ? (
+                <>
+                  <button
+                    onClick={() => setExpandedCategory(expandedCategory === category.name ? null : category.name)}
+                    className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors"
+                  >
+                    <span className="flex items-center gap-2">
+                      <category.icon className="w-4 h-4" />
+                      {category.name}
+                    </span>
+                    <ChevronDown className={`w-3 h-3 transition-transform ${expandedCategory === category.name ? 'rotate-180' : ''}`} />
+                  </button>
+                  {expandedCategory === category.name && (
+                    <div className="space-y-1 mt-1">
+                      {category.items.map((item) => (
+                        <button
+                          key={item.id}
+                          onClick={() => setActiveTab(item.id as TabType)}
+                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all group ${
+                            activeTab === item.id
+                              ? 'bg-gradient-to-r from-purple-500/20 to-orange-500/10 text-white border border-purple-500/30'
+                              : 'text-gray-400 hover:text-white hover:bg-white/5'
+                          }`}
+                        >
+                          <item.icon className={`w-4 h-4 ${activeTab === item.id ? 'text-purple-400' : 'text-gray-500 group-hover:text-purple-400'}`} />
+                          <div className="flex-1 text-left">
+                            <div className="flex items-center gap-2">
+                              {item.label}
+                              {item.hot && <span className="px-1.5 py-0.5 bg-orange-500/20 text-orange-400 text-[10px] rounded-full">HOT</span>}
+                              {item.new && <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 text-[10px] rounded-full">NEW</span>}
+                            </div>
+                          </div>
+                          {activeTab === item.id && <ChevronRight className="w-4 h-4 text-purple-400" />}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="space-y-1">
+                  {category.items.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setActiveTab(item.id as TabType)}
+                      className={`w-full flex items-center justify-center p-3 rounded-xl transition-all group ${
+                        activeTab === item.id
+                          ? 'bg-gradient-to-r from-purple-500/20 to-orange-500/10 text-white'
+                          : 'text-gray-400 hover:text-white hover:bg-white/5'
+                      }`}
+                      title={item.label}
+                    >
+                      <item.icon className={`w-5 h-5 ${activeTab === item.id ? 'text-purple-400' : ''}`} />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ))}
+        </nav>
+
+        {/* Sidebar Footer */}
+        <div className="p-4 border-t border-white/5">
+          {sidebarOpen ? (
+            <div className="space-y-3">
+              {/* Quick Stats */}
+              <div className="bg-gradient-to-r from-purple-500/10 to-orange-500/10 rounded-xl p-3 border border-purple-500/20">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-gray-400">TVL</span>
+                  <span className="text-xs text-green-400">+12.5%</span>
+                </div>
+                <div className="text-lg font-bold text-white">$142.50M</div>
+              </div>
+              
+              {/* Toggle Button */}
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="w-full flex items-center justify-center gap-2 py-2 text-gray-500 hover:text-white transition-colors"
+              >
+                <ChevronRight className="w-4 h-4 rotate-180" />
+                <span className="text-xs">Collapse</span>
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="w-full flex items-center justify-center py-2 text-gray-500 hover:text-white transition-colors"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          )}
+        </div>
+      </aside>
+
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 bg-black/80 z-50 lg:hidden" onClick={() => setMobileMenuOpen(false)}>
+          <aside className="w-72 h-full bg-[#0d0d14] p-4 overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#5546FF] to-[#FC6432] flex items-center justify-center">
+                  <Zap className="w-5 h-5 text-white" />
+                </div>
+                <span className="font-bold text-white">DeFi Sentinel</span>
+              </div>
+              <button onClick={() => setMobileMenuOpen(false)} className="p-2 hover:bg-white/10 rounded-lg">
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
             </div>
             
-            <div className="flex items-center gap-4">
-              {/* Last Update */}
-              <div className="hidden md:flex items-center gap-2 text-xs text-gray-500">
-                {isRefreshing ? (
-                  <RefreshCw className="w-3 h-3 animate-spin text-purple-400" />
-                ) : (
-                  <Clock className="w-3 h-3" />
-                )}
-                <span>Updated {lastUpdate.toLocaleTimeString()}</span>
+            {navCategories.map((category) => (
+              <div key={category.name} className="mb-4">
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 mb-2">{category.name}</div>
+                <div className="space-y-1">
+                  {category.items.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => { setActiveTab(item.id as TabType); setMobileMenuOpen(false); }}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
+                        activeTab === item.id
+                          ? 'bg-purple-500/20 text-white'
+                          : 'text-gray-400 hover:text-white hover:bg-white/5'
+                      }`}
+                    >
+                      <item.icon className="w-4 h-4" />
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </aside>
+        </div>
+      )}
+
+      {/* Main Content */}
+      <main className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : 'lg:ml-20'}`}>
+        {/* Top Header */}
+        <header className="sticky top-0 z-30 bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-white/5">
+          <div className="px-4 lg:px-6 py-3">
+            <div className="flex items-center justify-between">
+              {/* Left: Mobile Menu + Breadcrumb */}
+              <div className="flex items-center gap-4">
+                <button
+                  onClick={() => setMobileMenuOpen(true)}
+                  className="lg:hidden p-2 hover:bg-white/10 rounded-lg"
+                >
+                  <Menu className="w-5 h-5 text-gray-400" />
+                </button>
+                
+                <div className="hidden sm:flex items-center gap-2 text-sm">
+                  <span className="text-gray-500">{currentNavItem?.label || 'Dashboard'}</span>
+                  {currentNavItem?.description && (
+                    <>
+                      <ChevronRight className="w-4 h-4 text-gray-600" />
+                      <span className="text-gray-400">{currentNavItem.description}</span>
+                    </>
+                  )}
+                </div>
               </div>
 
-              {/* Connection Status */}
-              <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-all ${
-                isConnected 
-                  ? 'bg-green-500/10 text-green-400 border border-green-500/20' 
-                  : 'bg-red-500/10 text-red-400 border border-red-500/20'
-              }`}>
-                {isConnected ? (
-                  <>
-                    <span className="relative flex h-2 w-2">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              {/* Right: Status + Wallet */}
+              <div className="flex items-center gap-3">
+                {/* Live Status */}
+                <div className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
+                  wsConnected 
+                    ? 'bg-green-500/10 text-green-400 border border-green-500/20' 
+                    : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
+                }`}>
+                  {wsConnected ? (
+                    <>
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                      </span>
+                      <span>Live</span>
+                    </>
+                  ) : (
+                    <>
+                      <WifiOff className="w-3 h-3" />
+                      <span>Connecting</span>
+                    </>
+                  )}
+                </div>
+
+                {/* Alerts */}
+                {totalAlerts > 0 && (
+                  <button 
+                    onClick={() => setActiveTab('alerts')}
+                    className="relative p-2 hover:bg-white/10 rounded-lg"
+                  >
+                    <Bell className="w-5 h-5 text-gray-400" />
+                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-orange-500 rounded-full text-[10px] font-bold flex items-center justify-center text-white">
+                      {totalAlerts > 9 ? '9+' : totalAlerts}
                     </span>
-                    <span>Live</span>
-                  </>
-                ) : (
-                  <>
-                    <WifiOff className="w-4 h-4" />
-                    <span>Connecting...</span>
-                  </>
+                  </button>
                 )}
-              </div>
 
-              {/* Alerts Badge */}
-              {totalAlerts > 0 && (
-                <div className="relative">
-                  <Bell className="w-5 h-5 text-gray-400 hover:text-white cursor-pointer transition-colors" />
-                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-orange-500 rounded-full text-[10px] font-bold flex items-center justify-center">
-                    {totalAlerts}
-                  </span>
+                {/* Wallet */}
+                {walletConnected ? (
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-purple-500/10 to-orange-500/10 rounded-xl border border-purple-500/20">
+                    <div className="w-6 h-6 rounded-full bg-gradient-to-br from-purple-500 to-orange-500 flex items-center justify-center">
+                      <Wallet className="w-3 h-3 text-white" />
+                    </div>
+                    <div className="hidden sm:block">
+                      <div className="text-xs font-medium text-white">{stxBalance ? `${(stxBalance / 1_000_000).toFixed(2)} STX` : '...'}</div>
+                      <div className="text-[10px] text-gray-500 font-mono">{userAddress?.slice(0, 6)}...{userAddress?.slice(-4)}</div>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={connectWallet}
+                    className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-orange-500 rounded-xl text-sm font-medium text-white hover:opacity-90 transition-opacity"
+                  >
+                    <Wallet className="w-4 h-4" />
+                    <span className="hidden sm:inline">Connect</span>
+                  </button>
+                )}
+
+                {/* GitHub */}
+                <a 
+                  href="https://github.com/serayd61/stacks-defi-sentinel" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="hidden sm:flex p-2 hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <Github className="w-5 h-5 text-gray-500 hover:text-white" />
+                </a>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <div className="p-4 lg:p-6">
+          {error && (
+            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 flex items-center gap-3">
+              <WifiOff className="w-5 h-5" />
+              <div className="flex-1">
+                <p className="font-medium">Connection Error</p>
+                <p className="text-sm opacity-70">{error}</p>
+              </div>
+              <button onClick={() => fetchDashboard()} className="p-2 hover:bg-red-500/20 rounded-lg">
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <div className="relative w-16 h-16 mx-auto mb-4">
+                  <div className="absolute inset-0 border-4 border-purple-500/20 rounded-full" />
+                  <div className="absolute inset-0 border-4 border-transparent border-t-purple-500 rounded-full animate-spin" />
+                </div>
+                <p className="text-gray-500">Loading DeFi data...</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Quick Stats - Always Visible */}
+              {activeTab === 'overview' && (
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                  <StatCard
+                    title="Total Value Locked"
+                    value={formatNumber(dashboardStats?.totalValueLocked || 0)}
+                    icon={<Wallet className="w-6 h-6" />}
+                    color="purple"
+                    trend={12.5}
+                  />
+                  <StatCard
+                    title="24h Volume"
+                    value={formatNumber(dashboardStats?.totalVolume24h || 0)}
+                    icon={<TrendingUp className="w-6 h-6" />}
+                    color="orange"
+                    trend={-3.2}
+                  />
+                  <StatCard
+                    title="Transactions"
+                    value={formatCount(dashboardStats?.totalTransactions24h || 0)}
+                    icon={<Activity className="w-6 h-6" />}
+                    color="green"
+                    subtitle="Last 24 hours"
+                  />
+                  <StatCard
+                    title="Active Wallets"
+                    value={formatCount(dashboardStats?.activeWallets24h || 0)}
+                    icon={<Users className="w-6 h-6" />}
+                    color="blue"
+                    subtitle="Unique addresses"
+                  />
                 </div>
               )}
 
-              {/* Network Badge */}
-              <span className="px-3 py-1.5 bg-gradient-to-r from-purple-500/10 to-orange-500/10 text-purple-300 rounded-full text-sm font-medium border border-purple-500/20">
-                Mainnet
-              </span>
+              {/* Tab Content */}
+              {activeTab === 'overview' && (
+                <>
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                    <div className="lg:col-span-2">
+                      <SwapTable swaps={combinedSwaps} isLive={wsConnected} />
+                    </div>
+                    <div>
+                      <WhaleAlerts alerts={combinedAlerts} />
+                    </div>
+                  </div>
+                  <PoolsTable pools={dashboardStats?.topPools || []} />
+                </>
+              )}
 
-              {/* GitHub Link */}
-              <a 
-                href="https://github.com/serayd61/stacks-defi-sentinel" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="p-2 rounded-xl hover:bg-white/5 transition-colors group"
-              >
-                <Github className="w-5 h-5 text-gray-500 group-hover:text-white transition-colors" />
-              </a>
-            </div>
-          </div>
+              {activeTab === 'swaps' && <SwapTable swaps={combinedSwaps} isLive={wsConnected} showAll />}
 
-          {/* Navigation Tabs */}
-          <div className="flex gap-1 mt-4 -mb-4">
-            {[
-              { id: 'overview', label: 'Overview', icon: BarChart3 },
-              { id: 'sbtc', label: 'sBTC Bridge', icon: Wallet },
-              { id: 'aggregator', label: 'DEX Aggregator', icon: Zap },
-              { id: 'swaps', label: 'Swaps', icon: ArrowRightLeft },
-              { id: 'alerts', label: 'Whale Alerts', icon: Bell },
-              { id: 'ecosystem', label: 'Ecosystem', icon: Activity },
-              { id: 'token-sale', label: 'Token Sale', icon: CreditCard },
-              { id: 'stake', label: 'Stake & Earn', icon: Droplets },
-              { id: 'lending', label: 'Lending', icon: CreditCard },
-              { id: 'membership', label: 'Pro Access', icon: Crown },
-              { id: 'passport', label: 'Passport', icon: Users },
-              { id: 'badges', label: 'Badges', icon: Crown },
-              { id: 'predict', label: 'Predict', icon: TrendingUp },
-              { id: 'leaderboard', label: 'Leaderboard', icon: Trophy },
-              { id: 'portfolio', label: 'Portfolio', icon: Wallet },
-              { id: 'gas', label: 'Gas', icon: Zap },
-              { id: 'dao', label: 'DAO', icon: Users },
-              { id: 'referral', label: 'Referral', icon: Users },
-              { id: 'subscribe', label: 'Subscribe', icon: CreditCard },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-t-xl transition-all ${
-                  activeTab === tab.id
-                    ? 'bg-white/5 text-white border-t border-l border-r border-white/10'
-                    : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
-                }`}
-              >
-                <tab.icon className="w-4 h-4" />
-                {tab.label}
-                {tab.id === 'alerts' && totalAlerts > 0 && (
-                  <span className="ml-1 px-1.5 py-0.5 bg-orange-500/20 text-orange-400 rounded-full text-xs">
-                    {totalAlerts}
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
+              {activeTab === 'alerts' && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <WhaleAlerts alerts={combinedAlerts} expanded />
+                  <div className="bg-white/5 rounded-2xl border border-white/10 p-6">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <Activity className="w-5 h-5 text-purple-400" />
+                      Alert Statistics
+                    </h3>
+                    <div className="space-y-4">
+                      {[
+                        { label: 'Large Transfers', type: 'large_transfer', color: 'orange' },
+                        { label: 'Large Swaps', type: 'large_swap', color: 'purple' },
+                        { label: 'Liquidity Events', type: 'large_liquidity', color: 'blue' },
+                      ].map(({ label, type, color }) => (
+                        <div key={type} className="flex justify-between items-center p-3 bg-white/5 rounded-xl">
+                          <span className="text-gray-400">{label}</span>
+                          <span className={`font-mono font-bold text-${color}-400`}>
+                            {combinedAlerts.filter(a => a.type === type).length}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'ecosystem' && (
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <SwapInterface />
+                    <div className="lg:col-span-2"><TokenAnalytics /></div>
+                  </div>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <SBTCDashboard />
+                    <StackingTracker />
+                  </div>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <NFTGallery />
+                    <BlockExplorer />
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'sbtc' && <div className="max-w-5xl mx-auto"><SBTCBridgeMonitor /></div>}
+              {activeTab === 'aggregator' && <div className="max-w-4xl mx-auto"><DEXAggregator /></div>}
+              {activeTab === 'token-sale' && <div className="max-w-4xl mx-auto"><TokenSale /></div>}
+              {activeTab === 'stake' && <div className="max-w-4xl mx-auto"><StakePanel /></div>}
+              {activeTab === 'lending' && <div className="max-w-4xl mx-auto"><LendingPool /></div>}
+              {activeTab === 'membership' && <div className="max-w-5xl mx-auto"><ProMembership /></div>}
+              {activeTab === 'passport' && <div className="max-w-5xl mx-auto"><StacksPassport /></div>}
+              {activeTab === 'badges' && <div className="max-w-5xl mx-auto"><StacksBadge /></div>}
+              {activeTab === 'predict' && <div className="max-w-4xl mx-auto"><StacksPredict /></div>}
+              {activeTab === 'leaderboard' && <div className="max-w-5xl mx-auto"><StacksLeaderboard /></div>}
+              {activeTab === 'portfolio' && <div className="max-w-4xl mx-auto"><PortfolioTracker /></div>}
+              {activeTab === 'gas' && <div className="max-w-4xl mx-auto"><GasTracker /></div>}
+              {activeTab === 'dao' && <div className="max-w-5xl mx-auto"><DAOVoting /></div>}
+              {activeTab === 'referral' && <div className="max-w-4xl mx-auto"><ReferralSystem /></div>}
+              {activeTab === 'subscribe' && <div className="max-w-2xl mx-auto"><SubscriptionPanel /></div>}
+
+              {/* Footer */}
+              <footer className="mt-12 pt-8 border-t border-white/5">
+                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-orange-500 flex items-center justify-center">
+                      <Zap className="w-4 h-4 text-white" />
+                    </div>
+                    <p className="text-sm text-gray-500">
+                      Built with <span className="text-purple-400">Chainhooks</span> • Stacks Builder Challenge 2024
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-6">
+                    {[
+                      { label: 'Docs', href: 'https://docs.hiro.so/chainhooks' },
+                      { label: 'GitHub', href: 'https://github.com/serayd61/stacks-defi-sentinel' },
+                      { label: 'Hiro', href: 'https://platform.hiro.so' },
+                    ].map(link => (
+                      <a 
+                        key={link.label}
+                        href={link.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-sm text-gray-500 hover:text-purple-400 transition-colors"
+                      >
+                        {link.label}
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              </footer>
+            </>
+          )}
         </div>
-      </header>
-
-      {/* Main Content */}
-      <main className="relative max-w-7xl mx-auto px-6 py-8">
-        {error && (
-          <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-red-500/20 flex items-center justify-center">
-              <WifiOff className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="font-medium">Connection Error</p>
-              <p className="text-sm text-red-400/70">{error}</p>
-            </div>
-            <button 
-              onClick={() => fetchDashboard()}
-              className="ml-auto p-2 hover:bg-red-500/20 rounded-lg transition-colors"
-            >
-              <RefreshCw className="w-4 h-4" />
-            </button>
-          </div>
-        )}
-
-        {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <div className="relative w-16 h-16 mx-auto mb-4">
-                <div className="absolute inset-0 border-4 border-purple-500/20 rounded-full" />
-                <div className="absolute inset-0 border-4 border-transparent border-t-purple-500 rounded-full animate-spin" />
-              </div>
-              <p className="text-gray-500">Loading DeFi data...</p>
-            </div>
-          </div>
-        ) : (
-          <>
-            {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-              <StatCard
-                title="Total Value Locked"
-                value={formatNumber(dashboardStats?.totalValueLocked || 0)}
-                icon={<Wallet className="w-6 h-6" />}
-                color="purple"
-                trend={12.5}
-              />
-              <StatCard
-                title="24h Volume"
-                value={formatNumber(dashboardStats?.totalVolume24h || 0)}
-                icon={<TrendingUp className="w-6 h-6" />}
-                color="orange"
-                trend={-3.2}
-              />
-              <StatCard
-                title="Transactions"
-                value={formatCount(dashboardStats?.totalTransactions24h || 0)}
-                icon={<Activity className="w-6 h-6" />}
-                color="green"
-                subtitle="Last 24 hours"
-              />
-              <StatCard
-                title="Active Wallets"
-                value={formatCount(dashboardStats?.activeWallets24h || 0)}
-                icon={<Users className="w-6 h-6" />}
-                color="blue"
-                subtitle="Unique addresses"
-              />
-            </div>
-
-            {/* Tab Content */}
-            {activeTab === 'overview' && (
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2">
-                  <SwapTable swaps={combinedSwaps} isLive={isConnected} />
-                </div>
-                <div>
-                  <WhaleAlerts alerts={combinedAlerts} />
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'swaps' && (
-              <SwapTable swaps={combinedSwaps} isLive={isConnected} showAll />
-            )}
-
-            {activeTab === 'alerts' && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <WhaleAlerts alerts={combinedAlerts} expanded />
-                <div className="bg-white/5 rounded-2xl border border-white/10 p-6">
-                  <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                    <Activity className="w-5 h-5 text-purple-400" />
-                    Alert Statistics
-                  </h3>
-                  <div className="space-y-4">
-                    <div className="flex justify-between items-center p-3 bg-white/5 rounded-xl">
-                      <span className="text-gray-400">Large Transfers</span>
-                      <span className="font-mono font-bold text-orange-400">
-                        {combinedAlerts.filter(a => a.type === 'large_transfer').length}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center p-3 bg-white/5 rounded-xl">
-                      <span className="text-gray-400">Large Swaps</span>
-                      <span className="font-mono font-bold text-purple-400">
-                        {combinedAlerts.filter(a => a.type === 'large_swap').length}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center p-3 bg-white/5 rounded-xl">
-                      <span className="text-gray-400">Liquidity Events</span>
-                      <span className="font-mono font-bold text-blue-400">
-                        {combinedAlerts.filter(a => a.type === 'large_liquidity').length}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Ecosystem Section */}
-            {activeTab === 'ecosystem' && (
-              <div className="space-y-6">
-                {/* Swap Interface - Full Width */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                  <SwapInterface />
-                  <div className="lg:col-span-2">
-                    <TokenAnalytics />
-                  </div>
-                </div>
-                {/* sBTC and Stacking */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <SBTCDashboard />
-                  <StackingTracker />
-                </div>
-                {/* NFT and Block Explorer */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <NFTGallery />
-                  <BlockExplorer />
-                </div>
-              </div>
-            )}
-
-            {/* sBTC Bridge Monitor */}
-            {activeTab === 'sbtc' && (
-              <div className="max-w-5xl mx-auto">
-                <SBTCBridgeMonitor />
-              </div>
-            )}
-
-            {/* DEX Aggregator */}
-            {activeTab === 'aggregator' && (
-              <div className="max-w-4xl mx-auto">
-                <DEXAggregator />
-              </div>
-            )}
-
-            {/* Token Sale Section */}
-            {activeTab === 'token-sale' && (
-              <div className="max-w-4xl mx-auto">
-                <TokenSale />
-              </div>
-            )}
-
-            {/* Stake & Earn Section */}
-            {activeTab === 'stake' && (
-              <div className="max-w-4xl mx-auto">
-                <StakePanel />
-              </div>
-            )}
-
-            {/* Lending Section */}
-            {activeTab === 'lending' && (
-              <div className="max-w-4xl mx-auto">
-                <LendingPool />
-              </div>
-            )}
-
-            {/* Pro Membership Section */}
-            {activeTab === 'membership' && (
-              <div className="max-w-5xl mx-auto">
-                <ProMembership />
-              </div>
-            )}
-
-            {/* StacksPassport Section */}
-            {activeTab === 'passport' && (
-              <div className="max-w-5xl mx-auto">
-                <StacksPassport />
-              </div>
-            )}
-
-            {/* StacksBadge Section */}
-            {activeTab === 'badges' && (
-              <div className="max-w-5xl mx-auto">
-                <StacksBadge />
-              </div>
-            )}
-
-            {/* StacksPredict Section */}
-            {activeTab === 'predict' && (
-              <div className="max-w-4xl mx-auto">
-                <StacksPredict />
-              </div>
-            )}
-
-            {/* Leaderboard Section */}
-            {activeTab === 'leaderboard' && (
-              <div className="max-w-5xl mx-auto">
-                <StacksLeaderboard />
-              </div>
-            )}
-
-            {/* Portfolio Section */}
-            {activeTab === 'portfolio' && (
-              <div className="max-w-4xl mx-auto">
-                <PortfolioTracker />
-              </div>
-            )}
-
-            {/* Gas Tracker Section */}
-            {activeTab === 'gas' && (
-              <div className="max-w-4xl mx-auto">
-                <GasTracker />
-              </div>
-            )}
-
-            {/* DAO Voting Section */}
-            {activeTab === 'dao' && (
-              <div className="max-w-5xl mx-auto">
-                <DAOVoting />
-              </div>
-            )}
-
-            {/* Referral Section */}
-            {activeTab === 'referral' && (
-              <div className="max-w-4xl mx-auto">
-                <ReferralSystem />
-              </div>
-            )}
-
-            {/* Subscribe Section */}
-            {activeTab === 'subscribe' && (
-              <div className="max-w-2xl mx-auto">
-                <SubscriptionPanel />
-              </div>
-            )}
-
-            {/* Pools Section */}
-            {activeTab === 'overview' && (
-              <div className="mt-8">
-                <PoolsTable pools={dashboardStats?.topPools || []} />
-              </div>
-            )}
-
-            {/* Footer */}
-            <footer className="mt-12 pt-8 border-t border-white/5">
-              <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-orange-500 flex items-center justify-center">
-                    <Zap className="w-4 h-4 text-white" />
-                  </div>
-                  <p className="text-sm text-gray-500">
-                    Built with <span className="text-purple-400">Chainhooks</span> • Real-time blockchain monitoring
-                  </p>
-                </div>
-                <div className="flex items-center gap-6">
-                  <a 
-                    href="https://docs.hiro.so/chainhooks"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-gray-500 hover:text-purple-400 transition-colors"
-                  >
-                    Documentation
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                  <a 
-                    href="https://github.com/serayd61/stacks-defi-sentinel"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-gray-500 hover:text-orange-400 transition-colors"
-                  >
-                    GitHub
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                  <a 
-                    href="https://platform.hiro.so"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-gray-500 hover:text-white transition-colors"
-                  >
-                    Hiro Platform
-                    <ExternalLink className="w-3 h-3" />
-                  </a>
-                </div>
-              </div>
-            </footer>
-          </>
-        )}
       </main>
     </div>
   );
