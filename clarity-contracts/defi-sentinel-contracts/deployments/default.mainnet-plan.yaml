@@ -9,10 +9,59 @@ plan:
     - id: 0
       transactions:
         - contract-publish:
+            contract-name: defi-sentinel
+            expected-sender: SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB
+            cost: 46360
+            path: contracts/defi-sentinel.clar
+            anchor-block-only: true
+            clarity-version: 3
+        - contract-publish:
+            contract-name: sentinel-dao
+            expected-sender: SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB
+            cost: 81890
+            path: contracts/sentinel-dao.clar
+            anchor-block-only: true
+            clarity-version: 3
+        - contract-publish:
+            contract-name: sentinel-staking
+            expected-sender: SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB
+            cost: 97270
+            path: contracts/sentinel-staking.clar
+            anchor-block-only: true
+            clarity-version: 3
+        - contract-publish:
+            contract-name: sentinel-token-simple
+            expected-sender: SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB
+            cost: 32580
+            path: contracts/sentinel-token-simple.clar
+            anchor-block-only: true
+            clarity-version: 3
+        - contract-publish:
+            contract-name: sip-010-trait
+            expected-sender: SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB
+            cost: 8830
+            path: contracts/sip-010-trait.clar
+            anchor-block-only: true
+            clarity-version: 3
+        - contract-publish:
+            contract-name: stacks-badge
+            expected-sender: SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB
+            cost: 121800
+            path: contracts/stacks-badge.clar
+            anchor-block-only: true
+            clarity-version: 3
+        - contract-publish:
             contract-name: stacks-passport
             expected-sender: SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB
-            cost: 203410
+            cost: 203420
             path: contracts/stacks-passport.clar
+            anchor-block-only: true
+            clarity-version: 3
+        - contract-publish:
+            contract-name: stacks-predict
+            expected-sender: SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB
+            cost: 119700
+            path: contracts/stacks-predict.clar
             anchor-block-only: true
             clarity-version: 3
       epoch: "3.1"

@@ -82,7 +82,7 @@
   (match (get-proposal proposal-id)
     proposal
     (and 
-      (< block-height (get voting-ends proposal))
+      (< stacks-block-height (get voting-ends proposal))
       (not (get canceled proposal))
     )
     false
@@ -106,7 +106,7 @@
   (match (get-proposal proposal-id)
     proposal
     (and
-      (>= block-height (get voting-ends proposal))
+      (>= stacks-block-height (get voting-ends proposal))
       (has-quorum proposal-id)
       (> (get votes-for proposal) (get votes-against proposal))
       (not (get canceled proposal))
@@ -120,7 +120,7 @@
     proposal
     (and
       (is-proposal-passed proposal-id)
-      (>= block-height (get execution-time proposal))
+      (>= stacks-block-height (get execution-time proposal))
       (not (get executed proposal))
     )
     false
@@ -138,7 +138,7 @@
     (proposer tx-sender)
     (proposer-power (get-voting-power proposer))
     (new-id (+ (var-get proposal-count) u1))
-    (voting-ends (+ block-height VOTING_PERIOD))
+    (voting-ends (+ stacks-block-height VOTING_PERIOD))
     (execution-time (+ voting-ends EXECUTION_DELAY))
   )
     ;; Check proposer has enough voting power
@@ -152,7 +152,7 @@
         description: description,
         proposer: proposer,
         proposal-type: proposal-type,
-        created-at: block-height,
+        created-at: stacks-block-height,
         voting-ends: voting-ends,
         execution-time: execution-time,
         votes-for: u0,
@@ -194,7 +194,7 @@
       {
         vote: vote-for,
         voting-power: voter-power,
-        voted-at: block-height
+        voted-at: stacks-block-height
       }
     )
     

@@ -125,13 +125,13 @@
 
 (define-read-only (calculate-pending-rewards (staker principal))
   (match (get-stake staker)
-    stake
+    stake-info
     (let (
-      (blocks-staked (- block-height (get last-claim-block stake)))
-      (base-apy (get-tier-apy (get tier stake)))
-      (lock-bonus (get-lock-bonus (get lock-period stake)))
+      (blocks-staked (- stacks-block-height (get last-claim-block stake-info)))
+      (base-apy (get-tier-apy (get tier stake-info)))
+      (lock-bonus (get-lock-bonus (get lock-period stake-info)))
       (effective-apy (+ base-apy (/ (* base-apy lock-bonus) u10000)))
-      (yearly-reward (/ (* (get amount stake) effective-apy) u10000))
+      (yearly-reward (/ (* (get amount stake-info) effective-apy) u10000))
       ;; Approximate blocks per year: 52,560 (assuming 10 min blocks)
       (reward (/ (* yearly-reward blocks-staked) u52560))
     )
@@ -143,8 +143,8 @@
 
 (define-read-only (is-stake-unlocked (staker principal))
   (match (get-stake staker)
-    stake
-    (>= block-height (+ (get start-block stake) (get lock-period stake)))
+    stake-info
+    (>= stacks-block-height (+ (get start-block stake-info) (get lock-period stake-info)))
     false
   )
 )
@@ -181,9 +181,9 @@
       { staker: staker }
       {
         amount: amount,
-        start-block: block-height,
+        start-block: stacks-block-height,
         lock-period: lock-period,
-        last-claim-block: block-height,
+        last-claim-block: stacks-block-height,
         referrer: referrer,
         tier: tier
       }
@@ -232,7 +232,7 @@
     ;; Update last claim block
     (map-set stakes
       { staker: staker }
-      (merge stake-data { last-claim-block: block-height })
+      (merge stake-data { last-claim-block: stacks-block-height })
     )
     
     ;; Process referrer reward

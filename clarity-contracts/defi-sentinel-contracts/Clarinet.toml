@@ -1,12 +1,49 @@
 [project]
 name = "defi-sentinel-contracts"
-description = ""
-authors = []
+description = "Stacks DeFi Sentinel - Complete smart contract suite"
+authors = ["serayd61"]
 telemetry = true
 cache_dir = "./.cache"
 
+# SIP-010 Trait (must be first)
+[contracts.sip-010-trait]
+path = "contracts/sip-010-trait.clar"
+epoch = "3.1"
+
+# Simple Token (standalone, no dependencies)
+[contracts.sentinel-token-simple]
+path = "contracts/sentinel-token-simple.clar"
+epoch = "3.1"
+depends_on = ["sip-010-trait"]
+
+# Main DeFi Sentinel
+[contracts.defi-sentinel]
+path = "contracts/defi-sentinel.clar"
+epoch = "3.1"
+
+# Staking System
+[contracts.sentinel-staking]
+path = "contracts/sentinel-staking.clar"
+epoch = "3.1"
+
+# DAO Governance
+[contracts.sentinel-dao]
+path = "contracts/sentinel-dao.clar"
+epoch = "3.1"
+
+# Stacks Passport
 [contracts.stacks-passport]
 path = "contracts/stacks-passport.clar"
+epoch = "3.1"
+
+# Stacks Badge
+[contracts.stacks-badge]
+path = "contracts/stacks-badge.clar"
+epoch = "3.1"
+
+# Stacks Predict
+[contracts.stacks-predict]
+path = "contracts/stacks-predict.clar"
 epoch = "3.1"
 
 [repl.analysis]

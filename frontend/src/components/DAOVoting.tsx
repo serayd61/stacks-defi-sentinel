@@ -28,7 +28,7 @@ interface VotingStats {
 }
 
 const DAOVoting: React.FC = () => {
-  const { isConnected, stxAddress } = useWallet();
+  const { isConnected, userAddress: stxAddress } = useWallet();
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [stats, setStats] = useState<VotingStats | null>(null);
   const [loading, setLoading] = useState(true);

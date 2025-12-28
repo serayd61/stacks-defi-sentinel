@@ -30,7 +30,7 @@ interface PortfolioStats {
 }
 
 const PortfolioTracker: React.FC = () => {
-  const { isConnected, stxAddress } = useWallet();
+  const { isConnected, userAddress: stxAddress } = useWallet();
   const [tokens, setTokens] = useState<TokenBalance[]>([]);
   const [nfts, setNfts] = useState<NFTBalance[]>([]);
   const [stats, setStats] = useState<PortfolioStats | null>(null);

@@ -19,7 +19,7 @@ interface ReferralUser {
 }
 
 const ReferralSystem: React.FC = () => {
-  const { isConnected, stxAddress } = useWallet();
+  const { isConnected, userAddress: stxAddress } = useWallet();
   const [stats, setStats] = useState<ReferralStats | null>(null);
   const [referrals, setReferrals] = useState<ReferralUser[]>([]);
   const [loading, setLoading] = useState(true);
