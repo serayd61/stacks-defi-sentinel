@@ -62,3 +62,9 @@ epoch = 3.0
 [repl.analysis]
 passes = ["check_checker"]
 check_checker = { trusted_sender = false, trusted_caller = false, callee_filter = false }
+
+[contracts.stx-donation]
+path = "contracts/stx-donation.clar"
+clarity_version = 3
+epoch = 3.0
+
