@@ -72,8 +72,24 @@ const WS_URL = import.meta.env.VITE_WS_URL || 'wss://stacks-defi-sentinel-produc
 
 type TabType = 'overview' | 'swaps' | 'alerts' | 'ecosystem' | 'subscribe' | 'token-sale' | 'stake' | 'lending' | 'membership' | 'sbtc' | 'aggregator' | 'badges' | 'predict' | 'passport' | 'leaderboard' | 'portfolio' | 'gas' | 'dao' | 'referral';
 
+// Navigation item type
+interface NavItem {
+  id: string;
+  label: string;
+  icon: any;
+  description: string;
+  hot?: boolean;
+  new?: boolean;
+}
+
+interface NavCategory {
+  name: string;
+  icon: any;
+  items: NavItem[];
+}
+
 // Navigation categories
-const navCategories = [
+const navCategories: NavCategory[] = [
   {
     name: 'Overview',
     icon: BarChart3,
@@ -133,7 +149,7 @@ const navCategories = [
 function App() {
   const { dashboardStats, isLoading, isRefreshing, error, fetchDashboard } = useApi();
   const { isConnected: wsConnected, events } = useWebSocket(WS_URL);
-  const { isConnected: walletConnected, userAddress, connectWallet, stxBalance } = useWallet();
+  const { isConnected: walletConnected, userAddress, setShowWalletModal } = useWallet();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -413,13 +429,12 @@ function App() {
                       <Wallet className="w-3 h-3 text-white" />
                     </div>
                     <div className="hidden sm:block">
-                      <div className="text-xs font-medium text-white">{stxBalance ? `${(stxBalance / 1_000_000).toFixed(2)} STX` : '...'}</div>
-                      <div className="text-[10px] text-gray-500 font-mono">{userAddress?.slice(0, 6)}...{userAddress?.slice(-4)}</div>
+                      <div className="text-[10px] text-gray-400 font-mono">{userAddress?.slice(0, 8)}...{userAddress?.slice(-4)}</div>
                     </div>
                   </div>
                 ) : (
                   <button
-                    onClick={connectWallet}
+                    onClick={() => setShowWalletModal(true)}
                     className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-orange-500 rounded-xl text-sm font-medium text-white hover:opacity-90 transition-opacity"
                   >
                     <Wallet className="w-4 h-4" />
