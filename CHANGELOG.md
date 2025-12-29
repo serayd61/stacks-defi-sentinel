@@ -2,53 +2,55 @@
 
 All notable changes to DeFi Sentinel will be documented in this file.
 
-## [1.2.0] - 2024-12-23
+## [1.2.0] - 2024-12-29
 
 ### Added
-- 🔗 **Reown AppKit / WalletConnect** integration for mobile wallet support
-- 📊 **Real blockchain data** from Hiro API (live transactions, whale alerts)
-- 💰 **STX price** fetching from CoinGecko
-- 🖱️ **Clickable transactions** - opens Stacks Explorer
-- 🔄 **Auto-refresh** every 30 seconds
+- Lending Pool with collateral and borrowing
+- Price Oracle for STX/sBTC
+- Multisig Treasury
+- On-chain voting system
+- NFT Marketplace integration
+- Subscription management
+- Lottery system
+- Timelock contracts
 
-### Changed
-- Upgraded `@stacks/connect` to v8 with new API
-- Improved STX address detection from wallet
+### Deployed Contracts
+- `amm-pool-v2` - Decentralized exchange
+- `voting` - DAO governance
+- `tipjar` - Creator monetization
+- `subscription` - SaaS subscriptions
+- `lottery` - Decentralized lottery
+- `timelock` - Vesting and scheduled payments
 
-## [1.1.0] - 2024-12-22
-
-### Added
-- 💳 **Subscription system** - Basic (1 STX) and Premium (2.5 STX) plans
-- 🪙 **SENTINEL Token (SNTL)** - SIP-010 fungible token
-- 🔒 **Team vesting** - 6-month cliff, 12-month linear vesting
-- 👛 **Multi-wallet support** - Xverse, Leather, Hiro, OKX
-- 🎨 **Wallet selection modal** with logos
-
-### Changed
-- Migrated to `@stacks/connect` v8
-- Improved error handling in webhook processing
-
-## [1.0.0] - 2024-12-21
+## [1.1.0] - 2024-12-28
 
 ### Added
-- 🚀 **Initial release**
-- 📊 **Dashboard** with real-time statistics
-- 🔗 **8 Chainhooks** for DeFi monitoring
-- 💱 **DEX swap tracking** (Velar, ALEX, Arkadiko)
-- 🐋 **Whale alerts** for large transfers
-- 📡 **WebSocket** for live updates
-- 🔌 **REST API** for data access
+- Token Sale v8 with manual distribution
+- Sentinel Oracle for price feeds
+- Sentinel Lending protocol
+- Multisig Treasury v2
+
+### Fixed
+- Removed `as-contract` usage for mainnet compatibility
+- Fixed token transfer in sale contract
+
+## [1.0.0] - 2024-12-27
+
+### Added
+- Initial release
+- DeFi monitoring dashboard
+- Whale alerts
+- DEX aggregator
+- sBTC bridge monitor
+- Staking system
+- DAO voting
+- Passport/Badge NFTs
+- Prediction market
 
 ### Smart Contracts
-- `defi-sentinel` - Subscription management
-- `sentinel-token` - SNTL governance token
-
----
-
-## Versioning
-
-We use [Semantic Versioning](https://semver.org/):
-- **MAJOR** - Breaking changes
-- **MINOR** - New features (backward compatible)
-- **PATCH** - Bug fixes (backward compatible)
-
+- sentinel-token (SIP-010)
+- sentinel-staking-v2
+- sentinel-dao-v2
+- stacks-passport
+- stacks-badge
+- stacks-predict
