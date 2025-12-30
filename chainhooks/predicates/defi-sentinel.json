@@ -1,0 +1,22 @@
+{
+  "uuid": "defi-sentinel-main",
+  "name": "DeFi Sentinel - Main Monitor",
+  "version": 1,
+  "chain": "stacks",
+  "networks": {
+    "mainnet": {
+      "if_this": {
+        "scope": "contract_call",
+        "contract_identifier": "SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.sentinel-token",
+        "method": "transfer"
+      },
+      "then_that": {
+        "http_post": {
+          "url": "https://stacks-defi-sentinel-production.up.railway.app/webhooks/token-transfer",
+          "authorization_header": "Bearer defi-sentinel-chainhooks"
+        }
+      }
+    }
+  }
+}
+
