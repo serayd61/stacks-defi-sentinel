@@ -1,0 +1,9 @@
+{
+  "name": "defi-sentinel",
+  "version": "2.0.0",
+  "description": "DeFi monitoring platform on Stacks",
+  "author": "serayd61",
+  "license": "MIT",
+  "contracts": 22,
+  "mainnet": true
+}
