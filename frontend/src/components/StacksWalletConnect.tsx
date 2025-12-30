@@ -78,31 +78,46 @@ export const StacksWalletConnect: React.FC = () => {
   const handleConnect = useCallback(() => {
     setIsLoading(true);
     
-    showConnect({
-      appDetails: {
-        name: 'DeFi Sentinel',
-        icon: 'https://defi-sentinel.xyz/favicon.ico',
-      },
-      redirectTo: '/',
-      onFinish: () => {
-        const userData = userSession.loadUserData();
-        const address = userData.profile.stxAddress?.mainnet;
-        setWallet({
-          isConnected: true,
-          address: address,
-          balance: null,
-          network: 'mainnet'
-        });
-        if (address) {
-          fetchBalance(address);
-        }
-        setIsLoading(false);
-      },
-      onCancel: () => {
-        setIsLoading(false);
-      },
-      userSession,
-    });
+    // Check if wallet extension is installed
+    const hasWallet = (window as any).StacksProvider || (window as any).LeatherProvider || (window as any).XverseProviders;
+    
+    if (!hasWallet) {
+      alert('Stacks cüzdanı bulunamadı!\n\nLütfen Leather veya Xverse wallet extension yükleyin:\n\n• Leather: https://leather.io\n• Xverse: https://xverse.app');
+      setIsLoading(false);
+      return;
+    }
+    
+    try {
+      showConnect({
+        appDetails: {
+          name: 'DeFi Sentinel',
+          icon: 'https://defi-sentinel.xyz/favicon.ico',
+        },
+        redirectTo: '/',
+        onFinish: () => {
+          const userData = userSession.loadUserData();
+          const address = userData.profile.stxAddress?.mainnet;
+          setWallet({
+            isConnected: true,
+            address: address,
+            balance: null,
+            network: 'mainnet'
+          });
+          if (address) {
+            fetchBalance(address);
+          }
+          setIsLoading(false);
+        },
+        onCancel: () => {
+          setIsLoading(false);
+        },
+        userSession,
+      });
+    } catch (error) {
+      console.error('Wallet connect error:', error);
+      alert('Cüzdan bağlantısı başarısız oldu. Lütfen tekrar deneyin.');
+      setIsLoading(false);
+    }
   }, []);
 
   const handleDisconnect = () => {
