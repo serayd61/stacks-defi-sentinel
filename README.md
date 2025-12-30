@@ -318,3 +318,11 @@ MIT License - see [LICENSE](LICENSE) for details.
 ---
 
 Built with ❤️ for the Stacks ecosystem | Stacks Builder Challenge 2024
+
+---
+## December 30, 2024 Update
+### New Contracts Deployed
+- airdrop, referral, token-burn, whitelist
+- reputation, achievement-badge, token-vesting, treasury
+
+### Total: 22+ mainnet contracts!

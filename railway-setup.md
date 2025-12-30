@@ -35,3 +35,4 @@ Railway'de aşağıdaki environment variable'ları ekleyin:
 
 
 
+
