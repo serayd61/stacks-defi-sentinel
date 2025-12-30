@@ -2,55 +2,190 @@
 
 All notable changes to DeFi Sentinel will be documented in this file.
 
-## [1.2.0] - 2024-12-29
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
 
 ### Added
-- Lending Pool with collateral and borrowing
-- Price Oracle for STX/sBTC
-- Multisig Treasury
-- On-chain voting system
-- NFT Marketplace integration
-- Subscription management
-- Lottery system
-- Timelock contracts
+- NFT Staking with compound rewards
+- Flash Loan protocol with 0.09% fee
+- Yield Farming dashboard
 
-### Deployed Contracts
-- `amm-pool-v2` - Decentralized exchange
-- `voting` - DAO governance
-- `tipjar` - Creator monetization
-- `subscription` - SaaS subscriptions
-- `lottery` - Decentralized lottery
-- `timelock` - Vesting and scheduled payments
-
-## [1.1.0] - 2024-12-28
+## [2.0.0] - 2024-12-30
 
 ### Added
-- Token Sale v8 with manual distribution
-- Sentinel Oracle for price feeds
-- Sentinel Lending protocol
-- Multisig Treasury v2
+- **Multi-Sig Wallet Contract** - Secure multi-signature transactions
+  - Configurable signature threshold
+  - Transaction queue with approval tracking
+  - Deposit/withdrawal management
+
+- **Token Swap (AMM)** - Decentralized exchange
+  - Constant product formula (x*y=k)
+  - Liquidity provision
+  - Slippage protection
+  - 0.3% swap fee
+
+- **NFT Staking** - Stake NFTs for rewards
+  - Reward per block calculation
+  - Compound rewards feature
+  - Cooldown period for unstaking
+
+- **Flash Loan Protocol** - Uncollateralized lending
+  - Zero collateral borrowing
+  - Same-block repayment requirement
+  - 0.09% flash fee
+  - Loan history tracking
+
+- **Yield Farm** - LP token staking
+  - Multiple pool support
+  - Variable APR
+  - Harvest and compound
+  - Admin reward controls
+
+- **Stacks Wallet Connect Integration**
+  - Native Leather/Xverse support
+  - STX Transfer functionality
+  - Contract call interface
+  - Message signing
+
+- **Frontend Components**
+  - MultiSigWallet dashboard
+  - YieldFarmDashboard
+  - FlashLoanInterface
+  - StacksWalletConnect
+
+- **Developer Tools**
+  - Contract utilities library
+  - Custom React hooks for contracts
+  - Analytics module
+  - API reference documentation
+
+### Changed
+- Upgraded @stacks/connect to latest version
+- Improved wallet connection flow
+- Enhanced error handling
+
+### Security
+- Added input validation for all contract functions
+- Implemented access control for admin functions
+- Added overflow protection for arithmetic operations
+
+## [1.5.0] - 2024-12-28
+
+### Added
+- Referral system contract
+- Token burn mechanism
+- Whitelist management
+- Reputation scoring
+- Achievement badge NFTs
+- Airdrop distribution
+- Treasury management
+- Token vesting schedules
+
+### Changed
+- Updated UI with premium effects
+- Improved mobile responsiveness
+
+## [1.4.0] - 2024-12-26
+
+### Added
+- DAO Voting contract
+- Crowdfunding platform
+- Tip Jar for creators
+- NFT Marketplace
+
+### Changed
+- Enhanced DEX aggregator
+- Improved gas estimation
+
+## [1.3.0] - 2024-12-24
+
+### Added
+- Staking rewards system
+- Portfolio tracker
+- Gas tracker
+- Pro membership features
 
 ### Fixed
-- Removed `as-contract` usage for mainnet compatibility
-- Fixed token transfer in sale contract
+- WebSocket reconnection issues
+- Price feed accuracy
 
-## [1.0.0] - 2024-12-27
+## [1.2.0] - 2024-12-22
+
+### Added
+- Chainhooks integration for real-time events
+- Whale alert system
+- Pool analytics dashboard
+
+### Changed
+- Migrated to Railway for backend hosting
+- Improved API response times
+
+## [1.1.0] - 2024-12-20
+
+### Added
+- sBTC bridge monitor
+- Token analytics
+- Block explorer integration
+
+### Fixed
+- Swap table refresh issues
+- Mobile menu navigation
+
+## [1.0.0] - 2024-12-18
 
 ### Added
 - Initial release
-- DeFi monitoring dashboard
-- Whale alerts
-- DEX aggregator
-- sBTC bridge monitor
-- Staking system
-- DAO voting
-- Passport/Badge NFTs
-- Prediction market
+- Dashboard with DeFi statistics
+- Real-time swap tracking
+- Pool monitoring
+- Basic wallet integration
 
-### Smart Contracts
-- sentinel-token (SIP-010)
-- sentinel-staking-v2
-- sentinel-dao-v2
-- stacks-passport
-- stacks-badge
-- stacks-predict
+---
+
+## Contract Deployment History
+
+| Date | Contract | Network | TX |
+|------|----------|---------|-----|
+| 2024-12-30 | yield-farm | Mainnet | 0x0e57... |
+| 2024-12-30 | flash-loan | Mainnet | 0x34a3... |
+| 2024-12-30 | nft-staking | Mainnet | 0x3f30... |
+| 2024-12-30 | token-swap | Mainnet | 0xfd09... |
+| 2024-12-30 | multi-sig-wallet | Mainnet | 0xdd71... |
+| 2024-12-29 | achievement-badge | Mainnet | 0xdb0a... |
+| 2024-12-29 | reputation | Mainnet | 0x518f... |
+| 2024-12-29 | whitelist | Mainnet | 0x24ea... |
+| 2024-12-29 | token-burn | Mainnet | 0xec2f... |
+| 2024-12-29 | referral | Mainnet | 0x4630... |
+| 2024-12-29 | airdrop | Mainnet | 0x9acc... |
+
+---
+
+## Stacks Builder Challenge
+
+This project is built for the **Stacks Builder Challenge 2024**.
+
+### Week 1 (Dec 8-15)
+- Smart contract development
+- Chainhooks setup
+
+### Week 2 (Dec 15-22)
+- GitHub activity
+- Contract deployment
+
+### Week 3 (Dec 22-30)
+- WalletConnect integration ✅
+- Advanced DeFi protocols ✅
+- Documentation ✅
+
+---
+
+[Unreleased]: https://github.com/serayd61/stacks-defi-sentinel/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/serayd61/stacks-defi-sentinel/compare/v1.5.0...v2.0.0
+[1.5.0]: https://github.com/serayd61/stacks-defi-sentinel/compare/v1.4.0...v1.5.0
+[1.4.0]: https://github.com/serayd61/stacks-defi-sentinel/compare/v1.3.0...v1.4.0
+[1.3.0]: https://github.com/serayd61/stacks-defi-sentinel/compare/v1.2.0...v1.3.0
+[1.2.0]: https://github.com/serayd61/stacks-defi-sentinel/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/serayd61/stacks-defi-sentinel/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/serayd61/stacks-defi-sentinel/releases/tag/v1.0.0

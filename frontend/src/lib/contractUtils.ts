@@ -1,0 +1,248 @@
+/**
+ * Contract Utilities
+ * Helper functions for interacting with Stacks smart contracts
+ */
+
+import {
+  callReadOnlyFunction,
+  cvToValue,
+  uintCV,
+  principalCV,
+  stringUtf8CV,
+  bufferCV,
+  ClarityValue
+} from '@stacks/transactions';
+
+// Contract addresses
+export const CONTRACT_ADDRESSES = {
+  VOTING_DAO: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.voting-dao',
+  CROWDFUND: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.crowdfund',
+  TIP_JAR: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.tip-jar',
+  NFT_MARKETPLACE: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.nft-marketplace',
+  STAKING_REWARDS: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.staking-rewards',
+  TOKEN_VESTING: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.token-vesting',
+  AIRDROP: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.airdrop',
+  TREASURY: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.treasury',
+  MULTI_SIG: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.multi-sig-wallet',
+  TOKEN_SWAP: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.token-swap',
+  NFT_STAKING: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.nft-staking',
+  FLASH_LOAN: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.flash-loan',
+  YIELD_FARM: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.yield-farm',
+  REFERRAL: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.referral',
+  TOKEN_BURN: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.token-burn',
+  WHITELIST: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.whitelist',
+  REPUTATION: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.reputation',
+  ACHIEVEMENT_BADGE: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.achievement-badge',
+} as const;
+
+// Network configuration
+export const NETWORK_CONFIG = {
+  mainnet: {
+    url: 'https://api.mainnet.hiro.so',
+    explorer: 'https://explorer.hiro.so',
+  },
+  testnet: {
+    url: 'https://api.testnet.hiro.so',
+    explorer: 'https://explorer.hiro.so/?chain=testnet',
+  }
+};
+
+/**
+ * Parse contract identifier into address and name
+ */
+export function parseContractId(contractId: string): { address: string; name: string } {
+  const [address, name] = contractId.split('.');
+  return { address, name };
+}
+
+/**
+ * Call a read-only function on a contract
+ */
+export async function readContract<T = any>(
+  contractId: string,
+  functionName: string,
+  args: ClarityValue[] = [],
+  network: 'mainnet' | 'testnet' = 'mainnet'
+): Promise<T> {
+  const { address, name } = parseContractId(contractId);
+  
+  try {
+    const result = await callReadOnlyFunction({
+      contractAddress: address,
+      contractName: name,
+      functionName,
+      functionArgs: args,
+      network,
+      senderAddress: address,
+    });
+    
+    return cvToValue(result) as T;
+  } catch (error) {
+    console.error(`Error calling ${contractId}.${functionName}:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Format STX amount from microSTX
+ */
+export function formatSTX(microSTX: number | string): string {
+  const amount = typeof microSTX === 'string' ? parseInt(microSTX) : microSTX;
+  return (amount / 1_000_000).toFixed(6);
+}
+
+/**
+ * Convert STX to microSTX
+ */
+export function toMicroSTX(stx: number): number {
+  return Math.floor(stx * 1_000_000);
+}
+
+/**
+ * Format address for display
+ */
+export function formatAddress(address: string, chars: number = 6): string {
+  if (!address) return '';
+  return `${address.slice(0, chars)}...${address.slice(-chars)}`;
+}
+
+/**
+ * Get contract explorer URL
+ */
+export function getContractExplorerUrl(
+  contractId: string,
+  network: 'mainnet' | 'testnet' = 'mainnet'
+): string {
+  const baseUrl = NETWORK_CONFIG[network].explorer;
+  return `${baseUrl}/txid/${contractId}?chain=${network}`;
+}
+
+/**
+ * Get transaction explorer URL
+ */
+export function getTxExplorerUrl(
+  txId: string,
+  network: 'mainnet' | 'testnet' = 'mainnet'
+): string {
+  const baseUrl = NETWORK_CONFIG[network].explorer;
+  return `${baseUrl}/txid/${txId}?chain=${network}`;
+}
+
+/**
+ * Voting DAO helpers
+ */
+export const VotingDAO = {
+  async getProposal(proposalId: number) {
+    return readContract(CONTRACT_ADDRESSES.VOTING_DAO, 'get-proposal', [uintCV(proposalId)]);
+  },
+  
+  async getUserVote(proposalId: number, voter: string) {
+    return readContract(CONTRACT_ADDRESSES.VOTING_DAO, 'get-user-vote', [
+      uintCV(proposalId),
+      principalCV(voter)
+    ]);
+  },
+  
+  async getProposalCount() {
+    return readContract(CONTRACT_ADDRESSES.VOTING_DAO, 'get-proposal-count', []);
+  }
+};
+
+/**
+ * Flash Loan helpers
+ */
+export const FlashLoan = {
+  async getAvailableLiquidity() {
+    return readContract(CONTRACT_ADDRESSES.FLASH_LOAN, 'get-available-liquidity', []);
+  },
+  
+  async getFlashFee() {
+    return readContract(CONTRACT_ADDRESSES.FLASH_LOAN, 'get-flash-fee', []);
+  },
+  
+  async calculateFee(amount: number) {
+    const fee = await this.getFlashFee();
+    return (amount * fee) / 10000;
+  }
+};
+
+/**
+ * Yield Farm helpers
+ */
+export const YieldFarm = {
+  async getTotalStaked() {
+    return readContract(CONTRACT_ADDRESSES.YIELD_FARM, 'get-total-staked', []);
+  },
+  
+  async getUserInfo(user: string) {
+    return readContract(CONTRACT_ADDRESSES.YIELD_FARM, 'get-user-info', [principalCV(user)]);
+  },
+  
+  async getPendingReward(user: string) {
+    return readContract(CONTRACT_ADDRESSES.YIELD_FARM, 'pending-reward', [principalCV(user)]);
+  },
+  
+  async getFarmInfo() {
+    return readContract(CONTRACT_ADDRESSES.YIELD_FARM, 'get-farm-info', []);
+  }
+};
+
+/**
+ * Multi-Sig Wallet helpers
+ */
+export const MultiSig = {
+  async getTransaction(txId: number) {
+    return readContract(CONTRACT_ADDRESSES.MULTI_SIG, 'get-transaction', [uintCV(txId)]);
+  },
+  
+  async isSigner(address: string) {
+    return readContract(CONTRACT_ADDRESSES.MULTI_SIG, 'is-signer', [principalCV(address)]);
+  },
+  
+  async getRequiredSignatures() {
+    return readContract(CONTRACT_ADDRESSES.MULTI_SIG, 'get-required-signatures', []);
+  },
+  
+  async getBalance() {
+    return readContract(CONTRACT_ADDRESSES.MULTI_SIG, 'get-balance', []);
+  }
+};
+
+/**
+ * Token Swap (AMM) helpers
+ */
+export const TokenSwap = {
+  async getReserves() {
+    return readContract(CONTRACT_ADDRESSES.TOKEN_SWAP, 'get-reserves', []);
+  },
+  
+  async getSwapQuote(inputAmount: number, inputReserve: number, outputReserve: number) {
+    return readContract(CONTRACT_ADDRESSES.TOKEN_SWAP, 'get-swap-output', [
+      uintCV(inputAmount),
+      uintCV(inputReserve),
+      uintCV(outputReserve)
+    ]);
+  },
+  
+  async getLPBalance(address: string) {
+    return readContract(CONTRACT_ADDRESSES.TOKEN_SWAP, 'get-lp-balance', [principalCV(address)]);
+  }
+};
+
+export default {
+  CONTRACT_ADDRESSES,
+  NETWORK_CONFIG,
+  parseContractId,
+  readContract,
+  formatSTX,
+  toMicroSTX,
+  formatAddress,
+  getContractExplorerUrl,
+  getTxExplorerUrl,
+  VotingDAO,
+  FlashLoan,
+  YieldFarm,
+  MultiSig,
+  TokenSwap,
+};
+
