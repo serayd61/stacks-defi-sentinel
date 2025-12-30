@@ -326,3 +326,44 @@ Built with ❤️ for the Stacks ecosystem | Stacks Builder Challenge 2024
 - reputation, achievement-badge, token-vesting, treasury
 
 ### Total: 22+ mainnet contracts!
+
+---
+
+## 🏆 Week 3 Builder Challenge Features
+
+### Chainhooks Integration
+Real-time blockchain event monitoring using [Hiro Chainhooks](https://docs.hiro.so/chainhooks):
+
+- **Token Transfer Monitoring** - Track SENTINEL token movements
+- **Staking Events** - Real-time staking deposits/withdrawals
+- **Whale Alerts** - Large transaction detection
+- **WebSocket Streaming** - Live data to connected clients
+
+### WalletConnect Support
+Full WalletConnect integration for seamless wallet connections:
+
+- ✅ Xverse Wallet
+- ✅ Leather Wallet
+- ✅ OKX Wallet
+- ✅ Asigna Multisig
+
+### Chainhook Predicates
+Located in `/chainhooks/predicates/`:
+
+```json
+{
+  "scope": "contract_call",
+  "contract_identifier": "SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.sentinel-token",
+  "method": "transfer"
+}
+```
+
+### Real-time Dashboard
+- Live transaction feed
+- Instant balance updates
+- Whale alert notifications
+- Block explorer integration
+
+---
+
+Built with ❤️ for Stacks Builder Challenge 2024
