@@ -4,7 +4,7 @@
  */
 
 import {
-  callReadOnlyFunction,
+  fetchCallReadOnlyFunction,
   cvToValue,
   uintCV,
   principalCV,
@@ -67,12 +67,12 @@ export async function readContract<T = any>(
   const { address, name } = parseContractId(contractId);
   
   try {
-    const result = await callReadOnlyFunction({
+    const result = await fetchCallReadOnlyFunction({
       contractAddress: address,
       contractName: name,
       functionName,
       functionArgs: args,
-      network,
+      network: network,
       senderAddress: address,
     });
     
