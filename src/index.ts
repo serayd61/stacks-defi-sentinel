@@ -23,7 +23,7 @@ const config = {
   chainhooksApiKey: process.env.CHAINHOOKS_API_KEY || '',
   webhookBaseUrl: process.env.WEBHOOK_BASE_URL || 'http://localhost:4000',
   whaleThresholdStx: parseInt(process.env.WHALE_ALERT_THRESHOLD_STX || '100000'),
-  largeSwapThresholdUsd: parseInt(process.env.LARGE_SWAP_THRESHOLD_USD || '50000'),
+  largeSwapThreshold: parseInt(process.env.LARGE_SWAP_THRESHOLD_USD || '50000'),
   
   // DEX contracts to monitor
   dexContracts: (process.env.MONITORED_DEX_CONTRACTS || '').split(',').filter(Boolean),
@@ -68,7 +68,7 @@ async function main() {
   // Initialize services
   const eventProcessor = new EventProcessor({
     whaleThresholdStx: config.whaleThresholdStx,
-    largeSwapThresholdUsd: config.largeSwapThresholdUsd,
+    largeSwapThreshold: config.largeSwapThreshold,
   });
 
   const analytics = new AnalyticsService();

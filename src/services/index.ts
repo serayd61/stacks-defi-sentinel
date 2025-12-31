@@ -1,5 +1,5 @@
-// Service exports for DeFi Sentinel
+// Service exports for DeFi Sentinel Backend
 
-export { priceService } from './priceService';
-export { walletService } from './walletService';
-export { contractService } from './contractService';
+export { AnalyticsService } from './analytics';
+export { EventProcessor } from './event-processor';
+export { NotificationService } from './notifications';
