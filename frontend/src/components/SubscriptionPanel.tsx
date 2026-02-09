@@ -6,13 +6,16 @@ const SubscriptionPanel: React.FC = () => {
     isConnected,
     userAddress,
     isSubscribed,
-    subscriptionTier,
     isLoading,
     connectWallet,
     disconnectWallet,
     subscribeBasic,
     subscribePremium,
   } = useWallet();
+  
+  // Default to basic tier for now (can be extended to track premium)
+  const subscriptionTier = isSubscribed ? 'basic' as const : null;
+  const isPremium = subscriptionTier === 'basic' ? false : false; // Placeholder for premium detection
 
   // Truncate address for display
   const truncateAddress = (address: string) => {
@@ -120,8 +123,8 @@ const SubscriptionPanel: React.FC = () => {
           <div className="subscription-info">
             <div className="tier">
               <span className="label">Plan:</span>
-              <span className={`value ${subscriptionTier}`}>
-                {subscriptionTier === 'premium' ? '👑 Premium' : '⭐ Basic'}
+              <span className={`value ${isPremium ? 'premium' : 'basic'}`}>
+                {isPremium ? '👑 Premium' : '⭐ Basic'}
               </span>
             </div>
             <div className="address">
@@ -135,7 +138,7 @@ const SubscriptionPanel: React.FC = () => {
             <ul>
               <li>🐋 Real-time whale alerts</li>
               <li>📊 Full dashboard access</li>
-              {subscriptionTier === 'premium' && (
+              {isPremium && (
                 <>
                   <li>🔔 Custom notifications</li>
                   <li>🔑 API access</li>

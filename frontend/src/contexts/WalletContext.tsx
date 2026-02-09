@@ -1,25 +1,59 @@
-import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
-import { AppConfig, UserSession, showConnect, disconnect } from '@stacks/connect';
+import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { 
+  AppConfig, 
+  UserSession, 
+  showConnect,
+  disconnect as stacksDisconnect,
+  openContractCall,
+} from '@stacks/connect';
+import { 
+  uintCV, 
+  PostConditionMode,
+  Pc,
+} from '@stacks/transactions';
 
-// Contract details
-const CONTRACT_ADDRESS = 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB';
-const CONTRACT_NAME = 'defi-sentinel';
+// Types
+export type WalletType = 'leather' | 'xverse' | 'hiro' | 'okx' | 'asigna' | 'orange';
 
-// App config
+interface WalletContextType {
+  // Connection state
+  isConnected: boolean;
+  isLoading: boolean;
+  userAddress: string | null;
+  balance: string | null;
+  
+  // Wallet detection
+  installedWallets: WalletType[];
+  detectedWallet: string | null;
+  hasProvider: boolean;
+  
+  // Modal state
+  showWalletModal: boolean;
+  setShowWalletModal: (show: boolean) => void;
+  
+  // Actions
+  connectWallet: (walletType?: WalletType) => void;
+  disconnectWallet: () => void;
+  refreshBalance: () => Promise<void>;
+  refreshDetection: () => void;
+  
+  // Subscription
+  isSubscribed: boolean;
+  subscribeBasic: () => Promise<void>;
+  subscribePremium: () => Promise<void>;
+  checkSubscription: () => Promise<void>;
+  
+  // User session
+  userSession: UserSession;
+}
+
+// App config - StackPay style
 const appConfig = new AppConfig(['store_write', 'publish_data']);
 const userSession = new UserSession({ appConfig });
 
-// Supported wallets
-export type WalletType = 'leather' | 'xverse' | 'hiro' | 'okx' | 'asigna' | 'orange';
-
-export const SUPPORTED_WALLETS = [
-  { id: 'leather' as WalletType, name: 'Leather', color: '#12100D' },
-  { id: 'xverse' as WalletType, name: 'Xverse', color: '#EE7242' },
-  { id: 'hiro' as WalletType, name: 'Hiro Wallet', color: '#FF5500' },
-  { id: 'okx' as WalletType, name: 'OKX Wallet', color: '#000000' },
-  { id: 'asigna' as WalletType, name: 'Asigna', color: '#6B46C1' },
-  { id: 'orange' as WalletType, name: 'Orange Wallet', color: '#F97316' },
-];
+// Contract details
+const CONTRACT_ADDRESS = 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9';
+const CONTRACT_NAME = 'defi-sentinel';
 
 // Check which wallets are installed
 const checkInstalledWallets = (): WalletType[] => {
@@ -28,307 +62,305 @@ const checkInstalledWallets = (): WalletType[] => {
   const installed: WalletType[] = [];
   const win = window as any;
   
-  // Leather (also provides StacksProvider)
-  if (win.LeatherProvider || win.StacksProvider) {
-    installed.push('leather');
-  }
-  
-  // Xverse
-  if (win.XverseProviders?.StacksProvider || win.BitcoinProvider) {
-    installed.push('xverse');
-  }
-  
-  // Hiro Wallet
-  if (win.HiroWalletProvider) {
-    installed.push('hiro');
-  }
-  
-  // OKX
-  if (win.okxwallet?.stacks) {
-    installed.push('okx');
-  }
-  
-  // Asigna
-  if (win.AsignaProvider) {
-    installed.push('asigna');
-  }
-  
-  // Orange
-  if (win.OrangeStacksProvider) {
-    installed.push('orange');
+  try {
+    // Leather
+    if (win.LeatherProvider || (win.StacksProvider && !win.XverseProviders) || win.btc?.request) {
+      installed.push('leather');
+    }
+    
+    // Xverse
+    if (win.XverseProviders || win.BitcoinProvider?.request || (win.StacksProvider && win.BitcoinProvider)) {
+      installed.push('xverse');
+    }
+    
+    // Hiro (legacy, now Leather)
+    if (win.HiroWalletProvider || win.StacksProvider) {
+      installed.push('hiro');
+    }
+    
+    // OKX
+    if (win.okxwallet?.stacks || win.okxwallet?.bitcoin) {
+      installed.push('okx');
+    }
+    
+    // Asigna
+    if (win.AsignaProvider) {
+      installed.push('asigna');
+    }
+    
+    // Orange
+    if (win.OrangeStacksProvider) {
+      installed.push('orange');
+    }
+  } catch (error) {
+    console.error('Error checking wallets:', error);
   }
   
   return installed;
 };
 
-interface WalletContextType {
-  // State
-  isConnected: boolean;
-  userAddress: string | null;
-  balance: string | null;
-  isSubscribed: boolean;
-  subscriptionTier: 'none' | 'basic' | 'premium';
-  isLoading: boolean;
-  installedWallets: WalletType[];
-  selectedWallet: WalletType | null;
-  showWalletModal: boolean;
-  
-  // Actions
-  connectWallet: (walletType?: WalletType) => Promise<void>;
-  disconnectWallet: () => void;
-  subscribeBasic: () => Promise<void>;
-  subscribePremium: () => Promise<void>;
-  checkSubscription: () => Promise<void>;
-  setShowWalletModal: (show: boolean) => void;
-  refreshBalance: () => Promise<void>;
-}
-
-const WalletContext = createContext<WalletContextType | undefined>(undefined);
-
-export const useWallet = () => {
-  const context = useContext(WalletContext);
-  if (!context) {
-    throw new Error('useWallet must be used within a WalletProvider');
-  }
-  return context;
+// Check if any Stacks provider is available
+const hasStacksProvider = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const win = window as any;
+  return !!(
+    win.StacksProvider ||
+    win.LeatherProvider ||
+    win.XverseProviders?.StacksProvider ||
+    win.BitcoinProvider ||
+    win.btc ||
+    win.HiroWalletProvider
+  );
 };
 
-interface WalletProviderProps {
-  children: ReactNode;
-}
+// Get detected wallet name
+const getDetectedWallet = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  const win = window as any;
+  
+  if (win.LeatherProvider || (win.StacksProvider && !win.XverseProviders && !win.BitcoinProvider)) {
+    return 'Leather';
+  }
+  if (win.XverseProviders || (win.StacksProvider && win.BitcoinProvider)) {
+    return 'Xverse';
+  }
+  if (win.HiroWalletProvider) {
+    return 'Hiro';
+  }
+  if (win.okxwallet) {
+    return 'OKX';
+  }
+  if (win.StacksProvider) {
+    return 'Stacks Wallet';
+  }
+  return null;
+};
 
-export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
-  const [walletConnected, setWalletConnected] = useState(false);
+// Create context
+const WalletContext = createContext<WalletContextType | undefined>(undefined);
+
+// Provider component
+export const WalletProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const [isConnected, setIsConnected] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const [userAddress, setUserAddress] = useState<string | null>(null);
   const [balance, setBalance] = useState<string | null>(null);
-  const [isSubscribed, setIsSubscribed] = useState(false);
-  const [subscriptionTier, setSubscriptionTier] = useState<'none' | 'basic' | 'premium'>('none');
-  const [isLoading, setIsLoading] = useState(false);
   const [installedWallets, setInstalledWallets] = useState<WalletType[]>([]);
-  const [selectedWallet, setSelectedWallet] = useState<WalletType | null>(null);
+  const [detectedWallet, setDetectedWallet] = useState<string | null>(null);
+  const [hasProvider, setHasProvider] = useState(false);
   const [showWalletModal, setShowWalletModal] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
 
-  // Check installed wallets on mount
-  useEffect(() => {
-    const checkWallets = () => {
-      const installed = checkInstalledWallets();
-      setInstalledWallets(installed);
-    };
+  // Refresh wallet detection
+  const refreshDetection = useCallback(() => {
+    const installed = checkInstalledWallets();
+    setInstalledWallets(installed);
+    setHasProvider(hasStacksProvider());
+    setDetectedWallet(getDetectedWallet());
     
-    checkWallets();
-    // Check again after a delay (wallets may inject late)
-    const timer = setTimeout(checkWallets, 1500);
-    return () => clearTimeout(timer);
+    console.log('=== Wallet Detection ===');
+    console.log('Installed wallets:', installed);
+    console.log('Has provider:', hasStacksProvider());
+    console.log('Detected wallet:', getDetectedWallet());
   }, []);
 
-  // Check if already connected on mount
+  // Check for existing session on mount
   useEffect(() => {
-    if (userSession.isUserSignedIn()) {
-      const userData = userSession.loadUserData();
-      const address = userData.profile.stxAddress?.mainnet || userData.profile.stxAddress?.testnet;
-      if (address) {
-        setWalletConnected(true);
-        setUserAddress(address);
-        fetchBalance(address);
+    const checkSession = () => {
+      refreshDetection();
+      
+      if (userSession.isUserSignedIn()) {
+        const userData = userSession.loadUserData();
+        const address = userData.profile?.stxAddress?.mainnet || 
+                       userData.profile?.stxAddress?.testnet ||
+                       null;
+        
+        if (address) {
+          setIsConnected(true);
+          setUserAddress(address);
+          refreshBalance();
+        }
       }
-    }
-  }, []);
+    };
+
+    checkSession();
+    
+    // Recheck after delays
+    const t1 = setTimeout(checkSession, 500);
+    const t2 = setTimeout(checkSession, 1500);
+    const t3 = setTimeout(checkSession, 3000);
+    
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+    };
+  }, [refreshDetection]);
 
   // Fetch balance
-  const fetchBalance = async (address: string) => {
+  const refreshBalance = useCallback(async () => {
+    const address = userAddress || (userSession.isUserSignedIn() 
+      ? userSession.loadUserData().profile?.stxAddress?.mainnet 
+      : null);
+    
+    if (!address) return;
+    
     try {
-      const response = await fetch(`https://api.mainnet.hiro.so/extended/v1/address/${address}/balances`);
-      const data = await response.json();
-      const stxBalance = (parseInt(data.stx?.balance || '0') / 1_000_000).toFixed(2);
-      setBalance(stxBalance);
+      const response = await fetch(
+        `https://api.hiro.so/extended/v1/address/${address}/balances`
+      );
+      if (response.ok) {
+        const data = await response.json();
+        const stxBalance = (parseInt(data.stx?.balance || '0') / 1_000_000).toFixed(2);
+        setBalance(stxBalance);
+      }
     } catch (error) {
       console.error('Failed to fetch balance:', error);
     }
-  };
-
-  // Refresh balance
-  const refreshBalance = useCallback(async () => {
-    if (userAddress) {
-      await fetchBalance(userAddress);
-    }
   }, [userAddress]);
 
-  // Connect wallet
-  const connectWallet = useCallback(async (_walletType?: WalletType) => {
-    setShowWalletModal(false);
+  // Connect wallet - StackPay style
+  const connectWallet = useCallback((walletType?: WalletType) => {
     setIsLoading(true);
+    setShowWalletModal(false);
 
-    try {
-      showConnect({
-        appDetails: {
-          name: 'DeFi Sentinel',
-          icon: 'https://defi-sentinel.xyz/favicon.svg',
-        },
-        redirectTo: window.location.origin,
-        onFinish: () => {
-          const userData = userSession.loadUserData();
-          const address = userData.profile.stxAddress?.mainnet;
-          if (address) {
-            setWalletConnected(true);
-            setUserAddress(address);
-            fetchBalance(address);
-          }
+    showConnect({
+      appDetails: {
+        name: 'DeFi Sentinel',
+        icon: window.location.origin + '/logo.png',
+      },
+      onFinish: () => {
+        const userData = userSession.loadUserData();
+        const address = userData.profile?.stxAddress?.mainnet || 
+                       userData.profile?.stxAddress?.testnet ||
+                       null;
+        
+        if (address) {
+          setIsConnected(true);
+          setUserAddress(address);
           setIsLoading(false);
-        },
-        onCancel: () => {
-          setIsLoading(false);
-        },
-        userSession,
-      });
-    } catch (error) {
-      console.error('Error connecting wallet:', error);
-      setIsLoading(false);
-    }
-  }, []);
+          refreshBalance();
+          checkSubscription();
+        }
+      },
+      onCancel: () => {
+        setIsLoading(false);
+      },
+      userSession,
+    });
+  }, [refreshBalance]);
 
   // Disconnect wallet
   const disconnectWallet = useCallback(() => {
-    try {
-      disconnect();
-      userSession.signUserOut();
-    } catch (e) {
-      console.error('Error disconnecting:', e);
-    }
-    setWalletConnected(false);
+    stacksDisconnect();
+    userSession.signUserOut();
+    setIsConnected(false);
     setUserAddress(null);
     setBalance(null);
     setIsSubscribed(false);
-    setSubscriptionTier('none');
-    setSelectedWallet(null);
   }, []);
-
-  // Subscribe to basic plan
-  const subscribeBasic = useCallback(async () => {
-    if (!userAddress) return;
-    
-    setIsLoading(true);
-    
-    try {
-      const { openContractCall } = await import('@stacks/connect');
-      
-      await openContractCall({
-        contractAddress: CONTRACT_ADDRESS,
-        contractName: CONTRACT_NAME,
-        functionName: 'subscribe',
-        functionArgs: [],
-        network: 'mainnet',
-        appDetails: {
-          name: 'DeFi Sentinel',
-          icon: 'https://defi-sentinel.xyz/favicon.svg',
-        },
-        onFinish: (data: any) => {
-          console.log('Subscribe TX:', data);
-          setIsSubscribed(true);
-          setSubscriptionTier('basic');
-          setIsLoading(false);
-        },
-        onCancel: () => {
-          setIsLoading(false);
-        },
-      });
-    } catch (error) {
-      console.error('Subscribe error:', error);
-      setIsLoading(false);
-    }
-  }, [userAddress]);
-
-  // Subscribe to premium plan
-  const subscribePremium = useCallback(async () => {
-    if (!userAddress) return;
-    
-    setIsLoading(true);
-    
-    try {
-      const { openContractCall } = await import('@stacks/connect');
-      
-      await openContractCall({
-        contractAddress: CONTRACT_ADDRESS,
-        contractName: CONTRACT_NAME,
-        functionName: 'subscribe-premium',
-        functionArgs: [],
-        network: 'mainnet',
-        appDetails: {
-          name: 'DeFi Sentinel',
-          icon: 'https://defi-sentinel.xyz/favicon.svg',
-        },
-        onFinish: (data: any) => {
-          console.log('Premium Subscribe TX:', data);
-          setIsSubscribed(true);
-          setSubscriptionTier('premium');
-          setIsLoading(false);
-        },
-        onCancel: () => {
-          setIsLoading(false);
-        },
-      });
-    } catch (error) {
-      console.error('Premium subscribe error:', error);
-      setIsLoading(false);
-    }
-  }, [userAddress]);
 
   // Check subscription status
   const checkSubscription = useCallback(async () => {
     if (!userAddress) return;
     
     try {
-      // Check via transaction history
-      const txResponse = await fetch(
+      // Check transaction history for subscription
+      const response = await fetch(
         `https://api.hiro.so/extended/v1/address/${userAddress}/transactions?limit=50`
       );
-      const txData = await txResponse.json();
       
-      // Look for successful subscribe transactions to our contract
-      const subscriptions = txData.results?.filter((tx: any) => 
-        tx.tx_status === 'success' &&
-        tx.tx_type === 'contract_call' &&
-        tx.contract_call?.contract_id === `${CONTRACT_ADDRESS}.${CONTRACT_NAME}` &&
-        (tx.contract_call?.function_name === 'subscribe' || tx.contract_call?.function_name === 'subscribe-premium')
-      );
-      
-      if (subscriptions && subscriptions.length > 0) {
-        setIsSubscribed(true);
-        const latestSub = subscriptions[0];
-        if (latestSub.contract_call?.function_name === 'subscribe-premium') {
-          setSubscriptionTier('premium');
-        } else {
-          setSubscriptionTier('basic');
-        }
+      if (response.ok) {
+        const data = await response.json();
+        const hasSubscription = data.results?.some((tx: any) => 
+          tx.contract_call?.contract_id?.includes(CONTRACT_NAME) &&
+          (tx.contract_call?.function_name === 'subscribe-basic' ||
+           tx.contract_call?.function_name === 'subscribe-premium')
+        );
+        setIsSubscribed(hasSubscription);
       }
     } catch (error) {
-      console.error('Check subscription error:', error);
+      console.error('Failed to check subscription:', error);
     }
   }, [userAddress]);
 
-  // Check subscription when address changes
-  useEffect(() => {
-    if (userAddress) {
-      checkSubscription();
+  // Subscribe basic
+  const subscribeBasic = useCallback(async () => {
+    if (!isConnected || !userAddress) {
+      setShowWalletModal(true);
+      return;
     }
-  }, [userAddress, checkSubscription]);
+
+    const amount = 10_000_000; // 10 STX
+
+    await openContractCall({
+      contractAddress: CONTRACT_ADDRESS,
+      contractName: CONTRACT_NAME,
+      functionName: 'subscribe-basic',
+      functionArgs: [],
+      postConditionMode: PostConditionMode.Deny,
+      postConditions: [
+        Pc.principal(userAddress).willSendEq(amount).ustx(),
+      ],
+      onFinish: (data) => {
+        console.log('Basic subscription tx:', data);
+        setIsSubscribed(true);
+        refreshBalance();
+      },
+      onCancel: () => {
+        console.log('Subscription cancelled');
+      },
+    });
+  }, [isConnected, userAddress, refreshBalance]);
+
+  // Subscribe premium
+  const subscribePremium = useCallback(async () => {
+    if (!isConnected || !userAddress) {
+      setShowWalletModal(true);
+      return;
+    }
+
+    const amount = 50_000_000; // 50 STX
+
+    await openContractCall({
+      contractAddress: CONTRACT_ADDRESS,
+      contractName: CONTRACT_NAME,
+      functionName: 'subscribe-premium',
+      functionArgs: [],
+      postConditionMode: PostConditionMode.Deny,
+      postConditions: [
+        Pc.principal(userAddress).willSendEq(amount).ustx(),
+      ],
+      onFinish: (data) => {
+        console.log('Premium subscription tx:', data);
+        setIsSubscribed(true);
+        refreshBalance();
+      },
+      onCancel: () => {
+        console.log('Subscription cancelled');
+      },
+    });
+  }, [isConnected, userAddress, refreshBalance]);
 
   const value: WalletContextType = {
-    isConnected: walletConnected,
+    isConnected,
+    isLoading,
     userAddress,
     balance,
-    isSubscribed,
-    subscriptionTier,
-    isLoading,
     installedWallets,
-    selectedWallet,
+    detectedWallet,
+    hasProvider,
     showWalletModal,
+    setShowWalletModal,
     connectWallet,
     disconnectWallet,
+    refreshBalance,
+    refreshDetection,
+    isSubscribed,
     subscribeBasic,
     subscribePremium,
     checkSubscription,
-    setShowWalletModal,
-    refreshBalance,
+    userSession,
   };
 
   return (
@@ -336,6 +368,15 @@ export const WalletProvider: React.FC<WalletProviderProps> = ({ children }) => {
       {children}
     </WalletContext.Provider>
   );
+};
+
+// Hook
+export const useWallet = (): WalletContextType => {
+  const context = useContext(WalletContext);
+  if (context === undefined) {
+    throw new Error('useWallet must be used within a WalletProvider');
+  }
+  return context;
 };
 
 export default WalletContext;
