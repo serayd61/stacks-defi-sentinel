@@ -2,14 +2,8 @@ name: Auto Changelog Update
 
 on:
   schedule:
-    - cron: '0 9 * * *'  # Her gün 09:00 UTC (Türkiye 12:00)
+    - cron: '0 9 * * *'  # Her gün 09:00 UTC
   workflow_dispatch:
-    inputs:
-      force_update:
-        description: 'Force changelog update even if no commits'
-        required: false
-        default: 'false'
-        type: boolean
 
 permissions:
   contents: write
@@ -31,177 +25,80 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Get commits from last 24 hours
-        id: get_commits
+      - name: Generate changelog entry
+        id: changelog
         run: |
           # Son 24 saatteki commit'leri al
-          SINCE=$(date -u -d '24 hours ago' '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -u -v-24H '+%Y-%m-%dT%H:%M:%SZ')
+          SINCE=$(date -u -d '24 hours ago' '+%Y-%m-%dT%H:%M:%SZ')
+          TODAY=$(date -u '+%Y-%m-%d')
           
           echo "Checking commits since: $SINCE"
           
-          # Commit'leri kategorize et
-          COMMITS=$(git log --since="$SINCE" --pretty=format:"%s" --no-merges 2>/dev/null || echo "")
+          # Commit'leri al
+          COMMITS=$(git log --since="$SINCE" --pretty=format:"- %s" --no-merges 2>/dev/null || true)
+          COMMIT_COUNT=$(echo "$COMMITS" | grep -c "^-" || echo "0")
           
-          if [ -z "$COMMITS" ]; then
+          echo "Found $COMMIT_COUNT commits"
+          echo "commit_count=$COMMIT_COUNT" >> $GITHUB_OUTPUT
+          
+          if [ "$COMMIT_COUNT" -eq "0" ] || [ -z "$COMMITS" ]; then
+            echo "No commits found in the last 24 hours"
             echo "has_commits=false" >> $GITHUB_OUTPUT
-            echo "No commits in the last 24 hours"
             exit 0
           fi
           
           echo "has_commits=true" >> $GITHUB_OUTPUT
           
-          # Kategorilere ayır
-          FEATURES=$(echo "$COMMITS" | grep -iE "^(feat|feature|add):" | sed 's/^[^:]*: /- /' || echo "")
-          FIXES=$(echo "$COMMITS" | grep -iE "^(fix|bugfix|hotfix):" | sed 's/^[^:]*: /- /' || echo "")
-          DOCS=$(echo "$COMMITS" | grep -iE "^(docs|doc):" | sed 's/^[^:]*: /- /' || echo "")
-          CHORES=$(echo "$COMMITS" | grep -iE "^(chore|refactor|style|perf):" | sed 's/^[^:]*: /- /' || echo "")
-          OTHER=$(echo "$COMMITS" | grep -ivE "^(feat|feature|add|fix|bugfix|hotfix|docs|doc|chore|refactor|style|perf):" | sed 's/^/- /' || echo "")
+          # Changelog entry oluştur
+          cat > /tmp/new_entry.md << ENTRY_EOF
           
-          # Multiline output için
-          {
-            echo "features<<EOF"
-            echo "$FEATURES"
-            echo "EOF"
-            echo "fixes<<EOF"
-            echo "$FIXES"
-            echo "EOF"
-            echo "docs<<EOF"
-            echo "$DOCS"
-            echo "EOF"
-            echo "chores<<EOF"
-            echo "$CHORES"
-            echo "EOF"
-            echo "other<<EOF"
-            echo "$OTHER"
-            echo "EOF"
-          } >> $GITHUB_OUTPUT
+          ## [Daily Update] - $TODAY
           
-          # Özet sayıları
-          FEAT_COUNT=$(echo "$FEATURES" | grep -c "^-" || echo "0")
-          FIX_COUNT=$(echo "$FIXES" | grep -c "^-" || echo "0")
-          DOC_COUNT=$(echo "$DOCS" | grep -c "^-" || echo "0")
-          OTHER_COUNT=$(echo "$OTHER" | grep -c "^-" || echo "0")
+          ### Changes
+          $COMMITS
           
-          echo "feat_count=$FEAT_COUNT" >> $GITHUB_OUTPUT
-          echo "fix_count=$FIX_COUNT" >> $GITHUB_OUTPUT
-          echo "doc_count=$DOC_COUNT" >> $GITHUB_OUTPUT
+          ENTRY_EOF
+          
+          echo "Entry created"
 
-      - name: Update CHANGELOG
-        if: steps.get_commits.outputs.has_commits == 'true'
+      - name: Update CHANGELOG.md
+        if: steps.changelog.outputs.has_commits == 'true'
         run: |
-          TODAY=$(date -u '+%Y-%m-%d')
-          
-          # Yeni changelog entry oluştur
-          NEW_ENTRY="## [Auto Update] - $TODAY
-
-"
-          
-          # Features ekle
-          if [ -n "${{ steps.get_commits.outputs.features }}" ] && [ "${{ steps.get_commits.outputs.features }}" != "" ]; then
-            FEATURES="${{ steps.get_commits.outputs.features }}"
-            if [ -n "$FEATURES" ]; then
-              NEW_ENTRY+="### Added
-$FEATURES
-
-"
-            fi
-          fi
-          
-          # Fixes ekle
-          if [ -n "${{ steps.get_commits.outputs.fixes }}" ] && [ "${{ steps.get_commits.outputs.fixes }}" != "" ]; then
-            FIXES="${{ steps.get_commits.outputs.fixes }}"
-            if [ -n "$FIXES" ]; then
-              NEW_ENTRY+="### Fixed
-$FIXES
-
-"
-            fi
-          fi
-          
-          # Docs ekle
-          if [ -n "${{ steps.get_commits.outputs.docs }}" ] && [ "${{ steps.get_commits.outputs.docs }}" != "" ]; then
-            DOCS="${{ steps.get_commits.outputs.docs }}"
-            if [ -n "$DOCS" ]; then
-              NEW_ENTRY+="### Documentation
-$DOCS
-
-"
-            fi
-          fi
-          
-          # Other ekle
-          if [ -n "${{ steps.get_commits.outputs.other }}" ] && [ "${{ steps.get_commits.outputs.other }}" != "" ]; then
-            OTHER="${{ steps.get_commits.outputs.other }}"
-            if [ -n "$OTHER" ]; then
-              NEW_ENTRY+="### Changed
-$OTHER
-
-"
-            fi
-          fi
-          
-          # CHANGELOG.md'yi güncelle (## [Unreleased] satırından sonra ekle)
-          if grep -q "## \[Unreleased\]" CHANGELOG.md; then
-            # Unreleased bölümünden sonra ekle
-            sed -i.bak '/## \[Unreleased\]/a\
-\
-'"$NEW_ENTRY"'' CHANGELOG.md
-            rm -f CHANGELOG.md.bak
-          else
-            # Başlıktan sonra ekle
-            sed -i.bak '1,/^# Changelog/!b;/^# Changelog/a\
-\
-'"$NEW_ENTRY"'' CHANGELOG.md
-            rm -f CHANGELOG.md.bak
-          fi
-
-      - name: Check for changes
-        id: check_changes
-        run: |
-          if git diff --quiet CHANGELOG.md; then
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-          else
-            echo "has_changes=true" >> $GITHUB_OUTPUT
+          # Yeni entry'yi CHANGELOG'un başına ekle
+          if [ -f /tmp/new_entry.md ]; then
+            # Header'ı koru, sonra yeni entry ekle
+            head -8 CHANGELOG.md > /tmp/changelog_header.md
+            tail -n +9 CHANGELOG.md > /tmp/changelog_body.md
+            
+            cat /tmp/changelog_header.md > CHANGELOG.md
+            cat /tmp/new_entry.md >> CHANGELOG.md
+            cat /tmp/changelog_body.md >> CHANGELOG.md
+            
+            echo "CHANGELOG.md updated"
           fi
 
       - name: Commit and Push
-        if: steps.get_commits.outputs.has_commits == 'true' && steps.check_changes.outputs.has_changes == 'true'
+        if: steps.changelog.outputs.has_commits == 'true'
         run: |
+          # Değişiklik var mı kontrol et
+          if git diff --quiet CHANGELOG.md 2>/dev/null; then
+            echo "No changes to commit"
+            exit 0
+          fi
+          
           git add CHANGELOG.md
-          
-          # Commit mesajı oluştur
-          FEAT_COUNT="${{ steps.get_commits.outputs.feat_count }}"
-          FIX_COUNT="${{ steps.get_commits.outputs.fix_count }}"
-          
-          COMMIT_MSG="chore: Auto-update CHANGELOG [skip ci]
+          git commit -m "chore: Auto-update CHANGELOG [skip ci]
 
-Daily changelog update:
-- Features: ${FEAT_COUNT:-0}
-- Fixes: ${FIX_COUNT:-0}
-
-Generated by GitHub Actions"
+          Daily update with ${{ steps.changelog.outputs.commit_count }} commits
+          Generated by GitHub Actions"
           
-          git commit -m "$COMMIT_MSG"
           git push origin main
+          echo "Changes pushed successfully"
 
       - name: Summary
+        if: always()
         run: |
-          echo "## Changelog Update Summary" >> $GITHUB_STEP_SUMMARY
+          echo "## Auto Changelog Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          
-          if [ "${{ steps.get_commits.outputs.has_commits }}" == "true" ]; then
-            echo "✅ Found commits in the last 24 hours" >> $GITHUB_STEP_SUMMARY
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "| Category | Count |" >> $GITHUB_STEP_SUMMARY
-            echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-            echo "| Features | ${{ steps.get_commits.outputs.feat_count }} |" >> $GITHUB_STEP_SUMMARY
-            echo "| Fixes | ${{ steps.get_commits.outputs.fix_count }} |" >> $GITHUB_STEP_SUMMARY
-            echo "| Docs | ${{ steps.get_commits.outputs.doc_count }} |" >> $GITHUB_STEP_SUMMARY
-          else
-            echo "ℹ️ No commits found in the last 24 hours" >> $GITHUB_STEP_SUMMARY
-          fi
-          
-          if [ "${{ steps.check_changes.outputs.has_changes }}" == "true" ]; then
-            echo "" >> $GITHUB_STEP_SUMMARY
-            echo "✅ CHANGELOG.md updated and pushed" >> $GITHUB_STEP_SUMMARY
-          fi
+          echo "- Commits found: ${{ steps.changelog.outputs.commit_count || '0' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Has commits: ${{ steps.changelog.outputs.has_commits || 'false' }}" >> $GITHUB_STEP_SUMMARY
