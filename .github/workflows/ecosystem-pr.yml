@@ -1,10 +1,7 @@
-name: Ecosystem Contribution
+name: Ecosystem PR Bot
 
 on:
-  schedule:
-    - cron: '0 10 * * 1'  # Her Pazartesi 10:00 UTC
   workflow_dispatch:
-    # Manual trigger enabled
     inputs:
       target_repo:
         description: 'Target repository (owner/repo)'
