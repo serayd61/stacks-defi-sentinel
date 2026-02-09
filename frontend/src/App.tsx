@@ -35,7 +35,10 @@ import {
   Database,
   LineChart,
   Star,
-  ChevronDown
+  ChevronDown,
+  Code,
+  Server,
+  Search
 } from 'lucide-react';
 import { StatCard } from './components/StatCard';
 import { SwapTable } from './components/SwapTable';
@@ -63,6 +66,12 @@ import GasTracker from './components/GasTracker';
 import DAOVoting from './components/DAOVoting';
 import ReferralSystem from './components/ReferralSystem';
 import LendingPool from './components/LendingPool';
+import LivePriceTicker from './components/LivePriceTicker';
+import NetworkHealth from './components/NetworkHealth';
+import ProtocolRankings from './components/ProtocolRankings';
+import ContractActivityMonitor from './components/ContractActivityMonitor';
+import WalletAnalytics from './components/WalletAnalytics';
+import PriceAlerts from './components/PriceAlerts';
 import { WalletProvider, useWallet } from './contexts/WalletContext';
 import { useApi } from './hooks/useApi';
 import { useWebSocket } from './hooks/useWebSocket';
@@ -71,7 +80,7 @@ import StacksWalletConnect from './components/StacksWalletConnect';
 const API_URL = import.meta.env.VITE_API_URL || 'https://stacks-defi-sentinel-production.up.railway.app';
 const WS_URL = import.meta.env.VITE_WS_URL || 'wss://stacks-defi-sentinel-production.up.railway.app/ws';
 
-type TabType = 'overview' | 'swaps' | 'alerts' | 'ecosystem' | 'subscribe' | 'token-sale' | 'stake' | 'lending' | 'membership' | 'sbtc' | 'aggregator' | 'badges' | 'predict' | 'passport' | 'leaderboard' | 'portfolio' | 'gas' | 'dao' | 'referral';
+type TabType = 'overview' | 'swaps' | 'alerts' | 'ecosystem' | 'subscribe' | 'token-sale' | 'stake' | 'lending' | 'membership' | 'sbtc' | 'aggregator' | 'badges' | 'predict' | 'passport' | 'leaderboard' | 'portfolio' | 'gas' | 'dao' | 'referral' | 'network' | 'protocols' | 'contracts' | 'wallet-analytics' | 'price-alerts';
 
 // Navigation item type
 interface NavItem {
@@ -96,8 +105,8 @@ const navCategories: NavCategory[] = [
     icon: BarChart3,
     items: [
       { id: 'overview', label: 'Dashboard', icon: BarChart3, description: 'Platform overview & stats' },
-      { id: 'portfolio', label: 'Portfolio', icon: PieChart, description: 'Track your assets' },
-      { id: 'leaderboard', label: 'Leaderboard', icon: Trophy, description: 'Top performers' },
+      { id: 'network', label: 'Network Health', icon: Server, description: 'Stacks network stats', new: true },
+      { id: 'protocols', label: 'DeFi Rankings', icon: Trophy, description: 'Protocol rankings', hot: true },
     ]
   },
   {
@@ -106,6 +115,15 @@ const navCategories: NavCategory[] = [
     items: [
       { id: 'aggregator', label: 'DEX Aggregator', icon: Zap, description: 'Best swap rates', hot: true },
       { id: 'swaps', label: 'Swap History', icon: ArrowRightLeft, description: 'Recent trades' },
+      { id: 'price-alerts', label: 'Price Alerts', icon: Bell, description: 'Custom alerts', new: true },
+    ]
+  },
+  {
+    name: 'Analytics',
+    icon: LineChart,
+    items: [
+      { id: 'contracts', label: 'Contract Activity', icon: Code, description: 'Smart contract calls', new: true },
+      { id: 'wallet-analytics', label: 'Wallet Analytics', icon: Search, description: 'Analyze any wallet', new: true },
       { id: 'alerts', label: 'Whale Alerts', icon: Bell, description: 'Large transactions' },
     ]
   },
@@ -113,7 +131,7 @@ const navCategories: NavCategory[] = [
     name: 'DeFi',
     icon: Landmark,
     items: [
-      { id: 'lending', label: 'Lending', icon: Landmark, description: 'Borrow & lend', new: true },
+      { id: 'lending', label: 'Lending', icon: Landmark, description: 'Borrow & lend' },
       { id: 'stake', label: 'Staking', icon: Coins, description: 'Earn rewards' },
       { id: 'sbtc', label: 'sBTC Bridge', icon: Database, description: 'Bitcoin bridge' },
     ]
@@ -137,10 +155,12 @@ const navCategories: NavCategory[] = [
     ]
   },
   {
-    name: 'Ecosystem',
+    name: 'More',
     icon: Layers,
     items: [
       { id: 'ecosystem', label: 'Explore', icon: Activity, description: 'Full ecosystem' },
+      { id: 'portfolio', label: 'Portfolio', icon: PieChart, description: 'Track your assets' },
+      { id: 'leaderboard', label: 'Leaderboard', icon: Trophy, description: 'Top performers' },
       { id: 'predict', label: 'Predictions', icon: Target, description: 'Market predictions' },
       { id: 'referral', label: 'Referrals', icon: Gift, description: 'Earn rewards' },
     ]
@@ -455,6 +475,11 @@ function App() {
             </div>
           )}
 
+          {/* Live Price Ticker - Always visible */}
+          <div className="mb-6">
+            <LivePriceTicker />
+          </div>
+
           {isLoading ? (
             <div className="flex items-center justify-center h-64">
               <div className="text-center">
@@ -576,6 +601,18 @@ function App() {
               {activeTab === 'dao' && <div className="max-w-5xl mx-auto"><DAOVoting /></div>}
               {activeTab === 'referral' && <div className="max-w-4xl mx-auto"><ReferralSystem /></div>}
               {activeTab === 'subscribe' && <div className="max-w-2xl mx-auto"><SubscriptionPanel /></div>}
+              
+              {/* New Advanced Features */}
+              {activeTab === 'network' && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <NetworkHealth />
+                  <ContractActivityMonitor />
+                </div>
+              )}
+              {activeTab === 'protocols' && <div className="max-w-5xl mx-auto"><ProtocolRankings /></div>}
+              {activeTab === 'contracts' && <div className="max-w-5xl mx-auto"><ContractActivityMonitor /></div>}
+              {activeTab === 'wallet-analytics' && <div className="max-w-4xl mx-auto"><WalletAnalytics /></div>}
+              {activeTab === 'price-alerts' && <div className="max-w-2xl mx-auto"><PriceAlerts /></div>}
 
               {/* Footer */}
               <footer className="mt-12 pt-8 border-t border-white/5">
