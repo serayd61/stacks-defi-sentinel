@@ -20,8 +20,13 @@ RUN npm prune --omit=dev
 
 # Environment
 ENV NODE_ENV=production
-ENV PORT=3000
+ENV PORT=4000
+ENV HOST=0.0.0.0
 
-EXPOSE 3000
+EXPOSE 4000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:4000/api/health || exit 1
 
 CMD ["node", "dist/index.js"]
