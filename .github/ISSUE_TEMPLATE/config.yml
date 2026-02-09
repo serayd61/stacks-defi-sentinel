@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Stacks Discord
+    url: https://discord.gg/stacks
+    about: Join the Stacks community for general questions
+  - name: GitHub Discussions
+    url: https://github.com/serayd61/stacks-defi-sentinel/discussions
+    about: Ask questions and share ideas
