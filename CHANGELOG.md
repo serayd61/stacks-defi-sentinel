@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [Daily Update] - 2026-02-09
+
+### Changes
+- fix: Simplify auto-changelog workflow for reliability
+- chore: Add workflow_dispatch input for force update
+- feat: Add auto-changelog GitHub Actions workflow
+- test: add edge case tests [mlexyb4m]
+- fix: Improve wallet connection with better UI and more wallet support
+- feat: Add advanced analytics and monitoring features
+- fix: Update CI/CD workflows - remove failing tests, fix paths
+- docs: add architecture overview [mldu759u]
+
+
 ### Added
 - NFT Staking with compound rewards
 - Flash Loan protocol with 0.09% fee
