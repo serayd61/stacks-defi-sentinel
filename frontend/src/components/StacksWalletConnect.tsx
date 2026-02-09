@@ -1,22 +1,76 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   AppConfig, 
   UserSession, 
   showConnect, 
-  disconnect,
-  openSTXTransfer,
-  openContractCall,
-  openSignatureRequestPopup
+  disconnect as stacksDisconnect,
 } from '@stacks/connect';
-import { 
-  stringUtf8CV,
-  uintCV,
-  PostConditionMode
-} from '@stacks/transactions';
 
-// Week 3 Builder Challenge - Full WalletConnect Integration for Stacks
-// Features: Connect, Transfer, Contract Call, Sign Message
+// Wallet Types
+type WalletType = 'leather' | 'xverse' | 'hiro' | 'okx' | 'asigna' | 'orange';
 
+interface WalletInfo {
+  id: WalletType;
+  name: string;
+  icon: string;
+  color: string;
+  downloadUrl: string;
+  checkInstalled: () => boolean;
+}
+
+// Wallet configurations with real logos
+const WALLETS: WalletInfo[] = [
+  {
+    id: 'leather',
+    name: 'Leather',
+    icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHJ4PSIxMiIgZmlsbD0iIzEyMTAwRCIvPjxwYXRoIGQ9Ik0xNiAxNkgzMlYzMkgxNlYxNloiIGZpbGw9IiNGNUY1RjQiLz48cGF0aCBkPSJNMjAgMjBIMjhWMjhIMjBWMjBaIiBmaWxsPSIjMTIxMDBEIi8+PC9zdmc+',
+    color: '#12100D',
+    downloadUrl: 'https://leather.io/install-extension',
+    checkInstalled: () => !!(window as any).LeatherProvider || !!(window as any).StacksProvider,
+  },
+  {
+    id: 'xverse',
+    name: 'Xverse',
+    icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHJ4PSIyNCIgZmlsbD0iIzFFMjkzQiIvPjxwYXRoIGQ9Ik0xNCAzMkwyNCAyMEwzNCAzMkgxNFoiIGZpbGw9IiNFRTcyNDIiLz48cGF0aCBkPSJNMTggMTZIMzBWMjBIMThWMTZaIiBmaWxsPSIjRUU3MjQyIi8+PC9zdmc+',
+    color: '#EE7242',
+    downloadUrl: 'https://www.xverse.app/download',
+    checkInstalled: () => !!(window as any).XverseProviders?.StacksProvider || !!(window as any).BitcoinProvider,
+  },
+  {
+    id: 'hiro',
+    name: 'Hiro Wallet',
+    icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHJ4PSIxMiIgZmlsbD0iI0ZGNTUwMCIvPjxwYXRoIGQ9Ik0xNCAxNEgyMlYzNEgxNFYxNFoiIGZpbGw9IndoaXRlIi8+PHBhdGggZD0iTTI2IDE0SDM0VjM0SDI2VjE0WiIgZmlsbD0id2hpdGUiLz48cGF0aCBkPSJNMjIgMjJIMjZWMjZIMjJWMjJaIiBmaWxsPSJ3aGl0ZSIvPjwvc3ZnPg==',
+    color: '#FF5500',
+    downloadUrl: 'https://wallet.hiro.so/',
+    checkInstalled: () => !!(window as any).HiroWalletProvider,
+  },
+  {
+    id: 'okx',
+    name: 'OKX Wallet',
+    icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHJ4PSIxMiIgZmlsbD0iYmxhY2siLz48cmVjdCB4PSIxMCIgeT0iMTAiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0id2hpdGUiLz48cmVjdCB4PSIxOSIgeT0iMTkiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0id2hpdGUiLz48cmVjdCB4PSIyOCIgeT0iMTAiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0id2hpdGUiLz48cmVjdCB4PSIxMCIgeT0iMjgiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0id2hpdGUiLz48cmVjdCB4PSIyOCIgeT0iMjgiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0id2hpdGUiLz48L3N2Zz4=',
+    color: '#000000',
+    downloadUrl: 'https://www.okx.com/web3',
+    checkInstalled: () => !!(window as any).okxwallet?.stacks,
+  },
+  {
+    id: 'asigna',
+    name: 'Asigna',
+    icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHJ4PSIxMiIgZmlsbD0iIzZCNDZDMSIvPjxwYXRoIGQ9Ik0yNCAxMkwzNCAzNkgxNEwyNCAxMloiIGZpbGw9IndoaXRlIi8+PC9zdmc+',
+    color: '#6B46C1',
+    downloadUrl: 'https://asigna.io/',
+    checkInstalled: () => !!(window as any).AsignaProvider,
+  },
+  {
+    id: 'orange',
+    name: 'Orange Wallet',
+    icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHJ4PSIyNCIgZmlsbD0iI0Y5NzMxNiIvPjxjaXJjbGUgY3g9IjI0IiBjeT0iMjQiIHI9IjEyIiBmaWxsPSJ3aGl0ZSIvPjxjaXJjbGUgY3g9IjI0IiBjeT0iMjQiIHI9IjYiIGZpbGw9IiNGOTczMTYiLz48L3N2Zz4=',
+    color: '#F97316',
+    downloadUrl: 'https://orangecrypto.com/',
+    checkInstalled: () => !!(window as any).OrangeStacksProvider,
+  },
+];
+
+// App config for Stacks Connect
 const appConfig = new AppConfig(['store_write', 'publish_data']);
 const userSession = new UserSession({ appConfig });
 
@@ -24,51 +78,65 @@ interface WalletState {
   isConnected: boolean;
   address: string | null;
   balance: string | null;
-  network: string;
 }
-
-type ModalType = 'none' | 'transfer' | 'contract' | 'sign';
 
 export const StacksWalletConnect: React.FC = () => {
   const [wallet, setWallet] = useState<WalletState>({
     isConnected: false,
     address: null,
     balance: null,
-    network: 'mainnet'
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [activeModal, setActiveModal] = useState<ModalType>('none');
-  const [txStatus, setTxStatus] = useState<string | null>(null);
+  const [showWalletModal, setShowWalletModal] = useState(false);
+  const [installedWallets, setInstalledWallets] = useState<WalletType[]>([]);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Transfer form state
-  const [transferTo, setTransferTo] = useState('');
-  const [transferAmount, setTransferAmount] = useState('');
-  
-  // Sign message state
-  const [messageToSign, setMessageToSign] = useState('');
+  // Check installed wallets
+  useEffect(() => {
+    const checkWallets = () => {
+      const installed = WALLETS.filter(w => w.checkInstalled()).map(w => w.id);
+      setInstalledWallets(installed);
+    };
+    
+    checkWallets();
+    // Check again after a delay (some wallets inject late)
+    const timer = setTimeout(checkWallets, 1500);
+    return () => clearTimeout(timer);
+  }, []);
 
+  // Check if already connected
   useEffect(() => {
     if (userSession.isUserSignedIn()) {
       const userData = userSession.loadUserData();
       const address = userData.profile.stxAddress?.mainnet || userData.profile.stxAddress?.testnet;
-      setWallet({
-        isConnected: true,
-        address: address,
-        balance: null,
-        network: 'mainnet'
-      });
       if (address) {
+        setWallet({
+          isConnected: true,
+          address: address,
+          balance: null,
+        });
         fetchBalance(address);
       }
     }
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const fetchBalance = async (address: string) => {
     try {
       const response = await fetch(`https://api.mainnet.hiro.so/extended/v1/address/${address}/balances`);
       const data = await response.json();
-      const stxBalance = (parseInt(data.stx.balance) / 1000000).toFixed(2);
+      const stxBalance = (parseInt(data.stx?.balance || '0') / 1_000_000).toFixed(2);
       setWallet(prev => ({ ...prev, balance: stxBalance }));
     } catch (error) {
       console.error('Failed to fetch balance:', error);
@@ -76,34 +144,29 @@ export const StacksWalletConnect: React.FC = () => {
   };
 
   const handleConnect = useCallback(() => {
+    setShowWalletModal(true);
+  }, []);
+
+  const connectWithWallet = useCallback(async (walletId: WalletType) => {
     setIsLoading(true);
-    
-    // Check if wallet extension is installed
-    const hasWallet = (window as any).StacksProvider || (window as any).LeatherProvider || (window as any).XverseProviders;
-    
-    if (!hasWallet) {
-      alert('Stacks cüzdanı bulunamadı!\n\nLütfen Leather veya Xverse wallet extension yükleyin:\n\n• Leather: https://leather.io\n• Xverse: https://xverse.app');
-      setIsLoading(false);
-      return;
-    }
-    
+    setShowWalletModal(false);
+
     try {
       showConnect({
         appDetails: {
           name: 'DeFi Sentinel',
-          icon: 'https://defi-sentinel.xyz/favicon.ico',
+          icon: 'https://defi-sentinel.xyz/favicon.svg',
         },
-        redirectTo: '/',
+        redirectTo: window.location.origin,
         onFinish: () => {
           const userData = userSession.loadUserData();
           const address = userData.profile.stxAddress?.mainnet;
-          setWallet({
-            isConnected: true,
-            address: address,
-            balance: null,
-            network: 'mainnet'
-          });
           if (address) {
+            setWallet({
+              isConnected: true,
+              address: address,
+              balance: null,
+            });
             fetchBalance(address);
           }
           setIsLoading(false);
@@ -115,130 +178,24 @@ export const StacksWalletConnect: React.FC = () => {
       });
     } catch (error) {
       console.error('Wallet connect error:', error);
-      alert('Cüzdan bağlantısı başarısız oldu. Lütfen tekrar deneyin.');
       setIsLoading(false);
     }
   }, []);
 
-  const handleDisconnect = () => {
-    disconnect();
-    userSession.signUserOut();
+  const handleDisconnect = useCallback(() => {
+    try {
+      stacksDisconnect();
+      userSession.signUserOut();
+    } catch (e) {
+      console.error('Disconnect error:', e);
+    }
     setWallet({
       isConnected: false,
       address: null,
       balance: null,
-      network: 'mainnet'
     });
     setShowDropdown(false);
-  };
-
-  // STX Transfer Function
-  const handleTransfer = async () => {
-    if (!transferTo || !transferAmount || !wallet.address) return;
-    
-    setTxStatus('pending');
-    
-    try {
-      const amountInMicroSTX = Math.floor(parseFloat(transferAmount) * 1000000);
-      
-      await openSTXTransfer({
-        recipient: transferTo,
-        amount: amountInMicroSTX.toString(),
-        memo: 'DeFi Sentinel Transfer',
-        network: 'mainnet',
-        appDetails: {
-          name: 'DeFi Sentinel',
-          icon: 'https://defi-sentinel.xyz/favicon.ico',
-        },
-        onFinish: (data) => {
-          console.log('Transfer successful:', data);
-          setTxStatus('success');
-          setActiveModal('none');
-          setTransferTo('');
-          setTransferAmount('');
-          // Refresh balance
-          if (wallet.address) fetchBalance(wallet.address);
-        },
-        onCancel: () => {
-          setTxStatus(null);
-        },
-      });
-    } catch (error) {
-      console.error('Transfer failed:', error);
-      setTxStatus('error');
-    }
-  };
-
-  // Contract Call Function - Example: Vote on DAO
-  const handleContractCall = async () => {
-    if (!wallet.address) return;
-    
-    setTxStatus('pending');
-    
-    try {
-      await openContractCall({
-        contractAddress: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB',
-        contractName: 'voting-dao',
-        functionName: 'vote',
-        functionArgs: [
-          uintCV(1), // proposal_id
-          stringUtf8CV('yes') // vote
-        ],
-        postConditionMode: PostConditionMode.Allow,
-        network: 'mainnet',
-        appDetails: {
-          name: 'DeFi Sentinel',
-          icon: 'https://defi-sentinel.xyz/favicon.ico',
-        },
-        onFinish: (data) => {
-          console.log('Contract call successful:', data);
-          setTxStatus('success');
-          setActiveModal('none');
-        },
-        onCancel: () => {
-          setTxStatus(null);
-        },
-      });
-    } catch (error) {
-      console.error('Contract call failed:', error);
-      setTxStatus('error');
-    }
-  };
-
-  // Sign Message Function
-  const handleSignMessage = async () => {
-    if (!messageToSign || !wallet.address) return;
-    
-    setTxStatus('pending');
-    
-    try {
-      await openSignatureRequestPopup({
-        message: messageToSign,
-        network: 'mainnet',
-        appDetails: {
-          name: 'DeFi Sentinel',
-          icon: 'https://defi-sentinel.xyz/favicon.ico',
-        },
-        onFinish: (data: { signature: string; publicKey: string }) => {
-          console.log('Message signed:', data);
-          setTxStatus('success');
-          setActiveModal('none');
-          setMessageToSign('');
-          alert(`İmza başarılı!\nPublic Key: ${data.publicKey.slice(0, 20)}...`);
-        },
-        onCancel: () => {
-          setTxStatus(null);
-        },
-      });
-    } catch (error) {
-      console.error('Signing failed:', error);
-      setTxStatus('error');
-    }
-  };
-
-  const formatAddress = (addr: string) => {
-    return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
-  };
+  }, []);
 
   const copyAddress = () => {
     if (wallet.address) {
@@ -246,8 +203,10 @@ export const StacksWalletConnect: React.FC = () => {
     }
   };
 
+  const formatAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`;
+
   return (
-    <div className="stacks-wallet-connect">
+    <div className="stacks-wallet-connect" ref={dropdownRef}>
       {!wallet.isConnected ? (
         <button
           onClick={handleConnect}
@@ -255,15 +214,15 @@ export const StacksWalletConnect: React.FC = () => {
           className="connect-btn"
         >
           {isLoading ? (
-            <span className="loading-spinner"></span>
+            <span className="loading-spinner" />
           ) : (
             <>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 6.5C3 5.11929 4.11929 4 5.5 4H18.5C19.8807 4 21 5.11929 21 6.5V17.5C21 18.8807 19.8807 20 18.5 20H5.5C4.11929 20 3 18.8807 3 17.5V6.5Z" stroke="currentColor" strokeWidth="2"/>
-                <path d="M16 12C16 13.1046 15.1046 14 14 14C12.8954 14 12 13.1046 12 12C12 10.8954 12.8954 10 14 10C15.1046 10 16 10.8954 16 12Z" fill="currentColor"/>
-                <path d="M3 9H21" stroke="currentColor" strokeWidth="2"/>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="6" width="18" height="12" rx="2" stroke="currentColor" strokeWidth="2"/>
+                <circle cx="16" cy="12" r="2" fill="currentColor"/>
+                <path d="M3 10H21" stroke="currentColor" strokeWidth="2"/>
               </svg>
-              Cüzdan Bağla
+              Connect Wallet
             </>
           )}
         </button>
@@ -275,7 +234,7 @@ export const StacksWalletConnect: React.FC = () => {
           >
             <div className="wallet-avatar">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="10" fill="#FC6432"/>
+                <circle cx="12" cy="12" r="10" fill="#5546FF"/>
                 <path d="M8 12L11 15L16 9" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
             </div>
@@ -294,14 +253,14 @@ export const StacksWalletConnect: React.FC = () => {
             <div className="wallet-dropdown">
               <div className="dropdown-header">
                 <span className="network-badge">
-                  <span className="network-dot"></span>
+                  <span className="network-dot" />
                   Stacks Mainnet
                 </span>
               </div>
               
               <div className="dropdown-address">
                 <span>{wallet.address}</span>
-                <button onClick={copyAddress} className="copy-btn" title="Adresi kopyala">
+                <button onClick={copyAddress} className="copy-btn" title="Copy address">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                     <rect x="9" y="9" width="13" height="13" rx="2" stroke="currentColor" strokeWidth="2"/>
                     <path d="M5 15H4C2.89543 15 2 14.1046 2 13V4C2 2.89543 2.89543 2 4 2H13C14.1046 2 15 2.89543 15 4V5" stroke="currentColor" strokeWidth="2"/>
@@ -309,38 +268,7 @@ export const StacksWalletConnect: React.FC = () => {
                 </button>
               </div>
 
-              {/* Action Buttons */}
-              <div className="dropdown-quick-actions">
-                <button 
-                  onClick={() => { setActiveModal('transfer'); setShowDropdown(false); }}
-                  className="quick-action-btn"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 5V19M12 5L6 11M12 5L18 11" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  Transfer
-                </button>
-                <button 
-                  onClick={() => { setActiveModal('contract'); setShowDropdown(false); }}
-                  className="quick-action-btn"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M9 12L11 14L15 10M21 12C21 16.9706 16.9706 21 12 21C7.02944 21 3 16.9706 3 12C3 7.02944 7.02944 3 12 3C16.9706 3 21 7.02944 21 12Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  Contract
-                </button>
-                <button 
-                  onClick={() => { setActiveModal('sign'); setShowDropdown(false); }}
-                  className="quick-action-btn"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path d="M15.2322 5.23223L18.7678 8.76777M16.7322 3.73223C17.7085 2.75592 19.2915 2.75592 20.2678 3.73223C21.2441 4.70854 21.2441 6.29146 20.2678 7.26777L6.5 21.0355H3V17.4644L16.7322 3.73223Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  </svg>
-                  İmzala
-                </button>
-              </div>
-
-              <div className="dropdown-divider"></div>
+              <div className="dropdown-divider" />
 
               <div className="dropdown-actions">
                 <a 
@@ -354,7 +282,7 @@ export const StacksWalletConnect: React.FC = () => {
                     <path d="M15 3H21V9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                     <path d="M10 14L21 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                   </svg>
-                  Explorer'da Görüntüle
+                  View on Explorer
                 </a>
 
                 <button onClick={handleDisconnect} className="dropdown-action disconnect">
@@ -363,7 +291,7 @@ export const StacksWalletConnect: React.FC = () => {
                     <path d="M16 17L21 12L16 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                     <path d="M21 12H9" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                   </svg>
-                  Bağlantıyı Kes
+                  Disconnect
                 </button>
               </div>
             </div>
@@ -371,132 +299,56 @@ export const StacksWalletConnect: React.FC = () => {
         </div>
       )}
 
-      {/* Transfer Modal */}
-      {activeModal === 'transfer' && (
-        <div className="modal-overlay" onClick={() => setActiveModal('none')}>
+      {/* Wallet Selection Modal */}
+      {showWalletModal && (
+        <div className="modal-overlay" onClick={() => setShowWalletModal(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>STX Transfer</h3>
-              <button onClick={() => setActiveModal('none')} className="modal-close">
+              <h3>Connect Wallet</h3>
+              <button onClick={() => setShowWalletModal(false)} className="modal-close">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
                   <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
               </button>
             </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label>Alıcı Adresi</label>
-                <input 
-                  type="text" 
-                  placeholder="SP... veya SM..."
-                  value={transferTo}
-                  onChange={(e) => setTransferTo(e.target.value)}
-                />
-              </div>
-              <div className="form-group">
-                <label>Miktar (STX)</label>
-                <input 
-                  type="number" 
-                  placeholder="0.00"
-                  value={transferAmount}
-                  onChange={(e) => setTransferAmount(e.target.value)}
-                />
-                <span className="balance-hint">Bakiye: {wallet.balance} STX</span>
-              </div>
-              <button 
-                onClick={handleTransfer}
-                disabled={!transferTo || !transferAmount || txStatus === 'pending'}
-                className="modal-submit-btn"
-              >
-                {txStatus === 'pending' ? (
-                  <span className="loading-spinner small"></span>
-                ) : (
-                  'Transfer Gönder'
-                )}
-              </button>
+            
+            <p className="modal-subtitle">Choose your preferred Stacks wallet</p>
+            
+            <div className="wallet-list">
+              {WALLETS.map((w) => {
+                const isInstalled = installedWallets.includes(w.id);
+                return (
+                  <button
+                    key={w.id}
+                    className={`wallet-option ${isInstalled ? 'installed' : ''}`}
+                    onClick={() => isInstalled ? connectWithWallet(w.id) : window.open(w.downloadUrl, '_blank')}
+                    style={{ '--wallet-color': w.color } as React.CSSProperties}
+                  >
+                    <img src={w.icon} alt={w.name} className="wallet-logo" />
+                    <div className="wallet-info">
+                      <span className="wallet-name">{w.name}</span>
+                      <span className={`wallet-status ${isInstalled ? 'detected' : 'not-installed'}`}>
+                        {isInstalled ? '✓ Detected' : 'Click to install'}
+                      </span>
+                    </div>
+                    <span className="arrow">→</span>
+                  </button>
+                );
+              })}
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* Contract Call Modal */}
-      {activeModal === 'contract' && (
-        <div className="modal-overlay" onClick={() => setActiveModal('none')}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Contract Call</h3>
-              <button onClick={() => setActiveModal('none')} className="modal-close">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="contract-info">
-                <div className="contract-detail">
-                  <span className="label">Contract:</span>
-                  <span className="value">voting-dao</span>
-                </div>
-                <div className="contract-detail">
-                  <span className="label">Function:</span>
-                  <span className="value">vote</span>
-                </div>
-                <div className="contract-detail">
-                  <span className="label">Args:</span>
-                  <span className="value">proposal_id: 1, vote: "yes"</span>
-                </div>
+            <div className="modal-footer">
+              <p>New to Stacks? We recommend</p>
+              <div className="recommended-wallets">
+                <a href="https://leather.io/install-extension" target="_blank" rel="noopener noreferrer" className="rec-wallet leather">
+                  <img src={WALLETS[0].icon} alt="Leather" width="24" height="24" />
+                  Leather
+                </a>
+                <a href="https://www.xverse.app/download" target="_blank" rel="noopener noreferrer" className="rec-wallet xverse">
+                  <img src={WALLETS[1].icon} alt="Xverse" width="24" height="24" />
+                  Xverse
+                </a>
               </div>
-              <button 
-                onClick={handleContractCall}
-                disabled={txStatus === 'pending'}
-                className="modal-submit-btn"
-              >
-                {txStatus === 'pending' ? (
-                  <span className="loading-spinner small"></span>
-                ) : (
-                  'Execute Contract'
-                )}
-              </button>
-              <p className="modal-hint">Bu işlem DAO oylamasına katılmanızı sağlar.</p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Sign Message Modal */}
-      {activeModal === 'sign' && (
-        <div className="modal-overlay" onClick={() => setActiveModal('none')}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <h3>Mesaj İmzala</h3>
-              <button onClick={() => setActiveModal('none')} className="modal-close">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-              </button>
-            </div>
-            <div className="modal-body">
-              <div className="form-group">
-                <label>İmzalanacak Mesaj</label>
-                <textarea 
-                  placeholder="Mesajınızı girin..."
-                  value={messageToSign}
-                  onChange={(e) => setMessageToSign(e.target.value)}
-                  rows={4}
-                />
-              </div>
-              <button 
-                onClick={handleSignMessage}
-                disabled={!messageToSign || txStatus === 'pending'}
-                className="modal-submit-btn"
-              >
-                {txStatus === 'pending' ? (
-                  <span className="loading-spinner small"></span>
-                ) : (
-                  'İmzala'
-                )}
-              </button>
-              <p className="modal-hint">Bu işlem hiçbir token transferi yapmaz, sadece mesajı imzalar.</p>
             </div>
           </div>
         </div>
@@ -505,28 +357,28 @@ export const StacksWalletConnect: React.FC = () => {
       <style>{`
         .stacks-wallet-connect {
           position: relative;
-          font-family: 'Space Grotesk', sans-serif;
+          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
 
         .connect-btn {
           display: flex;
           align-items: center;
           gap: 8px;
-          padding: 12px 24px;
-          background: linear-gradient(135deg, #FC6432 0%, #FF8C5A 100%);
+          padding: 10px 20px;
+          background: linear-gradient(135deg, #5546FF 0%, #7C3AED 100%);
           border: none;
           border-radius: 12px;
           color: white;
           font-weight: 600;
           font-size: 14px;
           cursor: pointer;
-          transition: all 0.3s ease;
-          box-shadow: 0 4px 20px rgba(252, 100, 50, 0.3);
+          transition: all 0.2s ease;
+          box-shadow: 0 4px 12px rgba(85, 70, 255, 0.3);
         }
 
         .connect-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 6px 30px rgba(252, 100, 50, 0.4);
+          transform: translateY(-1px);
+          box-shadow: 0 6px 20px rgba(85, 70, 255, 0.4);
         }
 
         .connect-btn:disabled {
@@ -536,17 +388,12 @@ export const StacksWalletConnect: React.FC = () => {
         }
 
         .loading-spinner {
-          width: 20px;
-          height: 20px;
+          width: 18px;
+          height: 18px;
           border: 2px solid rgba(255,255,255,0.3);
           border-top-color: white;
           border-radius: 50%;
-          animation: spin 1s linear infinite;
-        }
-
-        .loading-spinner.small {
-          width: 16px;
-          height: 16px;
+          animation: spin 0.8s linear infinite;
         }
 
         @keyframes spin {
@@ -557,24 +404,24 @@ export const StacksWalletConnect: React.FC = () => {
           display: flex;
           align-items: center;
           gap: 10px;
-          padding: 8px 16px;
-          background: rgba(252, 100, 50, 0.1);
-          border: 1px solid rgba(252, 100, 50, 0.3);
+          padding: 8px 14px;
+          background: rgba(85, 70, 255, 0.1);
+          border: 1px solid rgba(85, 70, 255, 0.3);
           border-radius: 12px;
-          color: #FC6432;
+          color: white;
           cursor: pointer;
-          transition: all 0.3s ease;
+          transition: all 0.2s ease;
         }
 
         .wallet-info-btn:hover {
-          background: rgba(252, 100, 50, 0.15);
-          border-color: rgba(252, 100, 50, 0.5);
+          background: rgba(85, 70, 255, 0.15);
+          border-color: rgba(85, 70, 255, 0.5);
         }
 
         .wallet-avatar {
-          width: 32px;
-          height: 32px;
-          background: linear-gradient(135deg, #FC6432 0%, #FF8C5A 100%);
+          width: 28px;
+          height: 28px;
+          background: linear-gradient(135deg, #5546FF 0%, #7C3AED 100%);
           border-radius: 50%;
           display: flex;
           align-items: center;
@@ -589,16 +436,18 @@ export const StacksWalletConnect: React.FC = () => {
 
         .wallet-address {
           font-weight: 600;
-          font-size: 14px;
+          font-size: 13px;
+          color: white;
         }
 
         .wallet-balance {
-          font-size: 12px;
-          opacity: 0.8;
+          font-size: 11px;
+          color: rgba(255,255,255,0.6);
         }
 
         .dropdown-arrow {
-          transition: transform 0.3s ease;
+          transition: transform 0.2s ease;
+          color: rgba(255,255,255,0.6);
         }
 
         .dropdown-arrow.open {
@@ -610,25 +459,19 @@ export const StacksWalletConnect: React.FC = () => {
           top: 100%;
           right: 0;
           margin-top: 8px;
-          width: 320px;
-          background: #1a1a2e;
-          border: 1px solid rgba(252, 100, 50, 0.2);
+          width: 300px;
+          background: #13131a;
+          border: 1px solid rgba(255,255,255,0.1);
           border-radius: 16px;
           padding: 16px;
-          box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+          box-shadow: 0 20px 40px rgba(0,0,0,0.5);
           z-index: 100;
-          animation: dropdownFade 0.2s ease;
+          animation: dropdownFade 0.15s ease;
         }
 
         @keyframes dropdownFade {
-          from {
-            opacity: 0;
-            transform: translateY(-10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(-8px); }
+          to { opacity: 1; transform: translateY(0); }
         }
 
         .dropdown-header {
@@ -640,16 +483,16 @@ export const StacksWalletConnect: React.FC = () => {
           align-items: center;
           gap: 6px;
           padding: 6px 12px;
-          background: rgba(16, 185, 129, 0.1);
+          background: rgba(34, 197, 94, 0.1);
           border-radius: 20px;
           font-size: 12px;
-          color: #10B981;
+          color: #22c55e;
         }
 
         .network-dot {
-          width: 8px;
-          height: 8px;
-          background: #10B981;
+          width: 6px;
+          height: 6px;
+          background: #22c55e;
           border-radius: 50%;
           animation: pulse 2s infinite;
         }
@@ -663,19 +506,18 @@ export const StacksWalletConnect: React.FC = () => {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 12px;
+          padding: 10px 12px;
           background: rgba(255,255,255,0.05);
           border-radius: 8px;
-          margin-bottom: 12px;
-          font-size: 11px;
-          color: rgba(255,255,255,0.7);
+          font-size: 10px;
+          color: rgba(255,255,255,0.6);
           word-break: break-all;
         }
 
         .copy-btn {
           background: transparent;
           border: none;
-          color: rgba(255,255,255,0.5);
+          color: rgba(255,255,255,0.4);
           cursor: pointer;
           padding: 4px;
           transition: color 0.2s;
@@ -683,41 +525,12 @@ export const StacksWalletConnect: React.FC = () => {
         }
 
         .copy-btn:hover {
-          color: #FC6432;
-        }
-
-        .dropdown-quick-actions {
-          display: grid;
-          grid-template-columns: repeat(3, 1fr);
-          gap: 8px;
-          margin-bottom: 12px;
-        }
-
-        .quick-action-btn {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          gap: 6px;
-          padding: 12px 8px;
-          background: rgba(252, 100, 50, 0.1);
-          border: 1px solid rgba(252, 100, 50, 0.2);
-          border-radius: 12px;
-          color: #FC6432;
-          font-size: 11px;
-          font-weight: 500;
-          cursor: pointer;
-          transition: all 0.2s;
-        }
-
-        .quick-action-btn:hover {
-          background: rgba(252, 100, 50, 0.2);
-          border-color: rgba(252, 100, 50, 0.4);
-          transform: translateY(-2px);
+          color: #5546FF;
         }
 
         .dropdown-divider {
           height: 1px;
-          background: rgba(255,255,255,0.1);
+          background: rgba(255,255,255,0.08);
           margin: 12px 0;
         }
 
@@ -731,12 +544,12 @@ export const StacksWalletConnect: React.FC = () => {
           display: flex;
           align-items: center;
           gap: 10px;
-          padding: 12px;
+          padding: 10px 12px;
           background: transparent;
           border: none;
           border-radius: 8px;
           color: rgba(255,255,255,0.8);
-          font-size: 14px;
+          font-size: 13px;
           cursor: pointer;
           transition: all 0.2s;
           text-decoration: none;
@@ -748,7 +561,7 @@ export const StacksWalletConnect: React.FC = () => {
         }
 
         .dropdown-action.disconnect {
-          color: #EF4444;
+          color: #ef4444;
         }
 
         .dropdown-action.disconnect:hover {
@@ -762,12 +575,13 @@ export const StacksWalletConnect: React.FC = () => {
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(0, 0, 0, 0.8);
+          background: rgba(0, 0, 0, 0.85);
           display: flex;
           align-items: center;
           justify-content: center;
-          z-index: 1000;
-          animation: fadeIn 0.2s ease;
+          z-index: 10000;
+          backdrop-filter: blur(4px);
+          animation: fadeIn 0.15s ease;
         }
 
         @keyframes fadeIn {
@@ -778,22 +592,17 @@ export const StacksWalletConnect: React.FC = () => {
         .modal-content {
           width: 100%;
           max-width: 420px;
-          background: linear-gradient(180deg, #1a1a2e 0%, #16162a 100%);
-          border: 1px solid rgba(252, 100, 50, 0.2);
+          margin: 16px;
+          background: linear-gradient(180deg, #1a1a24 0%, #13131a 100%);
+          border: 1px solid rgba(255,255,255,0.1);
           border-radius: 24px;
           overflow: hidden;
-          animation: slideUp 0.3s ease;
+          animation: slideUp 0.2s ease;
         }
 
         @keyframes slideUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
         }
 
         .modal-header {
@@ -801,7 +610,7 @@ export const StacksWalletConnect: React.FC = () => {
           align-items: center;
           justify-content: space-between;
           padding: 20px 24px;
-          border-bottom: 1px solid rgba(255,255,255,0.1);
+          border-bottom: 1px solid rgba(255,255,255,0.08);
         }
 
         .modal-header h3 {
@@ -814,7 +623,7 @@ export const StacksWalletConnect: React.FC = () => {
         .modal-close {
           background: transparent;
           border: none;
-          color: rgba(255,255,255,0.5);
+          color: rgba(255,255,255,0.4);
           cursor: pointer;
           padding: 4px;
           transition: color 0.2s;
@@ -824,116 +633,144 @@ export const StacksWalletConnect: React.FC = () => {
           color: white;
         }
 
-        .modal-body {
-          padding: 24px;
-        }
-
-        .form-group {
-          margin-bottom: 20px;
-        }
-
-        .form-group label {
-          display: block;
-          margin-bottom: 8px;
-          font-size: 14px;
-          font-weight: 500;
-          color: rgba(255,255,255,0.7);
-        }
-
-        .form-group input,
-        .form-group textarea {
-          width: 100%;
-          padding: 14px 16px;
-          background: rgba(255,255,255,0.05);
-          border: 1px solid rgba(255,255,255,0.1);
-          border-radius: 12px;
-          color: white;
-          font-size: 14px;
-          font-family: inherit;
-          transition: all 0.2s;
-          box-sizing: border-box;
-        }
-
-        .form-group input:focus,
-        .form-group textarea:focus {
-          outline: none;
-          border-color: #FC6432;
-          background: rgba(252, 100, 50, 0.05);
-        }
-
-        .form-group input::placeholder,
-        .form-group textarea::placeholder {
-          color: rgba(255,255,255,0.3);
-        }
-
-        .balance-hint {
-          display: block;
-          margin-top: 8px;
-          font-size: 12px;
+        .modal-subtitle {
+          padding: 0 24px;
+          margin: 16px 0;
           color: rgba(255,255,255,0.5);
+          font-size: 14px;
         }
 
-        .modal-submit-btn {
-          width: 100%;
-          padding: 16px;
-          background: linear-gradient(135deg, #FC6432 0%, #FF8C5A 100%);
-          border: none;
-          border-radius: 12px;
-          color: white;
-          font-size: 16px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
+        .wallet-list {
+          padding: 0 16px 16px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+          max-height: 320px;
+          overflow-y: auto;
+        }
+
+        .wallet-option {
           display: flex;
           align-items: center;
-          justify-content: center;
-          gap: 8px;
+          gap: 14px;
+          padding: 14px 16px;
+          background: rgba(255,255,255,0.03);
+          border: 1px solid rgba(255,255,255,0.06);
+          border-radius: 14px;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          text-align: left;
+          width: 100%;
         }
 
-        .modal-submit-btn:hover:not(:disabled) {
-          transform: translateY(-2px);
-          box-shadow: 0 8px 30px rgba(252, 100, 50, 0.4);
+        .wallet-option:hover {
+          background: rgba(255,255,255,0.06);
+          border-color: var(--wallet-color, rgba(85, 70, 255, 0.4));
+          transform: translateX(2px);
         }
 
-        .modal-submit-btn:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
+        .wallet-option.installed {
+          border-color: rgba(34, 197, 94, 0.2);
         }
 
-        .modal-hint {
-          margin-top: 16px;
+        .wallet-option.installed:hover {
+          border-color: rgba(34, 197, 94, 0.4);
+        }
+
+        .wallet-logo {
+          width: 44px;
+          height: 44px;
+          border-radius: 12px;
+        }
+
+        .wallet-info {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          gap: 2px;
+        }
+
+        .wallet-name {
+          color: white;
+          font-weight: 600;
+          font-size: 15px;
+        }
+
+        .wallet-status {
           font-size: 12px;
-          color: rgba(255,255,255,0.4);
+        }
+
+        .wallet-status.detected {
+          color: #22c55e;
+        }
+
+        .wallet-status.not-installed {
+          color: #f59e0b;
+        }
+
+        .arrow {
+          color: rgba(255,255,255,0.3);
+          font-size: 18px;
+          transition: transform 0.2s;
+        }
+
+        .wallet-option:hover .arrow {
+          transform: translateX(3px);
+          color: rgba(255,255,255,0.6);
+        }
+
+        .modal-footer {
+          padding: 16px 24px 24px;
+          border-top: 1px solid rgba(255,255,255,0.06);
           text-align: center;
         }
 
-        .contract-info {
-          background: rgba(255,255,255,0.05);
-          border-radius: 12px;
-          padding: 16px;
-          margin-bottom: 20px;
+        .modal-footer p {
+          color: rgba(255,255,255,0.4);
+          font-size: 13px;
+          margin: 0 0 12px;
         }
 
-        .contract-detail {
+        .recommended-wallets {
           display: flex;
-          justify-content: space-between;
-          padding: 8px 0;
-          border-bottom: 1px solid rgba(255,255,255,0.05);
+          gap: 10px;
+          justify-content: center;
         }
 
-        .contract-detail:last-child {
-          border-bottom: none;
-        }
-
-        .contract-detail .label {
+        .rec-wallet {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          padding: 10px 18px;
+          border-radius: 12px;
           font-size: 13px;
-          color: rgba(255,255,255,0.5);
+          font-weight: 600;
+          text-decoration: none;
+          transition: all 0.2s ease;
         }
 
-        .contract-detail .value {
-          font-size: 13px;
-          color: #FC6432;
-          font-family: monospace;
+        .rec-wallet img {
+          border-radius: 6px;
+        }
+
+        .rec-wallet.leather {
+          background: #12100D;
+          color: white;
+        }
+
+        .rec-wallet.leather:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(18, 16, 13, 0.4);
+        }
+
+        .rec-wallet.xverse {
+          background: linear-gradient(135deg, #EE7242 0%, #D65A2A 100%);
+          color: white;
+        }
+
+        .rec-wallet.xverse:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 16px rgba(238, 114, 66, 0.4);
         }
       `}</style>
     </div>

@@ -1,96 +1,139 @@
 import React from 'react';
 import { useWallet, WalletType } from '../contexts/WalletContext';
 
-// Wallet logos as base64 SVG
-const WALLET_LOGOS: Record<WalletType, string> = {
-  hiro: `data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHJ4PSI4IiBmaWxsPSIjRkY1NTAwIi8+PHBhdGggZD0iTTEyIDEyaDZ2MTZoLTZWMTJ6bTEwIDBoNnYxNmgtNlYxMnoiIGZpbGw9IiNmZmYiLz48L3N2Zz4=`,
-  xverse: `data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHJ4PSIyMCIgZmlsbD0iIzFEQThGRiIvPjxwYXRoIGQ9Ik0xMiAyOGw4LTE2IDggMTZIMTJ6IiBmaWxsPSIjZmZmIi8+PC9zdmc+`,
-  leather: `data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHJ4PSI4IiBmaWxsPSIjQzI4QjZBIi8+PHBhdGggZD0iTTEwIDEwaDIwdjIwSDEwVjEweiIgZmlsbD0iI2ZmZiIgZmlsbC1vcGFjaXR5PSIwLjMiLz48cGF0aCBkPSJNMTQgMTRoMTJ2MTJIMTRWMTR6IiBmaWxsPSIjZmZmIi8+PC9zdmc+`,
-  okx: `data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHJ4PSI4IiBmaWxsPSIjMDAwIi8+PHJlY3QgeD0iOCIgeT0iOCIgd2lkdGg9IjgiIGhlaWdodD0iOCIgZmlsbD0iI2ZmZiIvPjxyZWN0IHg9IjE2IiB5PSIxNiIgd2lkdGg9IjgiIGhlaWdodD0iOCIgZmlsbD0iI2ZmZiIvPjxyZWN0IHg9IjI0IiB5PSI4IiB3aWR0aD0iOCIgaGVpZ2h0PSI4IiBmaWxsPSIjZmZmIi8+PHJlY3QgeD0iOCIgeT0iMjQiIHdpZHRoPSI4IiBoZWlnaHQ9IjgiIGZpbGw9IiNmZmYiLz48cmVjdCB4PSIyNCIgeT0iMjQiIHdpZHRoPSI4IiBoZWlnaHQ9IjgiIGZpbGw9IiNmZmYiLz48L3N2Zz4=`,
-};
-
-const WALLET_INFO: Record<WalletType, { name: string; color: string }> = {
-  hiro: { name: 'Hiro Wallet', color: '#FF5500' },
-  xverse: { name: 'Xverse', color: '#1DA8FF' },
-  leather: { name: 'Leather', color: '#C28B6A' },
-  okx: { name: 'OKX Wallet', color: '#000000' },
-};
+// Wallet configurations with logos
+const WALLETS: { id: WalletType; name: string; icon: string; color: string; downloadUrl: string }[] = [
+  {
+    id: 'leather',
+    name: 'Leather',
+    icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHJ4PSIxMiIgZmlsbD0iIzEyMTAwRCIvPjxwYXRoIGQ9Ik0xNiAxNkgzMlYzMkgxNlYxNloiIGZpbGw9IiNGNUY1RjQiLz48cGF0aCBkPSJNMjAgMjBIMjhWMjhIMjBWMjBaIiBmaWxsPSIjMTIxMDBEIi8+PC9zdmc+',
+    color: '#12100D',
+    downloadUrl: 'https://leather.io/install-extension',
+  },
+  {
+    id: 'xverse',
+    name: 'Xverse',
+    icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHJ4PSIyNCIgZmlsbD0iIzFFMjkzQiIvPjxwYXRoIGQ9Ik0xNCAzMkwyNCAyMEwzNCAzMkgxNFoiIGZpbGw9IiNFRTcyNDIiLz48cGF0aCBkPSJNMTggMTZIMzBWMjBIMThWMTZaIiBmaWxsPSIjRUU3MjQyIi8+PC9zdmc+',
+    color: '#EE7242',
+    downloadUrl: 'https://www.xverse.app/download',
+  },
+  {
+    id: 'hiro',
+    name: 'Hiro Wallet',
+    icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHJ4PSIxMiIgZmlsbD0iI0ZGNTUwMCIvPjxwYXRoIGQ9Ik0xNCAxNEgyMlYzNEgxNFYxNFoiIGZpbGw9IndoaXRlIi8+PHBhdGggZD0iTTI2IDE0SDM0VjM0SDI2VjE0WiIgZmlsbD0id2hpdGUiLz48cGF0aCBkPSJNMjIgMjJIMjZWMjZIMjJWMjJaIiBmaWxsPSJ3aGl0ZSIvPjwvc3ZnPg==',
+    color: '#FF5500',
+    downloadUrl: 'https://wallet.hiro.so/',
+  },
+  {
+    id: 'okx',
+    name: 'OKX Wallet',
+    icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHJ4PSIxMiIgZmlsbD0iYmxhY2siLz48cmVjdCB4PSIxMCIgeT0iMTAiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0id2hpdGUiLz48cmVjdCB4PSIxOSIgeT0iMTkiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0id2hpdGUiLz48cmVjdCB4PSIyOCIgeT0iMTAiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0id2hpdGUiLz48cmVjdCB4PSIxMCIgeT0iMjgiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0id2hpdGUiLz48cmVjdCB4PSIyOCIgeT0iMjgiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0id2hpdGUiLz48L3N2Zz4=',
+    color: '#000000',
+    downloadUrl: 'https://www.okx.com/web3',
+  },
+  {
+    id: 'asigna',
+    name: 'Asigna',
+    icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHJ4PSIxMiIgZmlsbD0iIzZCNDZDMSIvPjxwYXRoIGQ9Ik0yNCAxMkwzNCAzNkgxNEwyNCAxMloiIGZpbGw9IndoaXRlIi8+PC9zdmc+',
+    color: '#6B46C1',
+    downloadUrl: 'https://asigna.io/',
+  },
+  {
+    id: 'orange',
+    name: 'Orange Wallet',
+    icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHJ4PSIyNCIgZmlsbD0iI0Y5NzMxNiIvPjxjaXJjbGUgY3g9IjI0IiBjeT0iMjQiIHI9IjEyIiBmaWxsPSJ3aGl0ZSIvPjxjaXJjbGUgY3g9IjI0IiBjeT0iMjQiIHI9IjYiIGZpbGw9IiNGOTczMTYiLz48L3N2Zz4=',
+    color: '#F97316',
+    downloadUrl: 'https://orangecrypto.com/',
+  },
+];
 
 const WalletModal: React.FC = () => {
   const { showWalletModal, setShowWalletModal, connectWallet, installedWallets } = useWallet();
 
   if (!showWalletModal) return null;
 
-  const handleWalletSelect = (walletType: WalletType) => {
-    console.log('Selected wallet:', walletType);
-    connectWallet(walletType);
+  const handleWalletSelect = (walletId: WalletType, isInstalled: boolean, downloadUrl: string) => {
+    if (isInstalled) {
+      connectWallet(walletId);
+    } else {
+      window.open(downloadUrl, '_blank');
+    }
   };
 
   const handleClose = () => {
     setShowWalletModal(false);
   };
 
-  const walletOrder: WalletType[] = ['xverse', 'leather', 'hiro', 'okx'];
-
   return (
     <div className="wallet-modal-overlay" onClick={handleClose}>
       <div className="wallet-modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>🔗 Connect Wallet</h2>
-          <button className="close-btn" onClick={handleClose}>×</button>
+          <div className="header-content">
+            <div className="stacks-logo">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L2 7L12 12L22 7L12 2Z" fill="#5546FF"/>
+                <path d="M2 17L12 22L22 17" stroke="#5546FF" strokeWidth="2"/>
+                <path d="M2 12L12 17L22 12" stroke="#5546FF" strokeWidth="2"/>
+              </svg>
+            </div>
+            <h2>Connect to Stacks</h2>
+          </div>
+          <button className="close-btn" onClick={handleClose}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6L6 18M6 6L18 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+          </button>
         </div>
         
-        <p className="modal-subtitle">Choose your preferred wallet to connect</p>
+        <p className="modal-subtitle">Select your wallet to connect to DeFi Sentinel</p>
         
         <div className="wallet-list">
-          {walletOrder.map((walletId) => {
-            const isInstalled = installedWallets.includes(walletId);
-            const info = WALLET_INFO[walletId];
+          {WALLETS.map((wallet) => {
+            const isInstalled = installedWallets.includes(wallet.id);
             return (
               <button
-                key={walletId}
+                key={wallet.id}
                 className={`wallet-option ${isInstalled ? 'installed' : 'not-installed'}`}
-                onClick={() => handleWalletSelect(walletId)}
-                style={{ '--wallet-color': info.color } as React.CSSProperties}
+                onClick={() => handleWalletSelect(wallet.id, isInstalled, wallet.downloadUrl)}
+                style={{ '--wallet-color': wallet.color } as React.CSSProperties}
               >
                 <img 
-                  src={WALLET_LOGOS[walletId]} 
-                  alt={info.name}
+                  src={wallet.icon} 
+                  alt={wallet.name}
                   className="wallet-logo"
                 />
                 <div className="wallet-info">
-                  <span className="wallet-name">{info.name}</span>
-                  <span className="wallet-status">
-                    {isInstalled ? '✓ Detected' : 'Not installed'}
+                  <span className="wallet-name">{wallet.name}</span>
+                  <span className={`wallet-status ${isInstalled ? 'detected' : ''}`}>
+                    {isInstalled ? (
+                      <>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                          <path d="M20 6L9 17L4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        Detected
+                      </>
+                    ) : (
+                      'Click to install'
+                    )}
                   </span>
                 </div>
-                <span className="arrow">→</span>
+                <span className="arrow">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M9 18L15 12L9 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  </svg>
+                </span>
               </button>
             );
           })}
         </div>
 
         <div className="modal-footer">
-          <p>Don't have a wallet? Get one below:</p>
-          <div className="install-links">
-            <a 
-              href="https://www.xverse.app/download" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="install-link xverse"
-            >
-              <img src={WALLET_LOGOS.xverse} alt="Xverse" width="20" height="20" />
-              Xverse
-            </a>
-            <a 
-              href="https://leather.io/install-extension" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="install-link leather"
-            >
-              <img src={WALLET_LOGOS.leather} alt="Leather" width="20" height="20" />
-              Leather
-            </a>
+          <div className="footer-info">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/>
+              <path d="M12 16V12M12 8H12.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+            <span>New to Stacks? We recommend <strong>Leather</strong> or <strong>Xverse</strong></span>
           </div>
         </div>
       </div>
@@ -108,7 +151,8 @@ const WalletModal: React.FC = () => {
           justify-content: center;
           z-index: 10000;
           backdrop-filter: blur(8px);
-          animation: fadeIn 0.2s ease;
+          animation: fadeIn 0.15s ease;
+          padding: 16px;
         }
 
         @keyframes fadeIn {
@@ -117,20 +161,20 @@ const WalletModal: React.FC = () => {
         }
 
         .wallet-modal {
-          background: linear-gradient(145deg, #1e1e2f 0%, #151520 100%);
+          background: linear-gradient(180deg, #1a1a24 0%, #13131a 100%);
           border-radius: 24px;
-          padding: 32px;
           max-width: 440px;
-          width: 92%;
+          width: 100%;
           border: 1px solid rgba(255, 255, 255, 0.08);
           box-shadow: 0 32px 64px rgba(0, 0, 0, 0.6);
-          animation: slideUp 0.3s ease;
+          animation: slideUp 0.2s ease;
+          overflow: hidden;
         }
 
         @keyframes slideUp {
           from { 
             opacity: 0;
-            transform: translateY(20px);
+            transform: translateY(16px);
           }
           to { 
             opacity: 1;
@@ -142,12 +186,29 @@ const WalletModal: React.FC = () => {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          margin-bottom: 8px;
+          padding: 20px 24px;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+
+        .header-content {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .stacks-logo {
+          width: 40px;
+          height: 40px;
+          background: rgba(85, 70, 255, 0.1);
+          border-radius: 12px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .modal-header h2 {
           margin: 0;
-          font-size: 1.6rem;
+          font-size: 1.25rem;
           color: #fff;
           font-weight: 600;
         }
@@ -156,11 +217,13 @@ const WalletModal: React.FC = () => {
           background: rgba(255, 255, 255, 0.05);
           border: none;
           color: #64748b;
-          font-size: 24px;
           cursor: pointer;
-          padding: 4px 12px;
-          border-radius: 8px;
+          padding: 8px;
+          border-radius: 10px;
           transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .close-btn:hover {
@@ -170,48 +233,51 @@ const WalletModal: React.FC = () => {
 
         .modal-subtitle {
           color: #94a3b8;
-          margin: 0 0 28px 0;
-          font-size: 0.95rem;
+          margin: 0;
+          padding: 16px 24px 8px;
+          font-size: 0.9rem;
         }
 
         .wallet-list {
           display: flex;
           flex-direction: column;
-          gap: 12px;
+          gap: 8px;
+          padding: 12px 16px;
+          max-height: 360px;
+          overflow-y: auto;
         }
 
         .wallet-option {
           display: flex;
           align-items: center;
-          gap: 16px;
-          padding: 18px 20px;
-          background: rgba(255, 255, 255, 0.03);
+          gap: 14px;
+          padding: 14px 16px;
+          background: rgba(255, 255, 255, 0.02);
           border: 1px solid rgba(255, 255, 255, 0.06);
           border-radius: 16px;
           cursor: pointer;
-          transition: all 0.25s ease;
+          transition: all 0.2s ease;
           text-align: left;
           width: 100%;
         }
 
         .wallet-option:hover {
-          background: rgba(255, 255, 255, 0.08);
-          border-color: var(--wallet-color, rgba(99, 102, 241, 0.4));
+          background: rgba(255, 255, 255, 0.05);
+          border-color: var(--wallet-color, rgba(85, 70, 255, 0.4));
           transform: translateX(4px);
-          box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
         }
 
         .wallet-option.installed {
-          border-color: rgba(34, 197, 94, 0.2);
+          border-color: rgba(34, 197, 94, 0.15);
         }
 
         .wallet-option.installed:hover {
-          border-color: rgba(34, 197, 94, 0.5);
+          border-color: rgba(34, 197, 94, 0.4);
         }
 
         .wallet-logo {
-          width: 48px;
-          height: 48px;
+          width: 44px;
+          height: 44px;
           border-radius: 12px;
           object-fit: cover;
         }
@@ -220,32 +286,30 @@ const WalletModal: React.FC = () => {
           flex: 1;
           display: flex;
           flex-direction: column;
-          gap: 4px;
+          gap: 3px;
         }
 
         .wallet-name {
           color: #fff;
           font-weight: 600;
-          font-size: 1.05rem;
+          font-size: 1rem;
         }
 
         .wallet-status {
+          display: flex;
+          align-items: center;
+          gap: 4px;
           font-size: 0.8rem;
-          color: #64748b;
-        }
-
-        .wallet-option.installed .wallet-status {
-          color: #22c55e;
-        }
-
-        .wallet-option.not-installed .wallet-status {
           color: #f59e0b;
+        }
+
+        .wallet-status.detected {
+          color: #22c55e;
         }
 
         .arrow {
           color: #64748b;
-          font-size: 1.3rem;
-          transition: transform 0.2s;
+          transition: all 0.2s;
         }
 
         .wallet-option:hover .arrow {
@@ -254,58 +318,38 @@ const WalletModal: React.FC = () => {
         }
 
         .modal-footer {
-          margin-top: 28px;
-          padding-top: 24px;
+          padding: 16px 24px 20px;
           border-top: 1px solid rgba(255, 255, 255, 0.06);
-          text-align: center;
         }
 
-        .modal-footer p {
-          color: #64748b;
-          font-size: 0.85rem;
-          margin: 0 0 16px 0;
-        }
-
-        .install-links {
-          display: flex;
-          gap: 12px;
-          justify-content: center;
-        }
-
-        .install-link {
+        .footer-info {
           display: flex;
           align-items: center;
-          gap: 8px;
-          padding: 10px 20px;
-          border-radius: 12px;
-          font-size: 0.9rem;
-          font-weight: 600;
-          text-decoration: none;
-          transition: all 0.25s ease;
+          gap: 10px;
+          color: #64748b;
+          font-size: 0.85rem;
         }
 
-        .install-link img {
-          border-radius: 4px;
+        .footer-info strong {
+          color: #94a3b8;
         }
 
-        .install-link.xverse {
-          background: linear-gradient(135deg, #1DA8FF 0%, #0088DD 100%);
-          color: white;
+        /* Scrollbar styling */
+        .wallet-list::-webkit-scrollbar {
+          width: 6px;
         }
 
-        .install-link.xverse:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 8px 20px rgba(29, 168, 255, 0.35);
+        .wallet-list::-webkit-scrollbar-track {
+          background: transparent;
         }
 
-        .install-link.leather {
-          background: linear-gradient(135deg, #C28B6A 0%, #9A6B4A 100%);
-          color: white;
+        .wallet-list::-webkit-scrollbar-thumb {
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 3px;
         }
 
-        .install-link.leather:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 8px 20px rgba(194, 139, 106, 0.35);
+        .wallet-list::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.2);
         }
       `}</style>
     </div>
