@@ -72,7 +72,7 @@
 
 ## Deployment
 
-- **Frontend**: Vercel (https://defi-sentinel.vercel.app)
+- **Frontend**: Vercel (https://defi-sentinel.xyz)
 - **Backend**: Railway
 - **Contracts**: Stacks Mainnet
 
