@@ -3,7 +3,13 @@ name: Auto Changelog Update
 on:
   schedule:
     - cron: '0 9 * * *'  # Her gün 09:00 UTC (Türkiye 12:00)
-  workflow_dispatch:      # Manuel tetikleme
+  workflow_dispatch:
+    inputs:
+      force_update:
+        description: 'Force changelog update even if no commits'
+        required: false
+        default: 'false'
+        type: boolean
 
 permissions:
   contents: write
