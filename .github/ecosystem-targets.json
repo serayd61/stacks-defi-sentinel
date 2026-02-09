@@ -1,0 +1,55 @@
+{
+  "description": "Target repositories for ecosystem contributions",
+  "stacks": [
+    {
+      "repo": "stacks-network/docs",
+      "type": "documentation",
+      "priority": "high",
+      "contribution_types": ["docs", "typo-fix", "translation"]
+    },
+    {
+      "repo": "stacks-network/stacks-core",
+      "type": "core",
+      "priority": "medium",
+      "contribution_types": ["docs", "tests"]
+    },
+    {
+      "repo": "hirosystems/stacks-blockchain-api",
+      "type": "api",
+      "priority": "high",
+      "contribution_types": ["docs", "tests", "examples"]
+    },
+    {
+      "repo": "arkadiko-dao/arkadiko",
+      "type": "defi",
+      "priority": "medium",
+      "contribution_types": ["docs", "tests"]
+    },
+    {
+      "repo": "alexgo-io/alex-dao",
+      "type": "defi",
+      "priority": "medium",
+      "contribution_types": ["docs"]
+    }
+  ],
+  "base": [
+    {
+      "repo": "coinbase/smart-wallet",
+      "type": "wallet",
+      "priority": "high",
+      "contribution_types": ["docs", "tests"]
+    },
+    {
+      "repo": "coinbase/commerce-onchain-payment-protocol",
+      "type": "payments",
+      "priority": "medium",
+      "contribution_types": ["docs"]
+    },
+    {
+      "repo": "aerodrome-finance/contracts",
+      "type": "defi",
+      "priority": "medium",
+      "contribution_types": ["docs", "natspec"]
+    }
+  ]
+}

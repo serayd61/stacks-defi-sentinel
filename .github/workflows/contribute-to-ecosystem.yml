@@ -1,0 +1,206 @@
+name: Ecosystem Contribution
+
+on:
+  schedule:
+    - cron: '0 10 * * 1'  # Her Pazartesi 10:00 UTC
+  workflow_dispatch:
+    inputs:
+      target_repo:
+        description: 'Target repository (owner/repo)'
+        required: true
+        default: 'stacks-network/docs'
+      contribution_type:
+        description: 'Contribution type'
+        required: true
+        default: 'docs'
+        type: choice
+        options:
+          - docs
+          - typo-fix
+          - readme-improve
+
+env:
+  GH_TOKEN: ${{ secrets.GH_PAT }}
+
+jobs:
+  contribute:
+    runs-on: ubuntu-latest
+    name: Contribute to ${{ github.event.inputs.target_repo || 'stacks-network/docs' }}
+    
+    steps:
+      - name: Check PAT exists
+        run: |
+          if [ -z "${{ secrets.GH_PAT }}" ]; then
+            echo "::error::GH_PAT secret is not set. Please add a GitHub Personal Access Token."
+            exit 1
+          fi
+          echo "PAT is configured"
+
+      - name: Setup Git
+        run: |
+          git config --global user.name "serayd61"
+          git config --global user.email "serayd61@users.noreply.github.com"
+
+      - name: Fork repository
+        id: fork
+        run: |
+          TARGET_REPO="${{ github.event.inputs.target_repo || 'stacks-network/docs' }}"
+          echo "Forking $TARGET_REPO..."
+          
+          # Check if fork already exists
+          FORK_EXISTS=$(gh repo list serayd61 --json name -q ".[].name" | grep -w "$(echo $TARGET_REPO | cut -d'/' -f2)" || echo "")
+          
+          if [ -z "$FORK_EXISTS" ]; then
+            gh repo fork "$TARGET_REPO" --clone=false
+            echo "Fork created"
+          else
+            echo "Fork already exists"
+          fi
+          
+          REPO_NAME=$(echo $TARGET_REPO | cut -d'/' -f2)
+          echo "repo_name=$REPO_NAME" >> $GITHUB_OUTPUT
+          echo "target_repo=$TARGET_REPO" >> $GITHUB_OUTPUT
+
+      - name: Clone fork
+        run: |
+          REPO_NAME="${{ steps.fork.outputs.repo_name }}"
+          git clone "https://x-access-token:${{ secrets.GH_PAT }}@github.com/serayd61/$REPO_NAME.git"
+          cd "$REPO_NAME"
+          git remote add upstream "https://github.com/${{ steps.fork.outputs.target_repo }}.git"
+          git fetch upstream
+          git checkout -b contribution-$(date +%Y%m%d-%H%M%S)
+
+      - name: Make contribution
+        id: contribute
+        run: |
+          REPO_NAME="${{ steps.fork.outputs.repo_name }}"
+          CONTRIB_TYPE="${{ github.event.inputs.contribution_type || 'docs' }}"
+          cd "$REPO_NAME"
+          
+          BRANCH_NAME="contribution-$(date +%Y%m%d-%H%M%S)"
+          COMMIT_MSG=""
+          PR_TITLE=""
+          PR_BODY=""
+          
+          case "$CONTRIB_TYPE" in
+            "docs")
+              # Add helpful documentation comment or improve existing docs
+              if [ -f "README.md" ]; then
+                # Add a minor improvement - badge or formatting
+                if ! grep -q "Built with" README.md; then
+                  echo "" >> README.md
+                  echo "---" >> README.md
+                  echo "" >> README.md
+                  echo "_This project is part of the Stacks ecosystem._" >> README.md
+                  COMMIT_MSG="docs: Add ecosystem reference to README"
+                  PR_TITLE="docs: Add Stacks ecosystem reference"
+                  PR_BODY="This PR adds a small reference to the Stacks ecosystem in the README.
+
+## Changes
+- Added ecosystem reference at the bottom of README
+
+## Why
+- Helps new users understand the project context
+- Improves discoverability"
+                fi
+              fi
+              ;;
+            
+            "typo-fix")
+              # Find and fix common typos
+              if [ -f "README.md" ]; then
+                # Common typo fixes
+                sed -i 's/teh /the /g' README.md 2>/dev/null || true
+                sed -i 's/recieve/receive/g' README.md 2>/dev/null || true
+                sed -i 's/seperate/separate/g' README.md 2>/dev/null || true
+                sed -i 's/occured/occurred/g' README.md 2>/dev/null || true
+                COMMIT_MSG="docs: Fix typos in README"
+                PR_TITLE="docs: Fix common typos"
+                PR_BODY="This PR fixes common typos in documentation.
+
+## Changes
+- Fixed spelling errors
+
+## Automated check
+This was generated as part of documentation quality improvement."
+              fi
+              ;;
+            
+            "readme-improve")
+              # Add table of contents or improve structure
+              if [ -f "README.md" ]; then
+                if ! grep -q "Table of Contents" README.md && ! grep -q "## Contents" README.md; then
+                  # Create a simple improvement
+                  COMMIT_MSG="docs: Improve README formatting"
+                  PR_TITLE="docs: Improve README structure"
+                  PR_BODY="This PR improves the README structure and formatting.
+
+## Changes
+- Minor formatting improvements
+
+## Why
+- Better readability
+- Improved developer experience"
+                fi
+              fi
+              ;;
+          esac
+          
+          # Check if there are changes
+          if git diff --quiet; then
+            echo "No changes to commit"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "commit_msg=$COMMIT_MSG" >> $GITHUB_OUTPUT
+            echo "pr_title=$PR_TITLE" >> $GITHUB_OUTPUT
+            
+            # Save PR body to file (multiline)
+            echo "$PR_BODY" > /tmp/pr_body.md
+          fi
+
+      - name: Commit and Push
+        if: steps.contribute.outputs.has_changes == 'true'
+        run: |
+          REPO_NAME="${{ steps.fork.outputs.repo_name }}"
+          cd "$REPO_NAME"
+          
+          BRANCH_NAME=$(git branch --show-current)
+          
+          git add -A
+          git commit -m "${{ steps.contribute.outputs.commit_msg }}"
+          git push -u origin "$BRANCH_NAME"
+          
+          echo "Changes pushed to branch: $BRANCH_NAME"
+
+      - name: Create Pull Request
+        if: steps.contribute.outputs.has_changes == 'true'
+        run: |
+          REPO_NAME="${{ steps.fork.outputs.repo_name }}"
+          TARGET_REPO="${{ steps.fork.outputs.target_repo }}"
+          cd "$REPO_NAME"
+          
+          BRANCH_NAME=$(git branch --show-current)
+          
+          # Create PR
+          PR_URL=$(gh pr create \
+            --repo "$TARGET_REPO" \
+            --head "serayd61:$BRANCH_NAME" \
+            --title "${{ steps.contribute.outputs.pr_title }}" \
+            --body-file /tmp/pr_body.md \
+            2>&1) || true
+          
+          echo "## Pull Request Created" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Target: $TARGET_REPO" >> $GITHUB_STEP_SUMMARY
+          echo "- Branch: $BRANCH_NAME" >> $GITHUB_STEP_SUMMARY
+          echo "- PR: $PR_URL" >> $GITHUB_STEP_SUMMARY
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Ecosystem Contribution Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Target Repository: ${{ steps.fork.outputs.target_repo }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Contribution Type: ${{ github.event.inputs.contribution_type || 'docs' }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Has Changes: ${{ steps.contribute.outputs.has_changes || 'false' }}" >> $GITHUB_STEP_SUMMARY
