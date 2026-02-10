@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [Daily Update] - 2026-02-10
+
+### Changes
+- test: improve test coverage [mlfmwkgu]
+- test: update test fixtures [mlfaius4]
+- docs: Update frontend URL to defi-sentinel.xyz
+
+
 ## [Daily Update] - 2026-02-09
 
 ### Changes
