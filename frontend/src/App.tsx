@@ -72,6 +72,7 @@ import ProtocolRankings from './components/ProtocolRankings';
 import ContractActivityMonitor from './components/ContractActivityMonitor';
 import WalletAnalytics from './components/WalletAnalytics';
 import PriceAlerts from './components/PriceAlerts';
+import MarketOverview from './components/MarketOverview';
 import { WalletProvider, useWallet } from './contexts/WalletContext';
 import { useApi } from './hooks/useApi';
 import { useWebSocket } from './hooks/useWebSocket';
@@ -80,7 +81,7 @@ import StacksWalletConnect from './components/StacksWalletConnect';
 const API_URL = import.meta.env.VITE_API_URL || 'https://stacks-defi-sentinel-production.up.railway.app';
 const WS_URL = import.meta.env.VITE_WS_URL || 'wss://stacks-defi-sentinel-production.up.railway.app/ws';
 
-type TabType = 'overview' | 'swaps' | 'alerts' | 'ecosystem' | 'subscribe' | 'token-sale' | 'stake' | 'lending' | 'membership' | 'sbtc' | 'aggregator' | 'badges' | 'predict' | 'passport' | 'leaderboard' | 'portfolio' | 'gas' | 'dao' | 'referral' | 'network' | 'protocols' | 'contracts' | 'wallet-analytics' | 'price-alerts';
+type TabType = 'overview' | 'swaps' | 'alerts' | 'ecosystem' | 'subscribe' | 'token-sale' | 'stake' | 'lending' | 'membership' | 'sbtc' | 'aggregator' | 'badges' | 'predict' | 'passport' | 'leaderboard' | 'portfolio' | 'gas' | 'dao' | 'referral' | 'network' | 'protocols' | 'contracts' | 'wallet-analytics' | 'price-alerts' | 'market';
 
 // Navigation item type
 interface NavItem {
@@ -105,8 +106,9 @@ const navCategories: NavCategory[] = [
     icon: BarChart3,
     items: [
       { id: 'overview', label: 'Dashboard', icon: BarChart3, description: 'Platform overview & stats' },
+      { id: 'market', label: 'Market Overview', icon: TrendingUp, description: 'Live market data', hot: true },
       { id: 'network', label: 'Network Health', icon: Server, description: 'Stacks network stats', new: true },
-      { id: 'protocols', label: 'DeFi Rankings', icon: Trophy, description: 'Protocol rankings', hot: true },
+      { id: 'protocols', label: 'DeFi Rankings', icon: Trophy, description: 'Protocol rankings' },
     ]
   },
   {
@@ -601,6 +603,9 @@ function App() {
               {activeTab === 'dao' && <div className="max-w-5xl mx-auto"><DAOVoting /></div>}
               {activeTab === 'referral' && <div className="max-w-4xl mx-auto"><ReferralSystem /></div>}
               {activeTab === 'subscribe' && <div className="max-w-2xl mx-auto"><SubscriptionPanel /></div>}
+              
+              {/* Market Overview */}
+              {activeTab === 'market' && <div className="max-w-6xl mx-auto"><MarketOverview /></div>}
               
               {/* New Advanced Features */}
               {activeTab === 'network' && (
