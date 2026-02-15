@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [Daily Update] - 2026-02-15
+
+### Changes
+- docs: improve installation guide [mlnhvltj]
+- feat: Add Market Overview component with live price data
+
+
 ## [Daily Update] - 2026-02-14
 
 ### Changes
