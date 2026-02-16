@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [Daily Update] - 2026-02-16
+
+### Changes
+- test: fix flaky tests [mloxwn95]
+- docs: update configuration options [mlnua6tg]
+
+
 ## [Daily Update] - 2026-02-15
 
 ### Changes
