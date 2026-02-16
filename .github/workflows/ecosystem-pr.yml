@@ -22,6 +22,8 @@ env:
 
 jobs:
   contribute:
+    # Only run when manually triggered (not on push)
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     name: Contribute to ${{ github.event.inputs.target_repo || 'stacks-network/docs' }}
     
