@@ -92,14 +92,7 @@ jobs:
                   echo "_This project is part of the Stacks ecosystem._" >> README.md
                   COMMIT_MSG="docs: Add ecosystem reference to README"
                   PR_TITLE="docs: Add Stacks ecosystem reference"
-                  PR_BODY="This PR adds a small reference to the Stacks ecosystem in the README.
-
-## Changes
-- Added ecosystem reference at the bottom of README
-
-## Why
-- Helps new users understand the project context
-- Improves discoverability"
+                  PR_BODY="This PR adds a small reference to the Stacks ecosystem in the README.\n\n## Changes\n- Added ecosystem reference at the bottom of README\n\n## Why\n- Helps new users understand the project context\n- Improves discoverability"
                 fi
               fi
               ;;
@@ -114,13 +107,7 @@ jobs:
                 sed -i 's/occured/occurred/g' README.md 2>/dev/null || true
                 COMMIT_MSG="docs: Fix typos in README"
                 PR_TITLE="docs: Fix common typos"
-                PR_BODY="This PR fixes common typos in documentation.
-
-## Changes
-- Fixed spelling errors
-
-## Automated check
-This was generated as part of documentation quality improvement."
+                PR_BODY="This PR fixes common typos in documentation.\n\n## Changes\n- Fixed spelling errors\n\n## Automated check\nThis was generated as part of documentation quality improvement."
               fi
               ;;
             
@@ -131,14 +118,7 @@ This was generated as part of documentation quality improvement."
                   # Create a simple improvement
                   COMMIT_MSG="docs: Improve README formatting"
                   PR_TITLE="docs: Improve README structure"
-                  PR_BODY="This PR improves the README structure and formatting.
-
-## Changes
-- Minor formatting improvements
-
-## Why
-- Better readability
-- Improved developer experience"
+                  PR_BODY="This PR improves the README structure and formatting.\n\n## Changes\n- Minor formatting improvements\n\n## Why\n- Better readability\n- Improved developer experience"
                 fi
               fi
               ;;
