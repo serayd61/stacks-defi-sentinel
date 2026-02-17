@@ -1,0 +1,23 @@
+{
+  "version": "1",
+  "name": "DeFi Sentinel - Token Transfers",
+  "chain": "stacks",
+  "network": "mainnet",
+  "filters": {
+    "events": [
+      {
+        "type": "contract_call",
+        "contract_identifier": "SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.sentinel-token",
+        "function_name": "transfer"
+      }
+    ]
+  },
+  "action": {
+    "type": "http_post",
+    "url": "https://stacks-defi-sentinel-production.up.railway.app/webhooks/token-transfer"
+  },
+  "options": {
+    "decode_clarity_values": true,
+    "enable_on_registration": true
+  }
+}

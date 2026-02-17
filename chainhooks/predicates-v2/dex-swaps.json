@@ -1,0 +1,48 @@
+{
+  "version": "1",
+  "name": "DeFi Sentinel - DEX Swaps",
+  "chain": "stacks",
+  "network": "mainnet",
+  "filters": {
+    "events": [
+      {
+        "type": "contract_call",
+        "contract_identifier": "SP3K8BC0PPEVCV7NZ6QSRWPQ2JE9E5B6N3PA0KBR9.alex-vault",
+        "function_name": "swap-helper"
+      },
+      {
+        "type": "contract_call",
+        "contract_identifier": "SP3K8BC0PPEVCV7NZ6QSRWPQ2JE9E5B6N3PA0KBR9.alex-vault",
+        "function_name": "swap-x-for-y"
+      },
+      {
+        "type": "contract_call",
+        "contract_identifier": "SP3K8BC0PPEVCV7NZ6QSRWPQ2JE9E5B6N3PA0KBR9.alex-vault",
+        "function_name": "swap-y-for-x"
+      },
+      {
+        "type": "contract_call",
+        "contract_identifier": "SP1Y5YSTAHZ88XYK1VPDH24GY0HPX5J4JECTMY4A1.velar-swap",
+        "function_name": "swap"
+      },
+      {
+        "type": "contract_call",
+        "contract_identifier": "SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR.arkadiko-swap-v2-1",
+        "function_name": "swap-x-for-y"
+      },
+      {
+        "type": "contract_call",
+        "contract_identifier": "SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR.arkadiko-swap-v2-1",
+        "function_name": "swap-y-for-x"
+      }
+    ]
+  },
+  "action": {
+    "type": "http_post",
+    "url": "https://stacks-defi-sentinel-production.up.railway.app/webhooks/swaps"
+  },
+  "options": {
+    "decode_clarity_values": true,
+    "enable_on_registration": true
+  }
+}

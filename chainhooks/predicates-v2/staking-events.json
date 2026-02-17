@@ -1,0 +1,33 @@
+{
+  "version": "1",
+  "name": "DeFi Sentinel - Staking Events",
+  "chain": "stacks",
+  "network": "mainnet",
+  "filters": {
+    "events": [
+      {
+        "type": "contract_call",
+        "contract_identifier": "SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.sentinel-staking-v2",
+        "function_name": "stake"
+      },
+      {
+        "type": "contract_call",
+        "contract_identifier": "SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.sentinel-staking-v2",
+        "function_name": "unstake"
+      },
+      {
+        "type": "contract_call",
+        "contract_identifier": "SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.sentinel-staking-v2",
+        "function_name": "claim-rewards"
+      }
+    ]
+  },
+  "action": {
+    "type": "http_post",
+    "url": "https://stacks-defi-sentinel-production.up.railway.app/webhooks/staking"
+  },
+  "options": {
+    "decode_clarity_values": true,
+    "enable_on_registration": true
+  }
+}

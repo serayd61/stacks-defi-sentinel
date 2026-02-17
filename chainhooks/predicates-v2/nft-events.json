@@ -1,0 +1,24 @@
+{
+  "version": "1",
+  "name": "DeFi Sentinel - NFT Events",
+  "chain": "stacks",
+  "network": "mainnet",
+  "filters": {
+    "events": [
+      {
+        "type": "nft_transfer"
+      },
+      {
+        "type": "nft_mint"
+      }
+    ]
+  },
+  "action": {
+    "type": "http_post",
+    "url": "https://stacks-defi-sentinel-production.up.railway.app/webhooks/nft-events"
+  },
+  "options": {
+    "decode_clarity_values": true,
+    "enable_on_registration": true
+  }
+}
