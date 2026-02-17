@@ -1,0 +1,66 @@
+{
+  "timestamp": "2026-02-17T20:57:06.969Z",
+  "network": "mainnet",
+  "dryRun": false,
+  "results": [
+    {
+      "v1Name": "DEX Swap Monitor",
+      "v1Uuid": "4d94d6e8-339b-4a00-821a-41b2c490f620",
+      "v2Uuid": "e38b9063-4e58-41be-b829-0d2b98662c53",
+      "status": "success"
+    },
+    {
+      "v1Name": "NFT Transfer Monitor",
+      "v1Uuid": "b40f3d54-d825-4303-a6c7-5b9852390b22",
+      "v2Uuid": "1081f9e0-3f15-4123-b658-a8bf4283455c",
+      "status": "success"
+    },
+    {
+      "v1Name": "Liquidity Pool Events",
+      "v1Uuid": "1bb5fb34-1889-477d-8bdf-07647fc94913",
+      "v2Uuid": "adb9bcc8-d04e-4bfd-b5a1-154b45c12303",
+      "status": "success"
+    },
+    {
+      "v1Name": "ALEX DEX Swaps",
+      "v1Uuid": "859a0176-8685-4c42-9e98-57623dac4276",
+      "v2Uuid": "e336d213-c524-40d9-b821-6cfe1d529e46",
+      "status": "success"
+    },
+    {
+      "v1Name": "Arkadiko Swaps",
+      "v1Uuid": "49a29a58-9a58-4665-8e1a-c9af8c3d026c",
+      "v2Uuid": "23b3e15b-e7a1-4d8f-b2b2-6039af04ea11",
+      "status": "success"
+    },
+    {
+      "v1Name": "DeFi Sentinel Subscriptions",
+      "v1Uuid": "d31c1996-02aa-44a0-9192-3d164caed8ec",
+      "v2Uuid": "d15a4599-8e93-4947-95fe-4fec5c497ce3",
+      "status": "success"
+    },
+    {
+      "v1Name": "VELAR Token Tracker version: 1",
+      "v1Uuid": "cd122c98-18fd-43c8-b43e-c5b0559e6142",
+      "status": "failed",
+      "error": "Failed to register chainhook: 400 - {\"statusCode\":400,\"error\":\"Bad Request\",\"message\":\"/action/url: must match format \\\"uri\\\"\"}"
+    },
+    {
+      "v1Name": "aBTC Whale Tracker",
+      "v1Uuid": "a4d3b4da-bec1-461a-b755-520ace4c600e",
+      "status": "failed",
+      "error": "Failed to register chainhook: 400 - {\"statusCode\":400,\"error\":\"Bad Request\",\"message\":\"/action/url: must match format \\\"uri\\\"\"}"
+    },
+    {
+      "v1Name": "USDA Stablecoin Tracker",
+      "v1Uuid": "9e34069a-4d03-442b-96f7-3ebd732cc769",
+      "status": "failed",
+      "error": "Failed to register chainhook: 400 - {\"statusCode\":400,\"error\":\"Bad Request\",\"message\":\"/action/url: must match format \\\"uri\\\"\"}"
+    },
+    {
+      "v1Name": "STX Whale Alert",
+      "v2Uuid": "41d9a842-34c8-4281-946a-748a814d1e31",
+      "status": "success"
+    }
+  ]
+}

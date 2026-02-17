@@ -166,8 +166,8 @@ export class ChainhooksV2Manager {
         throw new Error(`Failed to list chainhooks: ${response.status}`);
       }
 
-      const data = await response.json();
-      return data.results || data;
+      const data = await response.json() as { results?: ChainhookV2Status[] } | ChainhookV2Status[];
+      return Array.isArray(data) ? data : (data.results || []);
     } catch (error) {
       logger.error('Failed to list V2 chainhooks', error);
       throw error;
@@ -241,7 +241,7 @@ export class ChainhooksV2Manager {
         throw new Error(`Failed to rotate secret: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as { secret: string };
       logger.info(`Rotated consumer secret for chainhook: ${uuid}`);
       return data.secret;
     } catch (error) {
@@ -533,8 +533,8 @@ export async function fetchV1Chainhooks(apiKey: string): Promise<V1Chainhook[]> 
       throw new Error(`Failed to fetch V1 chainhooks: ${response.status}`);
     }
 
-    const data = await response.json();
-    return data.results || data;
+    const data = await response.json() as { results?: V1Chainhook[] } | V1Chainhook[];
+    return Array.isArray(data) ? data : (data.results || []);
   } catch (error) {
     logger.error('Failed to fetch V1 chainhooks', error);
     throw error;
