@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [Daily Update] - 2026-02-17
+
+### Changes
+- feat: implement retry logic [mlq94l0n]
+- test: add performance tests [mlpsrard]
+- fix: Add condition to prevent Ecosystem PR Bot from running on push
+- fix: Fix YAML syntax error in ecosystem-pr workflow
+- test: update test fixtures [mlpa771g]
+- chore: Auto-update CHANGELOG [skip ci]
+
+
 ## [Daily Update] - 2026-02-16
 
 ### Changes
