@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [Daily Update] - 2026-02-18
+
+### Changes
+- docs: improve code comments [mlrona99]
+- feat: implement retry logic [mlr87jt9]
+- feat(chainhooks): Complete V2 migration - 10 hooks registered
+- feat(chainhooks): Add V2 migration support
+- feat(notifications): Enhanced notification system with filters and rate limiting
+- chore: Auto-update CHANGELOG [skip ci]
+
+
 ## [Daily Update] - 2026-02-17
 
 ### Changes
