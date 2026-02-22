@@ -1,0 +1,155 @@
+"""
+NAKAMOTO — DEX Arbitraj & Fiyat Analizi Ajanı
+───────────────────────────────────────────────
+Görev:
+  • Her 60 sn'de DEX verilerini çeker (Velar, ALEX, Arkadiko)
+  • LLM ile arbitraj fırsatı ve fiyat sapması analizi yapar
+  • Satoshi'den whale uyarısı alınca DEX etkisini hesaplar
+  • Finney'ye özet rapor gönderir
+"""
+import time
+import os
+import json
+import schedule
+from base_agent import BaseAgent
+
+POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", "60"))
+
+SYSTEM_PROMPT = """
+Sen bir DeFi DEX analisti yapay zeka ajanısın.
+Stacks blockchain'deki merkeziyetsiz borsaları (Velar, ALEX, Arkadiko) izler,
+fiyat farklılıkları, arbitraj fırsatları ve likidite değişimlerini tespit edersin.
+Kısa ve net JSON yanıtlar verirsin.
+"""
+
+
+class NakamotoAgent(BaseAgent):
+
+    def __init__(self):
+        super().__init__()
+        self.subscribe("satoshi:whale_alert", "orchestrator:command")
+
+    def analyze_dex(self, dex_data: dict) -> dict:
+        if not dex_data:
+            return {}
+
+        prompt = f"""
+Aşağıdaki DEX verilerini analiz et:
+
+{json.dumps(dex_data, indent=2)[:1500]}
+
+Şu soruları yanıtla (JSON):
+{{
+  "arbitrage_opportunity": true/false,
+  "best_pair": "TOKEN/STX gibi",
+  "price_deviation_pct": 0.0,
+  "liquidity_trend": "increasing|decreasing|stable",
+  "recommendation": "kısa açıklama",
+  "urgency": "low|medium|high"
+}}
+"""
+        response = self.think(prompt, SYSTEM_PROMPT)
+        try:
+            start = response.find("{")
+            end   = response.rfind("}") + 1
+            if start >= 0 and end > start:
+                return json.loads(response[start:end])
+        except Exception:
+            pass
+        return {"arbitrage_opportunity": False, "recommendation": response[:200]}
+
+    def analyze_whale_dex_impact(self, whale_data: dict):
+        """Satoshi'den whale uyarısı gelince DEX etkisini hesapla."""
+        amount  = whale_data.get("amount", 0)
+        pattern = whale_data.get("analysis", {}).get("pattern", "")
+
+        prompt = f"""
+{amount} STX değerinde bir whale hareketi tespit edildi.
+Hareket paterni: {pattern}
+
+Bu hareket Stacks DEX'lerini nasıl etkiler? (JSON):
+{{
+  "expected_price_impact_pct": 0.0,
+  "affected_pools": ["pool1", "pool2"],
+  "suggested_action": "açıklama",
+  "window_minutes": 0
+}}
+"""
+        response = self.think(prompt, SYSTEM_PROMPT)
+        try:
+            start = response.find("{")
+            end   = response.rfind("}") + 1
+            if start >= 0 and end > start:
+                impact = json.loads(response[start:end])
+                self.log.info(f"Whale DEX etkisi: {impact}")
+                self.publish("nakamoto:dex_impact", {
+                    "whale_amount": amount,
+                    "impact": impact
+                })
+                self.post_insight({
+                    "agent": self.name,
+                    "type": "dex_impact_analysis",
+                    "whale_amount": amount,
+                    "impact": impact
+                })
+        except Exception as e:
+            self.log.error(f"DEX etki analizi hatası: {e}")
+
+    def scan_dex(self):
+        self.log.info("DEX taraması başlıyor...")
+        dex_data = self.get_dex_data()
+        if not dex_data:
+            self.log.warning("DEX verisi alınamadı.")
+            return
+
+        analysis = self.analyze_dex(dex_data)
+        if not analysis:
+            return
+
+        self.log.info(
+            f"DEX analiz → arbitraj={analysis.get('arbitrage_opportunity')} "
+            f"urgency={analysis.get('urgency', 'low')}"
+        )
+
+        self.cache_set("latest_dex_analysis", analysis, ttl=120)
+        self.post_insight({
+            "agent": self.name,
+            "type": "dex_analysis",
+            "analysis": analysis
+        })
+
+        if analysis.get("urgency") == "high":
+            self.publish("nakamoto:dex_alert", {"analysis": analysis})
+
+        # Finney'e periyodik özet
+        self.publish("nakamoto:summary", {
+            "type": "dex_summary",
+            "analysis": analysis
+        })
+
+    def handle_messages(self):
+        msg = self.pubsub.get_message(timeout=0.1)
+        if msg and msg["type"] == "message":
+            try:
+                data = json.loads(msg["data"])
+                if "whale_alert" in msg.get("channel", "") or data.get("type") == "whale_analysis":
+                    self.analyze_whale_dex_impact(data)
+                elif data.get("command") == "scan_dex":
+                    self.scan_dex()
+            except Exception as e:
+                self.log.error(f"Mesaj işleme hatası: {e}")
+
+    def run(self):
+        self.log.info("NAKAMOTO aktif — DEX analizi başlıyor.")
+        schedule.every(POLL_INTERVAL).seconds.do(self.scan_dex)
+        self.scan_dex()
+
+        while True:
+            schedule.run_pending()
+            self.handle_messages()
+            time.sleep(1)
+
+
+if __name__ == "__main__":
+    agent = NakamotoAgent()
+    agent.run()
