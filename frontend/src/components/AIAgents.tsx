@@ -57,24 +57,24 @@ const RISK_COLORS: Record<string, string> = {
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const m = Math.floor(diff / 60000);
-  if (m < 1)  return 'şimdi';
-  if (m < 60) return `${m}dk önce`;
+  if (m < 1)  return 'just now';
+  if (m < 60) return `${m}m ago`;
   const h = Math.floor(m / 60);
-  if (h < 24) return `${h}sa önce`;
-  return `${Math.floor(h / 24)}g önce`;
+  if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
 }
 
 function insightTitle(ins: Insight): string {
   switch (ins.type) {
-    case 'whale_analysis':  return `🐋 ${ins.amount?.toLocaleString()} STX Whale Hareketi`;
-    case 'dex_analysis':    return '📊 DEX Fiyat Analizi';
-    case 'dex_impact':      return '💥 Whale DEX Etkisi';
-    case 'daily_report':    return '📝 Günlük AI Raporu';
-    case 'security_scan':   return '🔒 Kontrat Güvenlik Taraması';
-    case 'alert_whale':     return `⚡ Whale Uyarısı`;
-    case 'alert_dex':       return '📈 DEX Uyarısı';
-    case 'alert_security':  return '🚨 Güvenlik Uyarısı';
-    default:                return ins.type || 'AI Analiz';
+    case 'whale_analysis':  return `🐋 ${ins.amount?.toLocaleString()} STX Whale Movement`;
+    case 'dex_analysis':    return '📊 DEX Price Analysis';
+    case 'dex_impact':      return '💥 Whale DEX Impact';
+    case 'daily_report':    return '📝 Daily AI Report';
+    case 'security_scan':   return '🔒 Contract Security Scan';
+    case 'alert_whale':     return `⚡ Whale Alert`;
+    case 'alert_dex':       return '📈 DEX Alert';
+    case 'alert_security':  return '🚨 Security Alert';
+    default:                return ins.type || 'AI Analysis';
   }
 }
 
@@ -157,7 +157,7 @@ function InsightCard({ insight }: { insight: Insight }) {
           )}
           {insight.analysis?.arbitrage_opportunity && (
             <span className="text-xs px-2 py-0.5 rounded-full font-mono text-yellow-300 bg-yellow-400/10">
-              arbitraj fırsatı
+              arbitrage opportunity
             </span>
           )}
         </div>
@@ -215,7 +215,7 @@ export default function AIAgents() {
       <div className="flex items-center justify-center h-64">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-2 border-purple-500 border-t-transparent rounded-full animate-spin" />
-          <span className="text-gray-400 text-sm">AI Cluster bağlanıyor...</span>
+          <span className="text-gray-400 text-sm">Connecting to AI Cluster...</span>
         </div>
       </div>
     );
@@ -245,7 +245,7 @@ export default function AIAgents() {
           className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-gray-400 hover:text-white hover:bg-white/10 transition-all text-sm"
         >
           <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-          Yenile
+          Refresh
         </button>
       </div>
 
@@ -254,9 +254,9 @@ export default function AIAgents() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
             { label: 'Inference Model', value: 'llama3.2:1b', icon: Zap, color: 'text-yellow-400' },
-            { label: 'Aktif Agent',     value: `${status.agents.length}`,        icon: Brain,   color: 'text-purple-400' },
-            { label: 'AI Insight',      value: `${status.total_insights}`,        icon: Activity, color: 'text-blue-400'  },
-            { label: 'Son Analiz',      value: status.last_activity ? timeAgo(status.last_activity) : 'Bekleniyor',
+            { label: 'Active Agents',   value: `${status.agents.length}`,        icon: Brain,   color: 'text-purple-400' },
+            { label: 'AI Insights',     value: `${status.total_insights}`,        icon: Activity, color: 'text-blue-400'  },
+            { label: 'Last Analysis',   value: status.last_activity ? timeAgo(status.last_activity) : 'Waiting',
               icon: TrendingUp, color: 'text-green-400' },
           ].map(stat => {
             const Icon = stat.icon;
@@ -292,7 +292,7 @@ export default function AIAgents() {
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xs font-mono text-gray-500 uppercase tracking-widest flex items-center gap-2">
             <span className="w-4 h-px bg-gray-700" />
-            Son AI Analizleri
+            Latest AI Analyses
           </h2>
           <div className="flex items-center gap-2">
             {['all', 'satoshi', 'nakamoto', 'szabo', 'finney'].map(f => (
@@ -305,7 +305,7 @@ export default function AIAgents() {
                     : 'text-gray-500 hover:text-gray-300 border border-transparent'
                 }`}
               >
-                {f === 'all' ? 'Tümü' : f}
+                {f === 'all' ? 'All' : f}
               </button>
             ))}
           </div>
@@ -316,8 +316,8 @@ export default function AIAgents() {
             <div className="w-12 h-12 rounded-xl bg-gray-800/50 flex items-center justify-center">
               <Brain className="w-6 h-6 text-gray-600" />
             </div>
-            <p className="text-gray-500 text-sm">Henüz analiz yok</p>
-            <p className="text-gray-600 text-xs">Agentlar blockchain'i izliyor...</p>
+            <p className="text-gray-500 text-sm">No analyses yet</p>
+            <p className="text-gray-600 text-xs">Agents are monitoring the blockchain...</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -331,7 +331,7 @@ export default function AIAgents() {
       {/* Footer */}
       {lastUpdate && (
         <p className="text-center text-gray-600 text-xs font-mono">
-          Son güncelleme: {lastUpdate.toLocaleTimeString('tr-TR')} · Otomatik yenileme 15 sn
+          Last updated: {lastUpdate.toLocaleTimeString('en-US')} · Auto-refresh every 15s
         </p>
       )}
     </div>

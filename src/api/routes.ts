@@ -35,10 +35,10 @@ export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (fastify, opts
   // AI Agent Status — GET
   fastify.get('/ai-status', async (_req: FastifyRequest, reply: FastifyReply) => {
     const agents = [
-      { name: 'satoshi',  role: 'Whale Takibi & Pattern Analizi', model: 'llama3.2:1b' },
-      { name: 'nakamoto', role: 'DEX Arbitraj & Fiyat Analizi',    model: 'llama3.2:1b' },
-      { name: 'szabo',    role: 'Kontrat Güvenlik Taraması',       model: 'llama3.2:1b' },
-      { name: 'finney',   role: 'Kullanıcı Rapor & Bildirim',      model: 'llama3.2:1b' },
+      { name: 'satoshi',  role: 'Whale Tracking & Pattern Analysis', model: 'llama3.2:1b' },
+      { name: 'nakamoto', role: 'DEX Arbitrage & Price Analysis',    model: 'llama3.2:1b' },
+      { name: 'szabo',    role: 'Contract Security Scanner',         model: 'llama3.2:1b' },
+      { name: 'finney',   role: 'User Reports & Notifications',      model: 'llama3.2:1b' },
     ];
     const lastInsight = aiInsights[0] as Record<string, unknown> | undefined;
     return reply.send({
