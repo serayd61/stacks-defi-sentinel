@@ -1,45 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Activity, 
-  TrendingUp, 
-  Users, 
-  Wallet, 
-  Zap,
-  Github,
-  ExternalLink,
-  Wifi,
-  WifiOff,
-  Bell,
-  BarChart3,
-  Droplets,
-  ArrowRightLeft,
-  Clock,
-  RefreshCw,
-  CreditCard,
-  Crown,
-  Trophy,
-  Vote,
-  ChevronRight,
-  Menu,
-  X,
-  Landmark,
-  Shield,
-  Coins,
-  Target,
-  Award,
-  BookOpen,
-  PieChart,
-  Fuel,
-  Gift,
-  Layers,
-  Database,
-  LineChart,
-  Star,
-  ChevronDown,
-  Code,
-  Server,
-  Search
+import {
+  Activity, TrendingUp, Users, Wallet, Zap, Github, ExternalLink,
+  WifiOff, Bell, BarChart3, ArrowRightLeft, RefreshCw, CreditCard,
+  Crown, Trophy, Vote, ChevronRight, Menu, X, Landmark, Shield,
+  Coins, Target, Award, BookOpen, PieChart, Fuel, Gift, Layers,
+  Database, LineChart, Star, ChevronDown, Code, Server, Search,
+  Home, ChevronLeft, Brain,
 } from 'lucide-react';
+
 import { StatCard } from './components/StatCard';
 import { SwapTable } from './components/SwapTable';
 import { WhaleAlerts } from './components/WhaleAlerts';
@@ -73,132 +41,288 @@ import ContractActivityMonitor from './components/ContractActivityMonitor';
 import WalletAnalytics from './components/WalletAnalytics';
 import PriceAlerts from './components/PriceAlerts';
 import MarketOverview from './components/MarketOverview';
+import AIAgents from './components/AIAgents';
 import { WalletProvider, useWallet } from './contexts/WalletContext';
 import { useApi } from './hooks/useApi';
 import { useWebSocket } from './hooks/useWebSocket';
 import StacksWalletConnect from './components/StacksWalletConnect';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://stacks-defi-sentinel-production.up.railway.app';
 const WS_URL = import.meta.env.VITE_WS_URL || 'wss://stacks-defi-sentinel-production.up.railway.app/ws';
 
-type TabType = 'overview' | 'swaps' | 'alerts' | 'ecosystem' | 'subscribe' | 'token-sale' | 'stake' | 'lending' | 'membership' | 'sbtc' | 'aggregator' | 'badges' | 'predict' | 'passport' | 'leaderboard' | 'portfolio' | 'gas' | 'dao' | 'referral' | 'network' | 'protocols' | 'contracts' | 'wallet-analytics' | 'price-alerts' | 'market';
+type TabType =
+  | 'overview' | 'swaps' | 'alerts' | 'ecosystem' | 'subscribe'
+  | 'token-sale' | 'stake' | 'lending' | 'membership' | 'sbtc'
+  | 'aggregator' | 'badges' | 'predict' | 'passport' | 'leaderboard'
+  | 'portfolio' | 'gas' | 'dao' | 'referral' | 'network' | 'protocols'
+  | 'contracts' | 'wallet-analytics' | 'price-alerts' | 'market' | 'ai-agents';
 
-// Navigation item type
-interface NavItem {
-  id: string;
-  label: string;
-  icon: any;
-  description: string;
-  hot?: boolean;
-  new?: boolean;
-}
+interface NavItem { id: TabType; label: string; icon: React.ElementType; badge?: 'hot'|'new'|'live'; }
+interface NavSection { label: string; items: NavItem[]; }
 
-interface NavCategory {
-  name: string;
-  icon: any;
-  items: NavItem[];
-}
-
-// Navigation categories
-const navCategories: NavCategory[] = [
-  {
-    name: 'Overview',
-    icon: BarChart3,
-    items: [
-      { id: 'overview', label: 'Dashboard', icon: BarChart3, description: 'Platform overview & stats' },
-      { id: 'market', label: 'Market Overview', icon: TrendingUp, description: 'Live market data', hot: true },
-      { id: 'network', label: 'Network Health', icon: Server, description: 'Stacks network stats', new: true },
-      { id: 'protocols', label: 'DeFi Rankings', icon: Trophy, description: 'Protocol rankings' },
-    ]
-  },
-  {
-    name: 'Trading',
-    icon: ArrowRightLeft,
-    items: [
-      { id: 'aggregator', label: 'DEX Aggregator', icon: Zap, description: 'Best swap rates', hot: true },
-      { id: 'swaps', label: 'Swap History', icon: ArrowRightLeft, description: 'Recent trades' },
-      { id: 'price-alerts', label: 'Price Alerts', icon: Bell, description: 'Custom alerts', new: true },
-    ]
-  },
-  {
-    name: 'Analytics',
-    icon: LineChart,
-    items: [
-      { id: 'contracts', label: 'Contract Activity', icon: Code, description: 'Smart contract calls', new: true },
-      { id: 'wallet-analytics', label: 'Wallet Analytics', icon: Search, description: 'Analyze any wallet', new: true },
-      { id: 'alerts', label: 'Whale Alerts', icon: Bell, description: 'Large transactions' },
-    ]
-  },
-  {
-    name: 'DeFi',
-    icon: Landmark,
-    items: [
-      { id: 'lending', label: 'Lending', icon: Landmark, description: 'Borrow & lend' },
-      { id: 'stake', label: 'Staking', icon: Coins, description: 'Earn rewards' },
-      { id: 'sbtc', label: 'sBTC Bridge', icon: Database, description: 'Bitcoin bridge' },
-    ]
-  },
-  {
-    name: 'Token',
-    icon: Coins,
-    items: [
-      { id: 'token-sale', label: 'Token Sale', icon: CreditCard, description: 'Buy SNTL tokens', hot: true },
-      { id: 'membership', label: 'Pro Access', icon: Crown, description: 'Premium features' },
-      { id: 'gas', label: 'Gas Tracker', icon: Fuel, description: 'Transaction fees' },
-    ]
-  },
-  {
-    name: 'Governance',
-    icon: Shield,
-    items: [
-      { id: 'dao', label: 'DAO Voting', icon: Vote, description: 'Governance proposals' },
-      { id: 'passport', label: 'Passport', icon: BookOpen, description: 'Digital identity' },
-      { id: 'badges', label: 'Badges', icon: Award, description: 'Achievement NFTs' },
-    ]
-  },
-  {
-    name: 'More',
-    icon: Layers,
-    items: [
-      { id: 'ecosystem', label: 'Explore', icon: Activity, description: 'Full ecosystem' },
-      { id: 'portfolio', label: 'Portfolio', icon: PieChart, description: 'Track your assets' },
-      { id: 'leaderboard', label: 'Leaderboard', icon: Trophy, description: 'Top performers' },
-      { id: 'predict', label: 'Predictions', icon: Target, description: 'Market predictions' },
-      { id: 'referral', label: 'Referrals', icon: Gift, description: 'Earn rewards' },
-    ]
-  },
+const NAV: NavSection[] = [
+  { label: 'Overview', items: [
+    { id: 'overview',   label: 'Dashboard',     icon: Home,          badge: 'live' },
+    { id: 'market',     label: 'Market',         icon: TrendingUp,   badge: 'hot'  },
+    { id: 'network',    label: 'Network Health', icon: Server,        badge: 'new'  },
+    { id: 'protocols',  label: 'DeFi Rankings',  icon: Trophy },
+  ]},
+  { label: 'Trading', items: [
+    { id: 'aggregator',   label: 'DEX Aggregator', icon: Zap,          badge: 'hot' },
+    { id: 'swaps',        label: 'Swap History',   icon: ArrowRightLeft },
+    { id: 'price-alerts', label: 'Price Alerts',   icon: Bell,          badge: 'new' },
+  ]},
+  { label: 'Analytics', items: [
+    { id: 'contracts',        label: 'Contract Activity', icon: Code,   badge: 'new' },
+    { id: 'wallet-analytics', label: 'Wallet Analyzer',   icon: Search },
+    { id: 'alerts',           label: 'Whale Alerts',       icon: Activity },
+  ]},
+  { label: 'DeFi', items: [
+    { id: 'lending', label: 'Lending',    icon: Landmark },
+    { id: 'stake',   label: 'Staking',    icon: Coins },
+    { id: 'sbtc',    label: 'sBTC Bridge', icon: Database },
+  ]},
+  { label: 'Token', items: [
+    { id: 'token-sale', label: 'Token Sale',  icon: CreditCard, badge: 'hot' },
+    { id: 'membership', label: 'Pro Access',  icon: Crown },
+    { id: 'gas',        label: 'Gas Tracker', icon: Fuel },
+  ]},
+  { label: 'Governance', items: [
+    { id: 'dao',      label: 'DAO Voting', icon: Vote },
+    { id: 'passport', label: 'Passport',   icon: BookOpen },
+    { id: 'badges',   label: 'Badges',     icon: Award },
+  ]},
+  { label: 'AI', items: [
+    { id: 'ai-agents', label: 'AI Agents', icon: Brain, badge: 'new' as const },
+  ]},
+  { label: 'More', items: [
+    { id: 'ecosystem',   label: 'Explore',     icon: Layers },
+    { id: 'portfolio',   label: 'Portfolio',   icon: PieChart },
+    { id: 'leaderboard', label: 'Leaderboard', icon: Star },
+    { id: 'predict',     label: 'Predictions', icon: Target },
+    { id: 'referral',    label: 'Referrals',   icon: Gift },
+  ]},
 ];
 
+const BADGE: Record<string, { label: string; bg: string; text: string }> = {
+  hot:  { label: 'HOT',  bg: 'rgba(251,146,60,0.15)',  text: '#fb923c' },
+  new:  { label: 'NEW',  bg: 'rgba(34,197,94,0.15)',   text: '#22c55e' },
+  live: { label: 'LIVE', bg: 'rgba(239,68,68,0.15)',   text: '#f87171' },
+};
+
+const fmt = (n: number) => {
+  if (n >= 1e9) return `$${(n/1e9).toFixed(2)}B`;
+  if (n >= 1e6) return `$${(n/1e6).toFixed(2)}M`;
+  if (n >= 1e3) return `$${(n/1e3).toFixed(2)}K`;
+  return `$${n.toFixed(2)}`;
+};
+const fmtCount = (n: number) => {
+  if (n >= 1e6) return `${(n/1e6).toFixed(1)}M`;
+  if (n >= 1e3) return `${(n/1e3).toFixed(1)}K`;
+  return n.toString();
+};
+
+/* ═══════════════════════════════════════════════
+   SIDEBAR
+═══════════════════════════════════════════════ */
+const Sidebar: React.FC<{
+  open: boolean; activeTab: TabType;
+  onSelect: (t: TabType) => void;
+  onToggle: () => void; tvl: number;
+}> = ({ open, activeTab, onSelect, onToggle, tvl }) => {
+  const [expanded, setExpanded] = useState<string|null>('Overview');
+
+  return (
+    <aside style={{
+      width: open ? 248 : 72, minHeight: '100vh', height: '100vh',
+      position: 'fixed', left: 0, top: 0,
+      background: 'rgba(9,9,18,0.98)', backdropFilter: 'blur(20px)',
+      borderRight: '1px solid rgba(255,255,255,0.05)',
+      display: 'flex', flexDirection: 'column',
+      transition: 'width 0.25s cubic-bezier(0.4,0,0.2,1)',
+      zIndex: 40, overflow: 'hidden',
+    }}>
+
+      {/* Logo */}
+      <div style={{
+        padding: '18px 16px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)',
+        display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0,
+      }}>
+        <div style={{ position: 'relative', flexShrink: 0 }}>
+          <div style={{
+            width: 38, height: 38, borderRadius: 10,
+            background: 'linear-gradient(135deg,#5546FF,#7c3aed,#FC6432)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 4px 14px rgba(85,70,255,0.35)',
+          }}>
+            <Zap size={18} color="white" />
+          </div>
+          <div style={{
+            position: 'absolute', bottom: -2, right: -2,
+            width: 10, height: 10, borderRadius: '50%',
+            background: '#22c55e', border: '2px solid #090912',
+          }} />
+        </div>
+        {open && (
+          <div style={{ overflow: 'hidden' }}>
+            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#fff', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
+              DeFi Sentinel
+            </div>
+            <div style={{ fontSize: '0.68rem', color: '#475569', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
+              Stacks Mainnet
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Nav */}
+      <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '10px 8px' }}>
+        {NAV.map(section => (
+          <div key={section.label} style={{ marginBottom: 4 }}>
+            {open ? (
+              <>
+                <button
+                  onClick={() => setExpanded(e => e === section.label ? null : section.label)}
+                  style={{
+                    width: '100%', display: 'flex', alignItems: 'center',
+                    justifyContent: 'space-between', padding: '6px 10px',
+                    background: 'none', border: 'none', color: '#475569',
+                    fontSize: '0.67rem', fontWeight: 700, letterSpacing: '0.06em',
+                    textTransform: 'uppercase', cursor: 'pointer', borderRadius: 8,
+                    transition: 'color 0.15s', fontFamily: 'inherit',
+                  }}
+                  onMouseEnter={e => (e.currentTarget.style.color = '#94a3b8')}
+                  onMouseLeave={e => (e.currentTarget.style.color = '#475569')}
+                >
+                  {section.label}
+                  <ChevronDown size={12} style={{
+                    transform: expanded === section.label ? 'rotate(180deg)' : '',
+                    transition: 'transform 0.2s',
+                  }} />
+                </button>
+                {expanded === section.label && (
+                  <div style={{ marginTop: 2 }}>
+                    {section.items.map(item => {
+                      const active = activeTab === item.id;
+                      const b = item.badge ? BADGE[item.badge] : null;
+                      return (
+                        <button key={item.id} onClick={() => onSelect(item.id)}
+                          style={{
+                            width: '100%', display: 'flex', alignItems: 'center',
+                            gap: 10, padding: '8px 10px', borderRadius: 9,
+                            background: active
+                              ? 'linear-gradient(90deg,rgba(85,70,255,0.18),rgba(124,58,237,0.06))'
+                              : 'transparent',
+                            border: active ? '1px solid rgba(85,70,255,0.22)' : '1px solid transparent',
+                            color: active ? '#e2e8f0' : '#64748b',
+                            cursor: 'pointer', transition: 'all 0.15s',
+                            fontFamily: 'inherit', fontSize: '0.82rem',
+                            fontWeight: active ? 600 : 400, marginBottom: 1, textAlign: 'left',
+                          }}
+                          onMouseEnter={e => { if (!active) { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = '#e2e8f0'; }}}
+                          onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#64748b'; }}}
+                        >
+                          <item.icon size={15} color={active ? '#818cf8' : '#475569'} style={{ flexShrink: 0 }} />
+                          <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {item.label}
+                          </span>
+                          {b && (
+                            <span style={{
+                              padding: '1px 6px', borderRadius: 20, fontSize: '0.59rem',
+                              fontWeight: 700, letterSpacing: '0.04em',
+                              background: b.bg, color: b.text, flexShrink: 0,
+                            }}>
+                              {b.label}
+                            </span>
+                          )}
+                          {active && <ChevronRight size={12} color="#818cf8" style={{ flexShrink: 0 }} />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            ) : (
+              /* Collapsed – icons only */
+              <div>
+                {section.items.map(item => {
+                  const active = activeTab === item.id;
+                  return (
+                    <button key={item.id} onClick={() => onSelect(item.id)} title={item.label}
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center',
+                        justifyContent: 'center', padding: '9px 0',
+                        borderRadius: 9, marginBottom: 1,
+                        background: active ? 'rgba(85,70,255,0.15)' : 'transparent',
+                        border: '1px solid transparent', cursor: 'pointer', transition: 'all 0.15s',
+                      }}
+                      onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
+                      onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+                    >
+                      <item.icon size={16} color={active ? '#818cf8' : '#475569'} />
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ))}
+      </nav>
+
+      {/* Footer */}
+      <div style={{ padding: '12px 10px 14px', borderTop: '1px solid rgba(255,255,255,0.05)', flexShrink: 0 }}>
+        {open && tvl > 0 && (
+          <div style={{
+            background: 'linear-gradient(135deg,rgba(85,70,255,0.1),rgba(252,100,50,0.05))',
+            border: '1px solid rgba(85,70,255,0.18)',
+            borderRadius: 10, padding: '10px 12px', marginBottom: 10,
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+              <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 500 }}>Total Value Locked</span>
+              <span style={{ fontSize: '0.68rem', color: '#22c55e', fontWeight: 600 }}>+12.5%</span>
+            </div>
+            <div style={{ fontWeight: 700, fontSize: '1.05rem', color: '#fff', letterSpacing: '-0.02em' }}>
+              {fmt(tvl)}
+            </div>
+          </div>
+        )}
+        <button onClick={onToggle}
+          style={{
+            width: '100%', display: 'flex', alignItems: 'center',
+            justifyContent: open ? 'flex-start' : 'center',
+            gap: 8, padding: '7px 10px',
+            background: 'rgba(255,255,255,0.03)',
+            border: '1px solid rgba(255,255,255,0.06)',
+            borderRadius: 9, color: '#475569', cursor: 'pointer',
+            fontSize: '0.76rem', fontFamily: 'inherit', transition: 'all 0.15s',
+          }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
+          onMouseLeave={e => { e.currentTarget.style.color = '#475569'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
+        >
+          {open ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
+          {open && 'Collapse'}
+        </button>
+      </div>
+    </aside>
+  );
+};
+
+/* ═══════════════════════════════════════════════
+   MAIN APP
+═══════════════════════════════════════════════ */
 function App() {
   const { dashboardStats, isLoading, isRefreshing, error, fetchDashboard } = useApi();
   const { isConnected: wsConnected, events } = useWebSocket(WS_URL);
-  const { isConnected: walletConnected, userAddress, setShowWalletModal } = useWallet();
+  const { isConnected: walletConnected, userAddress } = useWallet();
+
   const [activeTab, setActiveTab] = useState<TabType>('overview');
-  const [lastUpdate, setLastUpdate] = useState(new Date());
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [expandedCategory, setExpandedCategory] = useState<string | null>('Overview');
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState(new Date());
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      fetchDashboard();
-      setLastUpdate(new Date());
-    }, 30000);
-    return () => clearInterval(interval);
+    const iv = setInterval(() => { fetchDashboard(); setLastUpdate(new Date()); }, 30000);
+    return () => clearInterval(iv);
   }, [fetchDashboard]);
-
-  const formatNumber = (num: number) => {
-    if (num >= 1_000_000_000) return `$${(num / 1_000_000_000).toFixed(2)}B`;
-    if (num >= 1_000_000) return `$${(num / 1_000_000).toFixed(2)}M`;
-    if (num >= 1_000) return `$${(num / 1_000).toFixed(2)}K`;
-    return `$${num.toFixed(2)}`;
-  };
-
-  const formatCount = (num: number) => {
-    if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
-    if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K`;
-    return num.toString();
-  };
 
   const combinedSwaps = [
     ...events.swaps,
@@ -211,359 +335,267 @@ function App() {
     ...(dashboardStats?.recentAlerts || []),
   ].slice(0, 15);
 
-  const totalAlerts = combinedAlerts.length + events.alerts.length;
+  const allItems = NAV.flatMap(s => s.items);
+  const currentItem = allItems.find(i => i.id === activeTab);
 
-  const currentNavItem = navCategories.flatMap(c => c.items).find(i => i.id === activeTab);
+  const handleSelect = (t: TabType) => { setActiveTab(t); setMobileOpen(false); };
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] flex">
-      {/* Animated Background */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-600/20 rounded-full blur-[100px] animate-pulse" />
-        <div className="absolute top-1/2 -left-40 w-80 h-80 bg-orange-500/10 rounded-full blur-[100px] animate-pulse" />
-        <div className="absolute -bottom-40 right-1/3 w-80 h-80 bg-blue-600/10 rounded-full blur-[100px] animate-pulse" />
+    <div style={{ minHeight: '100vh', background: '#090912', color: '#fff', display: 'flex' }}>
+
+      {/* Ambient glows */}
+      <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 0 }}>
+        <div style={{ position: 'absolute', top: -150, right: -150, width: 600, height: 600, background: 'radial-gradient(circle,rgba(85,70,255,0.1) 0%,transparent 70%)', borderRadius: '50%' }} />
+        <div style={{ position: 'absolute', bottom: -100, left: -100, width: 500, height: 500, background: 'radial-gradient(circle,rgba(252,100,50,0.06) 0%,transparent 70%)', borderRadius: '50%' }} />
       </div>
 
-      {/* Sidebar - Desktop */}
-      <aside className={`hidden lg:flex flex-col fixed left-0 top-0 h-full bg-[#0d0d14]/95 backdrop-blur-xl border-r border-white/5 z-40 transition-all duration-300 ${sidebarOpen ? 'w-64' : 'w-20'}`}>
-        {/* Logo */}
-        <div className="p-4 border-b border-white/5">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#5546FF] via-purple-500 to-[#FC6432] flex items-center justify-center shadow-lg shadow-purple-500/25">
-                <Zap className="w-5 h-5 text-white" />
+      {/* Desktop sidebar */}
+      <div className="hidden lg:block" style={{ flexShrink: 0, width: sidebarOpen ? 248 : 72, transition: 'width 0.25s' }}>
+        <Sidebar open={sidebarOpen} activeTab={activeTab} onSelect={handleSelect}
+          onToggle={() => setSidebarOpen(v => !v)} tvl={dashboardStats?.totalValueLocked || 0} />
+      </div>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div className="lg:hidden" onClick={() => setMobileOpen(false)} style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)',
+          zIndex: 50, backdropFilter: 'blur(4px)',
+        }}>
+          <div onClick={e => e.stopPropagation()} style={{
+            width: 264, height: '100%', background: '#0d0d18',
+            borderRight: '1px solid rgba(255,255,255,0.06)',
+            display: 'flex', flexDirection: 'column', overflowY: 'auto',
+          }}>
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '16px', borderBottom: '1px solid rgba(255,255,255,0.05)',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 34, height: 34, borderRadius: 9, background: 'linear-gradient(135deg,#5546FF,#FC6432)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <Zap size={16} color="white" />
+                </div>
+                <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>DeFi Sentinel</span>
               </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-[#0d0d14]" />
+              <button onClick={() => setMobileOpen(false)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
+                <X size={20} />
+              </button>
             </div>
-            {sidebarOpen && (
-              <div>
-                <h1 className="font-bold text-white">DeFi Sentinel</h1>
-                <p className="text-[10px] text-gray-500 font-mono">Stacks Mainnet</p>
-              </div>
-            )}
+            <nav style={{ padding: '10px 8px' }}>
+              {NAV.map(section => (
+                <div key={section.label} style={{ marginBottom: 10 }}>
+                  <div style={{ fontSize: '0.64rem', color: '#475569', fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', padding: '4px 10px 5px' }}>
+                    {section.label}
+                  </div>
+                  {section.items.map(item => {
+                    const active = activeTab === item.id;
+                    const b = item.badge ? BADGE[item.badge] : null;
+                    return (
+                      <button key={item.id} onClick={() => handleSelect(item.id)}
+                        style={{
+                          width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '9px 10px', borderRadius: 8, marginBottom: 1,
+                          background: active ? 'rgba(85,70,255,0.15)' : 'transparent',
+                          border: 'none', color: active ? '#fff' : '#64748b',
+                          cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.83rem',
+                          fontWeight: active ? 600 : 400, textAlign: 'left',
+                        }}
+                      >
+                        <item.icon size={15} color={active ? '#818cf8' : '#475569'} />
+                        <span style={{ flex: 1 }}>{item.label}</span>
+                        {b && <span style={{ padding: '1px 6px', borderRadius: 20, fontSize: '0.58rem', fontWeight: 700, background: b.bg, color: b.text }}>{b.label}</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              ))}
+            </nav>
           </div>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-4 px-2">
-          {navCategories.map((category) => (
-            <div key={category.name} className="mb-2">
-              {sidebarOpen ? (
-                <>
-                  <button
-                    onClick={() => setExpandedCategory(expandedCategory === category.name ? null : category.name)}
-                    className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-300 transition-colors"
-                  >
-                    <span className="flex items-center gap-2">
-                      <category.icon className="w-4 h-4" />
-                      {category.name}
-                    </span>
-                    <ChevronDown className={`w-3 h-3 transition-transform ${expandedCategory === category.name ? 'rotate-180' : ''}`} />
-                  </button>
-                  {expandedCategory === category.name && (
-                    <div className="space-y-1 mt-1">
-                      {category.items.map((item) => (
-                        <button
-                          key={item.id}
-                          onClick={() => setActiveTab(item.id as TabType)}
-                          className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all group ${
-                            activeTab === item.id
-                              ? 'bg-gradient-to-r from-purple-500/20 to-orange-500/10 text-white border border-purple-500/30'
-                              : 'text-gray-400 hover:text-white hover:bg-white/5'
-                          }`}
-                        >
-                          <item.icon className={`w-4 h-4 ${activeTab === item.id ? 'text-purple-400' : 'text-gray-500 group-hover:text-purple-400'}`} />
-                          <div className="flex-1 text-left">
-                            <div className="flex items-center gap-2">
-                              {item.label}
-                              {item.hot && <span className="px-1.5 py-0.5 bg-orange-500/20 text-orange-400 text-[10px] rounded-full">HOT</span>}
-                              {item.new && <span className="px-1.5 py-0.5 bg-green-500/20 text-green-400 text-[10px] rounded-full">NEW</span>}
-                            </div>
-                          </div>
-                          {activeTab === item.id && <ChevronRight className="w-4 h-4 text-purple-400" />}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </>
-              ) : (
-                <div className="space-y-1">
-                  {category.items.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => setActiveTab(item.id as TabType)}
-                      className={`w-full flex items-center justify-center p-3 rounded-xl transition-all group ${
-                        activeTab === item.id
-                          ? 'bg-gradient-to-r from-purple-500/20 to-orange-500/10 text-white'
-                          : 'text-gray-400 hover:text-white hover:bg-white/5'
-                      }`}
-                      title={item.label}
-                    >
-                      <item.icon className={`w-5 h-5 ${activeTab === item.id ? 'text-purple-400' : ''}`} />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
-        </nav>
-
-        {/* Sidebar Footer */}
-        <div className="p-4 border-t border-white/5">
-          {sidebarOpen ? (
-            <div className="space-y-3">
-              {/* Quick Stats */}
-              <div className="bg-gradient-to-r from-purple-500/10 to-orange-500/10 rounded-xl p-3 border border-purple-500/20">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-gray-400">TVL</span>
-                  <span className="text-xs text-green-400">+12.5%</span>
-                </div>
-                <div className="text-lg font-bold text-white">$142.50M</div>
-              </div>
-              
-              {/* Toggle Button */}
-              <button
-                onClick={() => setSidebarOpen(false)}
-                className="w-full flex items-center justify-center gap-2 py-2 text-gray-500 hover:text-white transition-colors"
-              >
-                <ChevronRight className="w-4 h-4 rotate-180" />
-                <span className="text-xs">Collapse</span>
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="w-full flex items-center justify-center py-2 text-gray-500 hover:text-white transition-colors"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          )}
-        </div>
-      </aside>
-
-      {/* Mobile Menu Overlay */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 bg-black/80 z-50 lg:hidden" onClick={() => setMobileMenuOpen(false)}>
-          <aside className="w-72 h-full bg-[#0d0d14] p-4 overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#5546FF] to-[#FC6432] flex items-center justify-center">
-                  <Zap className="w-5 h-5 text-white" />
-                </div>
-                <span className="font-bold text-white">DeFi Sentinel</span>
-              </div>
-              <button onClick={() => setMobileMenuOpen(false)} className="p-2 hover:bg-white/10 rounded-lg">
-                <X className="w-5 h-5 text-gray-400" />
-              </button>
-            </div>
-            
-            {navCategories.map((category) => (
-              <div key={category.name} className="mb-4">
-                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 mb-2">{category.name}</div>
-                <div className="space-y-1">
-                  {category.items.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => { setActiveTab(item.id as TabType); setMobileMenuOpen(false); }}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all ${
-                        activeTab === item.id
-                          ? 'bg-purple-500/20 text-white'
-                          : 'text-gray-400 hover:text-white hover:bg-white/5'
-                      }`}
-                    >
-                      <item.icon className="w-4 h-4" />
-                      {item.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </aside>
         </div>
       )}
 
-      {/* Main Content */}
-      <main className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'lg:ml-64' : 'lg:ml-20'}`}>
-        {/* Top Header */}
-        <header className="sticky top-0 z-30 bg-[#0a0a0f]/80 backdrop-blur-xl border-b border-white/5">
-          <div className="px-4 lg:px-6 py-3">
-            <div className="flex items-center justify-between">
-              {/* Left: Mobile Menu + Breadcrumb */}
-              <div className="flex items-center gap-4">
-                <button
-                  onClick={() => setMobileMenuOpen(true)}
-                  className="lg:hidden p-2 hover:bg-white/10 rounded-lg"
-                >
-                  <Menu className="w-5 h-5 text-gray-400" />
-                </button>
-                
-                <div className="hidden sm:flex items-center gap-2 text-sm">
-                  <span className="text-gray-500">{currentNavItem?.label || 'Dashboard'}</span>
-                  {currentNavItem?.description && (
-                    <>
-                      <ChevronRight className="w-4 h-4 text-gray-600" />
-                      <span className="text-gray-400">{currentNavItem.description}</span>
-                    </>
-                  )}
-                </div>
-              </div>
+      {/* Main content */}
+      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', position: 'relative', zIndex: 1 }}>
 
-              {/* Right: Status + Wallet */}
-              <div className="flex items-center gap-3">
-                {/* Live Status */}
-                <div className={`hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
-                  wsConnected 
-                    ? 'bg-green-500/10 text-green-400 border border-green-500/20' 
-                    : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
-                }`}>
-                  {wsConnected ? (
-                    <>
-                      <span className="relative flex h-2 w-2">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
-                      </span>
-                      <span>Live</span>
-                    </>
-                  ) : (
-                    <>
-                      <WifiOff className="w-3 h-3" />
-                      <span>Connecting</span>
-                    </>
-                  )}
-                </div>
+        {/* TOP HEADER */}
+        <header style={{
+          position: 'sticky', top: 0, zIndex: 30,
+          background: 'rgba(9,9,18,0.88)', backdropFilter: 'blur(20px)',
+          borderBottom: '1px solid rgba(255,255,255,0.05)', flexShrink: 0,
+        }}>
+          <div style={{ padding: '0 20px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
 
-                {/* Alerts */}
-                {totalAlerts > 0 && (
-                  <button 
-                    onClick={() => setActiveTab('alerts')}
-                    className="relative p-2 hover:bg-white/10 rounded-lg"
-                  >
-                    <Bell className="w-5 h-5 text-gray-400" />
-                    <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-orange-500 rounded-full text-[10px] font-bold flex items-center justify-center text-white">
-                      {totalAlerts > 9 ? '9+' : totalAlerts}
-                    </span>
-                  </button>
+            {/* Left: mobile button + breadcrumb */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <button className="lg:hidden" onClick={() => setMobileOpen(true)} style={{
+                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
+                color: '#94a3b8', cursor: 'pointer', padding: '6px 8px', borderRadius: 9, display: 'flex',
+              }}>
+                <Menu size={18} />
+              </button>
+              <div className="hidden sm:flex" style={{ alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: '0.75rem', color: '#334155', fontWeight: 500 }}>DeFi Sentinel</span>
+                <ChevronRight size={12} color="#1e293b" />
+                {currentItem && (
+                  <>
+                    <currentItem.icon size={13} color="#5546FF" />
+                    <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 500 }}>{currentItem.label}</span>
+                  </>
                 )}
-
-                {/* Stacks Wallet Connect - Week 3 Builder Challenge */}
-                <StacksWalletConnect />
-
-                {/* GitHub */}
-                <a 
-                  href="https://github.com/serayd61/stacks-defi-sentinel" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="hidden sm:flex p-2 hover:bg-white/10 rounded-lg transition-colors"
-                >
-                  <Github className="w-5 h-5 text-gray-500 hover:text-white" />
-                </a>
               </div>
             </div>
+
+            {/* Right: status chips + actions */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+
+              {/* Live pill */}
+              <div className="hidden sm:flex" style={{
+                alignItems: 'center', gap: 6, padding: '4px 11px', borderRadius: 20,
+                fontSize: '0.72rem', fontWeight: 600,
+                background: wsConnected ? 'rgba(34,197,94,0.08)' : 'rgba(245,158,11,0.08)',
+                border: `1px solid ${wsConnected ? 'rgba(34,197,94,0.18)' : 'rgba(245,158,11,0.18)'}`,
+                color: wsConnected ? '#22c55e' : '#f59e0b',
+              }}>
+                {wsConnected ? (
+                  <>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 0 2px rgba(34,197,94,0.3)', flexShrink: 0 }} />
+                    Live
+                  </>
+                ) : (
+                  <><WifiOff size={11} /> Connecting</>
+                )}
+              </div>
+
+              {/* Alerts */}
+              {combinedAlerts.length > 0 && (
+                <button onClick={() => setActiveTab('alerts')} style={{
+                  position: 'relative', background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.07)', color: '#94a3b8',
+                  cursor: 'pointer', padding: '6px 8px', borderRadius: 9, display: 'flex', transition: 'all 0.15s',
+                }}>
+                  <Bell size={16} />
+                  <span style={{
+                    position: 'absolute', top: -4, right: -4, width: 16, height: 16,
+                    borderRadius: '50%', background: 'linear-gradient(135deg,#FC6432,#ef4444)',
+                    border: '2px solid #090912', fontSize: '0.56rem', fontWeight: 700, color: '#fff',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}>
+                    {combinedAlerts.length > 9 ? '9+' : combinedAlerts.length}
+                  </span>
+                </button>
+              )}
+
+              {/* Refresh */}
+              <button onClick={() => fetchDashboard()} title="Refresh" style={{
+                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)',
+                color: isRefreshing ? '#818cf8' : '#64748b', cursor: 'pointer',
+                padding: '6px 8px', borderRadius: 9, display: 'flex', transition: 'all 0.15s',
+              }}>
+                <RefreshCw size={15} style={{ animation: isRefreshing ? 'spinCW 0.8s linear infinite' : 'none' }} />
+              </button>
+
+              {/* Wallet */}
+              <StacksWalletConnect />
+
+              {/* GitHub */}
+              <a className="hidden md:flex" href="https://github.com/serayd61/stacks-defi-sentinel"
+                target="_blank" rel="noopener noreferrer"
+                style={{
+                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)',
+                  color: '#64748b', padding: '6px 8px', borderRadius: 9, display: 'flex',
+                  textDecoration: 'none', transition: 'all 0.15s',
+                }}
+                onMouseEnter={e => { (e.currentTarget as any).style.color = '#fff'; (e.currentTarget as any).style.background = 'rgba(255,255,255,0.08)'; }}
+                onMouseLeave={e => { (e.currentTarget as any).style.color = '#64748b'; (e.currentTarget as any).style.background = 'rgba(255,255,255,0.04)'; }}
+              >
+                <Github size={16} />
+              </a>
+            </div>
+          </div>
+
+          {/* Price ticker strip */}
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+            <LivePriceTicker />
           </div>
         </header>
 
-        {/* Page Content */}
-        <div className="p-4 lg:p-6">
+        {/* PAGE BODY */}
+        <div style={{ flex: 1, padding: '24px 20px 48px' }}>
+
+          {/* Error */}
           {error && (
-            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl text-red-400 flex items-center gap-3">
-              <WifiOff className="w-5 h-5" />
-              <div className="flex-1">
-                <p className="font-medium">Connection Error</p>
-                <p className="text-sm opacity-70">{error}</p>
-              </div>
-              <button onClick={() => fetchDashboard()} className="p-2 hover:bg-red-500/20 rounded-lg">
-                <RefreshCw className="w-4 h-4" />
+            <div style={{
+              marginBottom: 20, padding: '12px 16px',
+              background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.18)',
+              borderRadius: 12, display: 'flex', alignItems: 'center', gap: 12,
+              color: '#f87171', fontSize: '0.82rem',
+            }}>
+              <WifiOff size={15} style={{ flexShrink: 0 }} />
+              <div style={{ flex: 1 }}><strong>Connection error</strong> — {error}</div>
+              <button onClick={() => fetchDashboard()} style={{
+                background: 'rgba(239,68,68,0.15)', border: 'none',
+                color: '#f87171', cursor: 'pointer', padding: '5px 9px', borderRadius: 8, display: 'flex',
+              }}>
+                <RefreshCw size={13} />
               </button>
             </div>
           )}
 
-          {/* Live Price Ticker - Always visible */}
-          <div className="mb-6">
-            <LivePriceTicker />
-          </div>
-
           {isLoading ? (
-            <div className="flex items-center justify-center h-64">
-              <div className="text-center">
-                <div className="relative w-16 h-16 mx-auto mb-4">
-                  <div className="absolute inset-0 border-4 border-purple-500/20 rounded-full" />
-                  <div className="absolute inset-0 border-4 border-transparent border-t-purple-500 rounded-full animate-spin" />
-                </div>
-                <p className="text-gray-500">Loading DeFi data...</p>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 320 }}>
+              <div style={{ textAlign: 'center' }}>
+                <div style={{
+                  width: 44, height: 44, margin: '0 auto 14px',
+                  border: '3px solid rgba(85,70,255,0.12)', borderTopColor: '#5546FF',
+                  borderRadius: '50%', animation: 'spinCW 0.8s linear infinite',
+                }} />
+                <p style={{ color: '#475569', fontSize: '0.85rem' }}>Loading DeFi data...</p>
               </div>
             </div>
           ) : (
             <>
-              {/* Quick Stats - Always Visible */}
-              {activeTab === 'overview' && (
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                  <StatCard
-                    title="Total Value Locked"
-                    value={formatNumber(dashboardStats?.totalValueLocked || 0)}
-                    icon={<Wallet className="w-6 h-6" />}
-                    color="purple"
-                    trend={12.5}
-                  />
-                  <StatCard
-                    title="24h Volume"
-                    value={formatNumber(dashboardStats?.totalVolume24h || 0)}
-                    icon={<TrendingUp className="w-6 h-6" />}
-                    color="orange"
-                    trend={-3.2}
-                  />
-                  <StatCard
-                    title="Transactions"
-                    value={formatCount(dashboardStats?.totalTransactions24h || 0)}
-                    icon={<Activity className="w-6 h-6" />}
-                    color="green"
-                    subtitle="Last 24 hours"
-                  />
-                  <StatCard
-                    title="Active Wallets"
-                    value={formatCount(dashboardStats?.activeWallets24h || 0)}
-                    icon={<Users className="w-6 h-6" />}
-                    color="blue"
-                    subtitle="Unique addresses"
-                  />
-                </div>
-              )}
-
-              {/* Tab Content */}
+              {/* ─── OVERVIEW ─── */}
               {activeTab === 'overview' && (
                 <>
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                    <div className="lg:col-span-2">
-                      <SwapTable swaps={combinedSwaps} isLive={wsConnected} />
-                    </div>
-                    <div>
-                      <WhaleAlerts alerts={combinedAlerts} />
-                    </div>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))',
+                    gap: 14, marginBottom: 22,
+                  }}>
+                    <StatCard title="Total Value Locked" value={fmt(dashboardStats?.totalValueLocked||0)} icon={<Wallet size={20}/>} color="purple" trend={12.5}/>
+                    <StatCard title="24h Volume" value={fmt(dashboardStats?.totalVolume24h||0)} icon={<TrendingUp size={20}/>} color="orange" trend={-3.2}/>
+                    <StatCard title="Transactions (24h)" value={fmtCount(dashboardStats?.totalTransactions24h||0)} icon={<Activity size={20}/>} color="green" subtitle="Confirmed"/>
+                    <StatCard title="Active Wallets" value={fmtCount(dashboardStats?.activeWallets24h||0)} icon={<Users size={20}/>} color="blue" subtitle="Unique addresses"/>
                   </div>
-                  <PoolsTable pools={dashboardStats?.topPools || []} />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 18, marginBottom: 18 }}>
+                    <SwapTable swaps={combinedSwaps} isLive={wsConnected} />
+                    <WhaleAlerts alerts={combinedAlerts} />
+                  </div>
+                  <PoolsTable pools={dashboardStats?.topPools||[]} />
                 </>
               )}
 
               {activeTab === 'swaps' && <SwapTable swaps={combinedSwaps} isLive={wsConnected} showAll />}
 
               {activeTab === 'alerts' && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
                   <WhaleAlerts alerts={combinedAlerts} expanded />
-                  <div className="bg-white/5 rounded-2xl border border-white/10 p-6">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                      <Activity className="w-5 h-5 text-purple-400" />
-                      Alert Statistics
+                  <div style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: 22 }}>
+                    <h3 style={{ fontSize: '0.95rem', fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <Activity size={17} color="#818cf8" /> Alert Statistics
                     </h3>
-                    <div className="space-y-4">
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
                       {[
-                        { label: 'Large Transfers', type: 'large_transfer', color: 'orange' },
-                        { label: 'Large Swaps', type: 'large_swap', color: 'purple' },
-                        { label: 'Liquidity Events', type: 'large_liquidity', color: 'blue' },
-                      ].map(({ label, type, color }) => (
-                        <div key={type} className="flex justify-between items-center p-3 bg-white/5 rounded-xl">
-                          <span className="text-gray-400">{label}</span>
-                          <span className={`font-mono font-bold text-${color}-400`}>
-                            {combinedAlerts.filter(a => a.type === type).length}
-                          </span>
+                        { label: 'Large Transfers', type: 'large_transfer', color: '#fb923c' },
+                        { label: 'Large Swaps',     type: 'large_swap',     color: '#818cf8' },
+                        { label: 'Liquidity Events',type: 'large_liquidity', color: '#60a5fa' },
+                      ].map(r => (
+                        <div key={r.type} style={{
+                          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                          padding: '11px 14px', background: 'rgba(255,255,255,0.025)',
+                          borderRadius: 9, border: '1px solid rgba(255,255,255,0.05)',
+                        }}>
+                          <span style={{ color: '#64748b', fontSize: '0.82rem' }}>{r.label}</span>
+                          <span style={{ fontFamily: 'monospace', fontWeight: 700, color: r.color }}>{combinedAlerts.filter(a => a.type === r.type).length}</span>
                         </div>
                       ))}
                     </div>
@@ -572,93 +604,112 @@ function App() {
               )}
 
               {activeTab === 'ecosystem' && (
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <SwapInterface />
-                    <div className="lg:col-span-2"><TokenAnalytics /></div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 18 }}>
+                    <SwapInterface /><TokenAnalytics />
                   </div>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <SBTCDashboard />
-                    <StackingTracker />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+                    <SBTCDashboard /><StackingTracker />
                   </div>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <NFTGallery />
-                    <BlockExplorer />
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+                    <NFTGallery /><BlockExplorer />
                   </div>
                 </div>
               )}
 
-              {activeTab === 'sbtc' && <div className="max-w-5xl mx-auto"><SBTCBridgeMonitor /></div>}
-              {activeTab === 'aggregator' && <div className="max-w-4xl mx-auto"><DEXAggregator /></div>}
-              {activeTab === 'token-sale' && <div className="max-w-4xl mx-auto"><TokenSale /></div>}
-              {activeTab === 'stake' && <div className="max-w-4xl mx-auto"><StakePanel /></div>}
-              {activeTab === 'lending' && <div className="max-w-4xl mx-auto"><LendingPool /></div>}
-              {activeTab === 'membership' && <div className="max-w-5xl mx-auto"><ProMembership /></div>}
-              {activeTab === 'passport' && <div className="max-w-5xl mx-auto"><StacksPassport /></div>}
-              {activeTab === 'badges' && <div className="max-w-5xl mx-auto"><StacksBadge /></div>}
-              {activeTab === 'predict' && <div className="max-w-4xl mx-auto"><StacksPredict /></div>}
-              {activeTab === 'leaderboard' && <div className="max-w-5xl mx-auto"><StacksLeaderboard /></div>}
-              {activeTab === 'portfolio' && <div className="max-w-4xl mx-auto"><PortfolioTracker /></div>}
-              {activeTab === 'gas' && <div className="max-w-4xl mx-auto"><GasTracker /></div>}
-              {activeTab === 'dao' && <div className="max-w-5xl mx-auto"><DAOVoting /></div>}
-              {activeTab === 'referral' && <div className="max-w-4xl mx-auto"><ReferralSystem /></div>}
-              {activeTab === 'subscribe' && <div className="max-w-2xl mx-auto"><SubscriptionPanel /></div>}
-              
-              {/* Market Overview */}
-              {activeTab === 'market' && <div className="max-w-6xl mx-auto"><MarketOverview /></div>}
-              
-              {/* New Advanced Features */}
               {activeTab === 'network' && (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <NetworkHealth />
-                  <ContractActivityMonitor />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+                  <NetworkHealth /><ContractActivityMonitor />
                 </div>
               )}
-              {activeTab === 'protocols' && <div className="max-w-5xl mx-auto"><ProtocolRankings /></div>}
-              {activeTab === 'contracts' && <div className="max-w-5xl mx-auto"><ContractActivityMonitor /></div>}
-              {activeTab === 'wallet-analytics' && <div className="max-w-4xl mx-auto"><WalletAnalytics /></div>}
-              {activeTab === 'price-alerts' && <div className="max-w-2xl mx-auto"><PriceAlerts /></div>}
 
-              {/* Footer */}
-              <footer className="mt-12 pt-8 border-t border-white/5">
-                <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-purple-500 to-orange-500 flex items-center justify-center">
-                      <Zap className="w-4 h-4 text-white" />
+              {activeTab === 'sbtc'            && <div style={{ maxWidth: 1000, margin: '0 auto' }}><SBTCBridgeMonitor /></div>}
+              {activeTab === 'aggregator'      && <div style={{ maxWidth: 800, margin: '0 auto' }}><DEXAggregator /></div>}
+              {activeTab === 'token-sale'      && <div style={{ maxWidth: 800, margin: '0 auto' }}><TokenSale /></div>}
+              {activeTab === 'stake'           && <div style={{ maxWidth: 800, margin: '0 auto' }}><StakePanel /></div>}
+              {activeTab === 'lending'         && <div style={{ maxWidth: 800, margin: '0 auto' }}><LendingPool /></div>}
+              {activeTab === 'membership'      && <div style={{ maxWidth: 920, margin: '0 auto' }}><ProMembership /></div>}
+              {activeTab === 'passport'        && <div style={{ maxWidth: 920, margin: '0 auto' }}><StacksPassport /></div>}
+              {activeTab === 'badges'          && <div style={{ maxWidth: 920, margin: '0 auto' }}><StacksBadge /></div>}
+              {activeTab === 'predict'         && <div style={{ maxWidth: 800, margin: '0 auto' }}><StacksPredict /></div>}
+              {activeTab === 'leaderboard'     && <div style={{ maxWidth: 920, margin: '0 auto' }}><StacksLeaderboard /></div>}
+              {activeTab === 'portfolio'       && <div style={{ maxWidth: 800, margin: '0 auto' }}><PortfolioTracker /></div>}
+              {activeTab === 'gas'             && <div style={{ maxWidth: 800, margin: '0 auto' }}><GasTracker /></div>}
+              {activeTab === 'dao'             && <div style={{ maxWidth: 920, margin: '0 auto' }}><DAOVoting /></div>}
+              {activeTab === 'referral'        && <div style={{ maxWidth: 800, margin: '0 auto' }}><ReferralSystem /></div>}
+              {activeTab === 'subscribe'       && <div style={{ maxWidth: 600, margin: '0 auto' }}><SubscriptionPanel /></div>}
+              {activeTab === 'market'          && <div style={{ maxWidth: 1100, margin: '0 auto' }}><MarketOverview /></div>}
+              {activeTab === 'ai-agents'      && <div style={{ maxWidth: 1000, margin: '0 auto' }}><AIAgents /></div>}
+              {activeTab === 'protocols'       && <div style={{ maxWidth: 920, margin: '0 auto' }}><ProtocolRankings /></div>}
+              {activeTab === 'contracts'       && <div style={{ maxWidth: 920, margin: '0 auto' }}><ContractActivityMonitor /></div>}
+              {activeTab === 'wallet-analytics'&& <div style={{ maxWidth: 800, margin: '0 auto' }}><WalletAnalytics /></div>}
+              {activeTab === 'price-alerts'    && <div style={{ maxWidth: 600, margin: '0 auto' }}><PriceAlerts /></div>}
+
+              {/* FOOTER */}
+              <footer style={{
+                marginTop: 52, paddingTop: 24,
+                borderTop: '1px solid rgba(255,255,255,0.05)',
+              }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 30, height: 30, borderRadius: 8, background: 'linear-gradient(135deg,#5546FF,#FC6432)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Zap size={13} color="white" />
                     </div>
-                    <p className="text-sm text-gray-500">
-                      Built with <span className="text-purple-400">Chainhooks</span> • Stacks Builder Challenge 2024
-                    </p>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.82rem', color: '#e2e8f0' }}>DeFi Sentinel</div>
+                      <div style={{ fontSize: '0.7rem', color: '#475569' }}>
+                        Powered by <span style={{ color: '#818cf8' }}>Chainhooks</span> · Stacks Builder Challenge 2024
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-6">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
                     {[
-                      { label: 'Docs', href: 'https://docs.hiro.so/chainhooks' },
-                      { label: 'GitHub', href: 'https://github.com/serayd61/stacks-defi-sentinel' },
-                      { label: 'Hiro', href: 'https://platform.hiro.so' },
+                      { label: 'Docs',     href: 'https://docs.hiro.so/chainhooks' },
+                      { label: 'GitHub',   href: 'https://github.com/serayd61/stacks-defi-sentinel' },
+                      { label: 'Hiro',     href: 'https://platform.hiro.so' },
                     ].map(link => (
-                      <a 
-                        key={link.label}
-                        href={link.href}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-sm text-gray-500 hover:text-purple-400 transition-colors"
+                      <a key={link.label} href={link.href} target="_blank" rel="noopener noreferrer"
+                        style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.78rem', color: '#475569', textDecoration: 'none' }}
+                        onMouseEnter={e => ((e.currentTarget as any).style.color = '#818cf8')}
+                        onMouseLeave={e => ((e.currentTarget as any).style.color = '#475569')}
                       >
-                        {link.label}
-                        <ExternalLink className="w-3 h-3" />
+                        {link.label} <ExternalLink size={10} />
                       </a>
                     ))}
                   </div>
+                </div>
+
+                {/* Status bar */}
+                <div style={{
+                  display: 'flex', flexWrap: 'wrap', gap: 14, padding: '9px 14px',
+                  background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)',
+                  borderRadius: 9, fontSize: '0.7rem', color: '#475569',
+                }}>
+                  {[
+                    { dot: wsConnected ? '#22c55e' : '#f59e0b', label: `WebSocket: ${wsConnected ? 'Live' : 'Reconnecting'}` },
+                    { dot: walletConnected ? '#22c55e' : '#334155', label: walletConnected && userAddress ? `Wallet: ${userAddress.slice(0,8)}...` : 'Wallet: Not connected' },
+                    { dot: '#60a5fa', label: `Updated: ${lastUpdate.toLocaleTimeString()}` },
+                    { dot: '#818cf8', label: 'Network: Stacks Mainnet' },
+                  ].map(s => (
+                    <span key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: s.dot, flexShrink: 0 }} />
+                      {s.label}
+                    </span>
+                  ))}
                 </div>
               </footer>
             </>
           )}
         </div>
       </main>
+
+      <style>{`
+        @keyframes spinCW { to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 }
 
-// Wrap App with WalletProvider
 const AppWithWallet: React.FC = () => (
   <WalletProvider>
     <App />

@@ -13,8 +13,44 @@ interface RouteOptions {
   eventProcessor: EventProcessor;
 }
 
+// ── AI Insights Store (in-memory, max 100) ──────────────────────────────────
+let aiInsights: object[] = [];
+
 export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (fastify, opts) => {
   const { analytics, chainhooksManager, eventProcessor } = opts;
+
+  // AI Insights — GET (frontend okur)
+  fastify.get('/ai-insights', async (_req: FastifyRequest, reply: FastifyReply) => {
+    return reply.send({ insights: aiInsights, count: aiInsights.length });
+  });
+
+  // AI Insights — POST (VPS agentları yazar)
+  fastify.post('/ai-insights', async (req: FastifyRequest, reply: FastifyReply) => {
+    const insight = req.body as object;
+    aiInsights.unshift({ ...insight, receivedAt: new Date().toISOString() });
+    if (aiInsights.length > 100) aiInsights = aiInsights.slice(0, 100);
+    return reply.send({ ok: true });
+  });
+
+  // AI Agent Status — GET
+  fastify.get('/ai-status', async (_req: FastifyRequest, reply: FastifyReply) => {
+    const agents = [
+      { name: 'satoshi',  role: 'Whale Takibi & Pattern Analizi', model: 'llama3.2:1b' },
+      { name: 'nakamoto', role: 'DEX Arbitraj & Fiyat Analizi',    model: 'llama3.2:1b' },
+      { name: 'szabo',    role: 'Kontrat Güvenlik Taraması',       model: 'llama3.2:1b' },
+      { name: 'finney',   role: 'Kullanıcı Rapor & Bildirim',      model: 'llama3.2:1b' },
+    ];
+    const lastInsight = aiInsights[0] as Record<string, unknown> | undefined;
+    return reply.send({
+      cluster: 'sentinel-ai',
+      inference: 'da-vinci (llama3.2:1b)',
+      agents,
+      total_insights: aiInsights.length,
+      last_activity: lastInsight
+        ? (lastInsight['receivedAt'] as string)
+        : null,
+    });
+  });
 
   // Dashboard
   fastify.get('/dashboard', async (_req: FastifyRequest, reply: FastifyReply) => {
