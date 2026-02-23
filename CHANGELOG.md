@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [Daily Update] - 2026-02-23
+
+### Changes
+- fix: lower whale threshold to 1k STX, pass threshold to container
+- feat: add Hiro API proxy endpoints + fix da-vinci healthcheck
+- feat: fix agent data pipeline and add detailed insight UI
+- docs: update configuration options [mlydabx9]
+- docs: add troubleshooting section [mly79df0]
+- fix: switch AI Agents UI and backend roles to English
+- fix: trigger clean Vercel build for AI Agents feature
+- feat: Add Agentic AI Cluster section to DeFi Sentinel
+
+
 ## [Daily Update] - 2026-02-22
 
 ### Changes
