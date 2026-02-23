@@ -1,9 +1,9 @@
 ;; ============================================================
-;; SENTINEL INSURANCE - Protokol Sigorta Fonu
+;; SENTINEL INSURANCE - Protocol Insurance Fund
 ;; ============================================================
-;; Kullanıcılar prim ödeyerek akıllı kontrat riskine karşı
-;; sigorta satın alır. DAO oylaması ile hasar talepleri çözülür.
-;; Sigorta fonu likidite sağlayıcılarına faiz öder.
+;; Users buy insurance against smart contract risk by paying premiums.
+;; Claims are resolved through DAO voting.
+;; The insurance fund pays interest to liquidity providers.
 ;; ============================================================
 
 ;; ============================================================
@@ -26,92 +26,92 @@
 (define-constant err-min-stake-required    (err u112))
 (define-constant err-withdraw-locked       (err u113))
 
-;; Sigorta parametreleri
-;; Yıllık prim oranı: coverage'ın %2'si
+;; Insurance parameters
+;; Annual premium rate: 2% of coverage
 (define-constant ANNUAL-PREMIUM-RATE u200)   ;; 200 basis points = 2%
 (define-constant RATE-DENOMINATOR u10000)
 
-;; Blok başına risk hesabı (~144 blok/gün, ~52560 blok/yıl)
+;; Risk calculation per block (~144 blocks/day, ~52560 blocks/year)
 (define-constant BLOCKS-PER-YEAR u52560)
 
-;; Minimum sigorta miktarı: 10 STX
+;; Minimum coverage amount: 10 STX
 (define-constant MIN-COVERAGE-STX u10000000)
 
-;; Maksimum sigorta miktarı: 100,000 STX
+;; Maximum coverage amount: 100,000 STX
 (define-constant MAX-COVERAGE-STX u100000000000)
 
-;; Likidite sağlayıcı minimum stake: 100 STX
+;; Liquidity provider minimum stake: 100 STX
 (define-constant MIN-PROVIDER-STAKE u100000000)
 
-;; Provider withdraw lock: 1000 blok (~7 gün)
+;; Provider withdraw lock: 1000 blocks (~7 days)
 (define-constant PROVIDER-LOCK-BLOCKS u1000)
 
-;; Hasar talebi oylama süresi: 720 blok (~5 gün)
+;; Claim voting period: 720 blocks (~5 days)
 (define-constant CLAIM-VOTING-BLOCKS u720)
 
-;; Onay için gereken oy oranı: %60
+;; Required vote ratio for approval: 60%
 (define-constant APPROVAL-THRESHOLD u60)
 
-;; Claim'den ödenecek max oran: coverage'ın %80'i
+;; Max payout rate from claim: 80% of coverage
 (define-constant MAX-PAYOUT-RATE u8000)
 
 ;; ============================================================
 ;; DATA STRUCTURES
 ;; ============================================================
 
-(define-data-var total-pool-stx uint u0)         ;; Toplam sigorta fonu
-(define-data-var total-coverage-outstanding uint u0)  ;; Toplam aktif teminat
+(define-data-var total-pool-stx uint u0)         ;; Total insurance fund
+(define-data-var total-coverage-outstanding uint u0)  ;; Total active coverage
 (define-data-var total-premiums-collected uint u0)
 (define-data-var total-claims-paid uint u0)
 (define-data-var next-claim-id uint u1)
 (define-data-var is-paused bool false)
-(define-data-var utilization-cap uint u8000)      ;; Max %80 kullanım oranı
+(define-data-var utilization-cap uint u8000)      ;; Max 80% utilization rate
 
-;; Sigorta poliçesi
+;; Insurance policy
 (define-map policies principal {
-  coverage-amount: uint,     ;; Teminat tutarı (micro-STX)
-  premium-paid: uint,        ;; Ödenen prim
-  start-block: uint,         ;; Başlangıç bloğu
-  end-block: uint,           ;; Bitiş bloğu (süresi dolma)
-  covered-protocol: (string-ascii 50),  ;; Hangi protokol sigortalı
+  coverage-amount: uint,     ;; Coverage amount (micro-STX)
+  premium-paid: uint,        ;; Premium paid
+  start-block: uint,         ;; Start block
+  end-block: uint,           ;; End block (expiration)
+  covered-protocol: (string-ascii 50),  ;; Which protocol is insured
   is-active: bool,
-  total-claims: uint         ;; Bu poliçeden yapılan claim sayısı
+  total-claims: uint         ;; Number of claims made from this policy
 })
 
-;; Hasar talebi
+;; Insurance claim
 (define-map claims uint {
   claimant: principal,
   coverage-amount: uint,
-  requested-amount: uint,    ;; Talep edilen ödeme
-  description: (string-utf8 500),  ;; Hasar açıklaması
-  evidence-url: (string-utf8 200), ;; Kanıt URL'i
+  requested-amount: uint,    ;; Requested payout
+  description: (string-utf8 500),  ;; Claim description
+  evidence-url: (string-utf8 200), ;; Evidence URL
   status: uint,              ;; 0=pending, 1=approved, 2=rejected, 3=paid
   created-at: uint,
   voting-ends-at: uint,
   yes-votes: uint,
   no-votes: uint,
-  payout-amount: uint        ;; Onaylanan ödeme miktarı
+  payout-amount: uint        ;; Approved payout amount
 })
 
-;; Oy kayıtları
+;; Vote records
 (define-map claim-votes { claim-id: uint, voter: principal } {
-  vote: bool,                ;; true=onay, false=ret
-  weight: uint,              ;; Oy ağırlığı (staked SNTL miktarı)
+  vote: bool,                ;; true=approve, false=reject
+  weight: uint,              ;; Vote weight (staked SNTL amount)
   voted-at: uint
 })
 
-;; Likidite sağlayıcılar
+;; Liquidity providers
 (define-map providers principal {
-  staked-stx: uint,          ;; Stake edilen STX
-  share-percentage: uint,    ;; Havuzdaki pay (PRECISION * 10000 ile)
-  deposited-at: uint,        ;; Yatırma bloğu
-  unlock-at: uint,           ;; Çekim lock bitiş bloğu
-  accumulated-rewards: uint, ;; Birikmiş prim geliri
-  last-reward-block: uint    ;; Son ödül hesaplama bloğu
+  staked-stx: uint,          ;; Staked STX
+  share-percentage: uint,    ;; Pool share (with PRECISION * 10000)
+  deposited-at: uint,        ;; Deposit block
+  unlock-at: uint,           ;; Withdrawal lock end block
+  accumulated-rewards: uint, ;; Accumulated premium income
+  last-reward-block: uint    ;; Last reward calculation block
 })
 
 (define-data-var total-provider-shares uint u0)
-(define-data-var acc-reward-per-share uint u0)   ;; Birikimli ödül/share
+(define-data-var acc-reward-per-share uint u0)   ;; Accumulated reward/share
 (define-constant SHARE-PRECISION u1000000)
 
 ;; ============================================================
@@ -135,19 +135,19 @@
 )
 
 (define-private (update-provider-rewards)
-  ;; Havuza yeni prim geldiğinde provider'lara dağıt
-  ;; Bu basitleştirilmiş versiyon - gerçekte her işlemde çağrılır
+  ;; Distribute to providers when new premium enters the pool
+  ;; This is a simplified version - in production called on every transaction
   true
 )
 
 ;; ============================================================
-;; PUBLIC FUNCTIONS - POLİÇE SATIN ALMA
+;; PUBLIC FUNCTIONS - POLICY PURCHASE
 ;; ============================================================
 
-;; SİGORTA SATIN AL
-;; coverage-amount: Teminat tutarı (micro-STX)
-;; coverage-blocks: Kaç block süreyle sigortalı olsun
-;; covered-protocol: Hangi protokol (ör: "sentinel-lending")
+;; BUY INSURANCE
+;; coverage-amount: Coverage amount (micro-STX)
+;; coverage-blocks: How many blocks to be insured for
+;; covered-protocol: Which protocol (e.g.: "sentinel-lending")
 (define-public (buy-policy
   (coverage-amount uint)
   (coverage-blocks uint)
@@ -162,17 +162,17 @@
     (asserts! (>= coverage-amount MIN-COVERAGE-STX) err-invalid-amount)
     (asserts! (<= coverage-amount MAX-COVERAGE-STX) err-invalid-amount)
     (asserts! (> premium u0) err-invalid-amount)
-    ;; Havuz yeterliliği kontrolü
+    ;; Pool sufficiency check
     (asserts! (is-under-utilization-cap) err-insufficient-coverage)
     (asserts! (<= (+ (var-get total-coverage-outstanding) coverage-amount)
                   (var-get total-pool-stx)) err-insufficient-coverage)
-    ;; Yeterli bakiye
+    ;; Sufficient balance
     (asserts! (>= (stx-get-balance user) premium) err-invalid-amount)
 
-    ;; Primi öde
+    ;; Pay premium
     (try! (stx-transfer? premium user (as-contract tx-sender)))
 
-    ;; Poliçeyi kaydet
+    ;; Save policy
     (map-set policies user {
       coverage-amount: coverage-amount,
       premium-paid: premium,
@@ -183,7 +183,7 @@
       total-claims: u0
     })
 
-    ;; İstatistikleri güncelle
+    ;; Update statistics
     (var-set total-pool-stx (+ (var-get total-pool-stx) premium))
     (var-set total-coverage-outstanding (+ (var-get total-coverage-outstanding) coverage-amount))
     (var-set total-premiums-collected (+ (var-get total-premiums-collected) premium))
@@ -201,7 +201,7 @@
   )
 )
 
-;; POLİÇEYİ YENİLE
+;; RENEW POLICY
 (define-public (renew-policy (additional-blocks uint))
   (let (
     (user tx-sender)
@@ -235,10 +235,10 @@
 )
 
 ;; ============================================================
-;; PUBLIC FUNCTIONS - HASAR TALEBİ
+;; PUBLIC FUNCTIONS - INSURANCE CLAIMS
 ;; ============================================================
 
-;; HASAR TALEBİ OLUŞTUR
+;; FILE A CLAIM
 (define-public (file-claim
   (requested-amount uint)
   (description (string-utf8 500))
@@ -271,7 +271,7 @@
 
     (var-set next-claim-id (+ claim-id u1))
 
-    ;; Poliçeyi şimdilik dondur (claim sürecinde)
+    ;; Freeze policy for now (during claim process)
     (map-set policies user (merge policy {
       total-claims: (+ (get total-claims policy) u1)
     }))
@@ -288,10 +288,10 @@
   )
 )
 
-;; HASAR TALEBİNE OY VER (SNTL sahipleri)
-;; claim-id: Oy verilecek talep
-;; approve: true=onay, false=ret
-;; vote-weight: Oy ağırlığı (staked SNTL miktarı - oracle'dan gelir)
+;; VOTE ON CLAIM (SNTL holders)
+;; claim-id: Claim to vote on
+;; approve: true=approve, false=reject
+;; vote-weight: Vote weight (staked SNTL amount - comes from oracle)
 (define-public (vote-on-claim (claim-id uint) (approve bool) (vote-weight uint))
   (let (
     (voter tx-sender)
@@ -302,14 +302,14 @@
     (asserts! (is-none (map-get? claim-votes { claim-id: claim-id, voter: voter })) err-already-voted)
     (asserts! (> vote-weight u0) err-invalid-amount)
 
-    ;; Oyu kaydet
+    ;; Record vote
     (map-set claim-votes { claim-id: claim-id, voter: voter } {
       vote: approve,
       weight: vote-weight,
       voted-at: stacks-block-height
     })
 
-    ;; Oy sayısını güncelle
+    ;; Update vote count
     (map-set claims claim-id (merge claim {
       yes-votes: (if approve (+ (get yes-votes claim) vote-weight) (get yes-votes claim)),
       no-votes: (if (not approve) (+ (get no-votes claim) vote-weight) (get no-votes claim))
@@ -327,7 +327,7 @@
   )
 )
 
-;; HASAR TALEBİNİ ÇÖZÜMLE (Oylama süresi bittikten sonra)
+;; RESOLVE CLAIM (After voting period ends)
 (define-public (resolve-claim (claim-id uint))
   (let (
     (claim (unwrap! (map-get? claims claim-id) err-claim-not-found))
@@ -344,7 +344,7 @@
       (approved (>= yes-percentage APPROVAL-THRESHOLD))
       (payout (if approved (get requested-amount claim) u0))
     )
-      ;; Ödemeyi yap
+      ;; Make the payout
       (if (and approved (> payout u0))
         (begin
           (asserts! (>= (var-get total-pool-stx) payout) err-insufficient-coverage)
@@ -355,7 +355,7 @@
         true
       )
 
-      ;; Claim'i güncelle
+      ;; Update claim
       (map-set claims claim-id (merge claim {
         status: (if approved u1 u2),  ;; 1=approved, 2=rejected
         payout-amount: payout
@@ -376,10 +376,10 @@
 )
 
 ;; ============================================================
-;; PUBLIC FUNCTIONS - LİKİDİTE SAĞLAYICI
+;; PUBLIC FUNCTIONS - LIQUIDITY PROVIDER
 ;; ============================================================
 
-;; LİKİDİTE SAĞLA (STX yatır, prim geliri kazan)
+;; PROVIDE LIQUIDITY (Deposit STX, earn premium income)
 (define-public (provide-liquidity (amount uint))
   (let (
     (provider tx-sender)
@@ -395,7 +395,7 @@
 
     (map-set providers provider {
       staked-stx: new-amount,
-      share-percentage: u0,  ;; Hesaplanacak
+      share-percentage: u0,  ;; To be calculated
       deposited-at: stacks-block-height,
       unlock-at: (+ stacks-block-height PROVIDER-LOCK-BLOCKS),
       accumulated-rewards: (match existing p (get accumulated-rewards p) u0),
@@ -416,7 +416,7 @@
   )
 )
 
-;; LİKİDİTEYİ ÇEK
+;; WITHDRAW LIQUIDITY
 (define-public (withdraw-liquidity (amount uint))
   (let (
     (provider tx-sender)
@@ -424,7 +424,7 @@
   )
     (asserts! (>= stacks-block-height (get unlock-at p)) err-withdraw-locked)
     (asserts! (<= amount (get staked-stx p)) err-invalid-amount)
-    ;; Kullanım oranı kontrolü - yüksekse likidite çekme
+    ;; Utilization rate check - prevent withdrawal if too high
     (asserts! (is-under-utilization-cap) err-insufficient-coverage)
 
     (try! (as-contract (stx-transfer? amount tx-sender provider)))

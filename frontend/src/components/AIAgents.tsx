@@ -199,7 +199,7 @@ function buildExplanation(ins: Insight): { title: string; summary: string; detai
     return {
       title:   `📝 Daily AI Intelligence Report — ${ins.date || 'Today'}`,
       summary: `Finney compiled the day's DeFi intelligence across all Stacks protocols. ${ins.event_count ?? 0} events processed by the agent cluster.`,
-      detail:  ins.content && ins.content !== 'Rapor üretilemedi.'
+      detail:  ins.content && ins.content !== 'Report could not be generated.'
         ? ins.content
         : 'The AI cluster monitored whale movements, DEX liquidity, and contract activity throughout the day. All systems operating normally.',
       tags,
@@ -446,7 +446,7 @@ function InsightDetail({ insight }: { insight: Insight }) {
             <DataRow label="Events Processed" value={insight.event_count} />
           )}
         </div>
-        {insight.content && insight.content !== 'Rapor üretilemedi.' && (
+        {insight.content && insight.content !== 'Report could not be generated.' && (
           <div>
             <p className="text-[10px] font-mono text-gray-500 uppercase tracking-wider mb-1">
               <FileText className="w-3 h-3 inline mr-1 opacity-60" />Full Report

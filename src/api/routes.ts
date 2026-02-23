@@ -19,12 +19,12 @@ let aiInsights: object[] = [];
 export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (fastify, opts) => {
   const { analytics, chainhooksManager, eventProcessor } = opts;
 
-  // AI Insights — GET (frontend okur)
+  // AI Insights — GET (frontend reads)
   fastify.get('/ai-insights', async (_req: FastifyRequest, reply: FastifyReply) => {
     return reply.send({ insights: aiInsights, count: aiInsights.length });
   });
 
-  // AI Insights — POST (VPS agentları yazar)
+  // AI Insights — POST (VPS agents write)
   fastify.post('/ai-insights', async (req: FastifyRequest, reply: FastifyReply) => {
     const insight = req.body as object;
     aiInsights.unshift({ ...insight, receivedAt: new Date().toISOString() });
@@ -262,7 +262,7 @@ export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (fastify, opts
   const HIRO = 'https://api.hiro.so';
   const WHALE_THRESHOLD_MICRO = 1_000 * 1_000_000; // 1,000 STX in microSTX
 
-  // GET /api/whale-alerts — büyük STX transferlerini Hiro'dan çek
+  // GET /api/whale-alerts — fetch large STX transfers from Hiro
   fastify.get('/whale-alerts', async (_req: FastifyRequest, reply: FastifyReply) => {
     try {
       const res = await fetch(
@@ -295,16 +295,16 @@ export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (fastify, opts
     }
   });
 
-  // GET /api/dex — STX fiyatı + DEX pool özeti
+  // GET /api/dex — STX price + DEX pool summary
   fastify.get('/dex', async (_req: FastifyRequest, reply: FastifyReply) => {
     try {
-      // STX USD fiyatını Hiro token endpoint'inden çek
+      // Fetch STX USD price from Hiro token endpoint
       const priceRes = await fetch(
         `${HIRO}/extended/v1/address/SP000000000000000000002Q6VF78/transactions?limit=1`,
         { headers: { 'Accept': 'application/json' } }
       );
 
-      // CoinGecko'dan STX fiyatı al
+      // Fetch STX price from CoinGecko
       const cgRes = await fetch(
         'https://api.coingecko.com/api/v3/simple/price?ids=blockstack&vs_currencies=usd&include_24hr_change=true',
         { headers: { 'Accept': 'application/json' } }
@@ -336,7 +336,7 @@ export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (fastify, opts
     }
   });
 
-  // GET /api/transactions — son Stacks işlemleri
+  // GET /api/transactions — recent Stacks transactions
   fastify.get('/transactions', async (req: FastifyRequest, reply: FastifyReply) => {
     const limit = Math.min(Number((req.query as { limit?: string }).limit ?? 20), 50);
     try {
@@ -353,7 +353,7 @@ export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (fastify, opts
     }
   });
 
-  // GET /api/contracts/recent — son deploy edilen smart contract'lar
+  // GET /api/contracts/recent — recently deployed smart contracts
   fastify.get('/contracts/recent', async (req: FastifyRequest, reply: FastifyReply) => {
     const limit = Math.min(Number((req.query as { limit?: string }).limit ?? 10), 20);
     try {
