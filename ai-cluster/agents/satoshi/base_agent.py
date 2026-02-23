@@ -70,36 +70,76 @@ class BaseAgent:
                 except json.JSONDecodeError:
                     pass
 
-    # ─── Sentinel API ──────────────────────────────────────────
+    # ─── Hiro API (direct) ────────────────────────────────────
+    HIRO_API = "https://api.hiro.so"
+
     def get_recent_txs(self, limit: int = 20) -> list:
+        """Hiro API'den son Stacks işlemlerini çek."""
         try:
             r = requests.get(
-                f"{self.sentinel_api}/api/transactions",
-                params={"limit": limit}, timeout=10
+                f"{self.HIRO_API}/extended/v1/tx",
+                params={"limit": min(limit, 50), "order": "desc", "order_by": "block_height"},
+                timeout=20
             )
-            return r.json() if r.ok else []
+            return r.json().get("results", []) if r.ok else []
         except Exception as e:
-            self.log.error(f"API hatası (transactions): {e}")
+            self.log.error(f"Hiro transactions hatası: {e}")
             return []
 
     def get_whale_alerts(self) -> list:
+        """Hiro API'den büyük STX transferlerini çek."""
+        whale_threshold_stx = int(os.getenv("WHALE_THRESHOLD_STX", "1000"))
         try:
             r = requests.get(
-                f"{self.sentinel_api}/api/whale-alerts", timeout=10
+                f"{self.HIRO_API}/extended/v1/tx",
+                params={"type": "token_transfer", "limit": 50, "order": "desc", "order_by": "block_height"},
+                timeout=20
             )
-            return r.json() if r.ok else []
+            if not r.ok:
+                return []
+            txs = r.json().get("results", [])
+            whales = []
+            for tx in txs:
+                tt = tx.get("token_transfer", {})
+                amount_micro = int(tt.get("amount", 0))
+                amount_stx = amount_micro / 1_000_000
+                if amount_stx >= whale_threshold_stx:
+                    whales.append({
+                        "txid":            tx.get("tx_id", ""),
+                        "amount":          round(amount_stx),
+                        "sender":          tx.get("sender_address", ""),
+                        "receiver":        tt.get("recipient_address", ""),
+                        "timestamp":       tx.get("burn_block_time_iso", ""),
+                        "sender_tx_count": 0,
+                    })
+            return whales
         except Exception as e:
-            self.log.error(f"API hatası (whale-alerts): {e}")
+            self.log.error(f"Hiro whale hatası: {e}")
             return []
 
     def get_dex_data(self) -> dict:
+        """CoinGecko'dan STX fiyatı + DEX özeti çek."""
         try:
             r = requests.get(
-                f"{self.sentinel_api}/api/dex", timeout=10
+                "https://api.coingecko.com/api/v3/simple/price",
+                params={"ids": "blockstack", "vs_currencies": "usd", "include_24hr_change": "true"},
+                timeout=15
             )
-            return r.json() if r.ok else {}
+            if r.ok:
+                cg = r.json().get("blockstack", {})
+                return {
+                    "stx_price_usd":  cg.get("usd", 0),
+                    "change_24h_pct": cg.get("usd_24h_change", 0),
+                    "pools": [
+                        {"name": "STX/USDA", "exchange": "Velar"},
+                        {"name": "STX/xBTC", "exchange": "ALEX"},
+                        {"name": "STX/USDA", "exchange": "Arkadiko"},
+                    ],
+                    "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                }
+            return {}
         except Exception as e:
-            self.log.error(f"API hatası (dex): {e}")
+            self.log.error(f"CoinGecko DEX hatası: {e}")
             return {}
 
     def post_insight(self, insight: dict):

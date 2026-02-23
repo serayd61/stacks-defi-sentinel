@@ -64,16 +64,28 @@ Güvenlik raporu (JSON):
         }
 
     def get_new_contracts(self) -> list:
-        """Sentinel API'dan son deploy edilen kontratları al."""
+        """Hiro API'den son deploy edilen Clarity kontratları al."""
         try:
             import requests
             r = requests.get(
-                f"{self.sentinel_api}/api/contracts/recent",
-                params={"limit": 10}, timeout=10
+                "https://api.hiro.so/extended/v1/tx",
+                params={"type": "smart_contract", "limit": 10, "order": "desc", "order_by": "block_height"},
+                timeout=20
             )
-            return r.json() if r.ok else []
+            if not r.ok:
+                return []
+            contracts = []
+            for tx in r.json().get("results", []):
+                sc = tx.get("smart_contract", {})
+                contracts.append({
+                    "contract_id": sc.get("contract_id", ""),
+                    "source_code": sc.get("source_code", ""),
+                    "deployer":    tx.get("sender_address", ""),
+                    "block_time":  tx.get("burn_block_time_iso", ""),
+                })
+            return contracts
         except Exception as e:
-            self.log.error(f"Kontrat listesi alınamadı: {e}")
+            self.log.error(f"Hiro contracts hatası: {e}")
             return []
 
     def run_scan(self):
