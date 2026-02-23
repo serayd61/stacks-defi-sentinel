@@ -16,10 +16,57 @@ interface NetworkStats {
   networkHealth: 'healthy' | 'degraded' | 'issues';
 }
 
+interface SignerMetrics {
+  totalSigners: number;
+  activeSigners: number;
+  participationRate: number;
+  avgAcceptanceRate: number;
+  avgLatencyMs: number;
+}
+
 const NetworkHealth: React.FC = () => {
   const [stats, setStats] = useState<NetworkStats | null>(null);
+  const [signerMetrics, setSignerMetrics] = useState<SignerMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [recentBlocks, setRecentBlocks] = useState<any[]>([]);
+
+  const fetchSignerMetrics = async () => {
+    try {
+      // Get current PoX cycle first
+      const cycleRes = await fetch('https://api.hiro.so/extended/v2/pox/cycles?limit=1');
+      if (!cycleRes.ok) return;
+      const cycleData = await cycleRes.json();
+      const currentCycle = cycleData.results?.[0]?.cycle_number;
+      if (!currentCycle) return;
+
+      const signersRes = await fetch(
+        `https://api.hiro.so/signer-metrics/v1/signers/${currentCycle}?limit=100`
+      );
+      if (!signersRes.ok) return;
+      const signersData = await signersRes.json();
+      const signers: any[] = signersData.results || [];
+      if (signers.length === 0) return;
+
+      const total = signers.length;
+      const active = signers.filter((s: any) => (s.proposals_accepted_count || 0) > 0).length;
+      const participationRate = total > 0 ? (active / total) * 100 : 0;
+      const avgAcceptance = signers.reduce((sum: number, s: any) => {
+        const accepted = s.proposals_accepted_count || 0;
+        const total_p = (s.proposals_accepted_count || 0) + (s.proposals_rejected_count || 0) + (s.proposals_missed_count || 0);
+        return sum + (total_p > 0 ? (accepted / total_p) * 100 : 0);
+      }, 0) / total;
+
+      setSignerMetrics({
+        totalSigners: total,
+        activeSigners: active,
+        participationRate: parseFloat(participationRate.toFixed(1)),
+        avgAcceptanceRate: parseFloat(avgAcceptance.toFixed(1)),
+        avgLatencyMs: 0,
+      });
+    } catch (e) {
+      console.error('Signer metrics error:', e);
+    }
+  };
 
   const fetchNetworkStats = async () => {
     try {
@@ -82,7 +129,11 @@ const NetworkHealth: React.FC = () => {
 
   useEffect(() => {
     fetchNetworkStats();
-    const interval = setInterval(fetchNetworkStats, 30000);
+    fetchSignerMetrics();
+    const interval = setInterval(() => {
+      fetchNetworkStats();
+      fetchSignerMetrics();
+    }, 30000);
     return () => clearInterval(interval);
   }, []);
 
@@ -258,6 +309,73 @@ const NetworkHealth: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Signer Metrics */}
+      {signerMetrics && (
+        <div className="p-4 border-t border-white/5">
+          <div className="flex items-center gap-2 mb-3">
+            <Wifi className="w-4 h-4 text-blue-400" />
+            <span className="text-sm font-medium text-gray-300">PoX Signer Consensus</span>
+            <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              HIRO METRICS API
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {/* Participation */}
+            <div className="bg-white/[0.03] rounded-xl p-3 border border-white/[0.06]">
+              <div className="text-[10px] text-gray-500 font-mono uppercase tracking-wider mb-1.5">Participation</div>
+              <div className={`text-lg font-bold font-mono ${
+                signerMetrics.participationRate >= 80 ? 'text-green-400'
+                : signerMetrics.participationRate >= 60 ? 'text-yellow-400'
+                : 'text-red-400'
+              }`}>
+                {signerMetrics.participationRate}%
+              </div>
+              <div className="mt-2 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    signerMetrics.participationRate >= 80 ? 'bg-green-400'
+                    : signerMetrics.participationRate >= 60 ? 'bg-yellow-400'
+                    : 'bg-red-400'
+                  }`}
+                  style={{ width: `${signerMetrics.participationRate}%` }}
+                />
+              </div>
+            </div>
+            {/* Acceptance Rate */}
+            <div className="bg-white/[0.03] rounded-xl p-3 border border-white/[0.06]">
+              <div className="text-[10px] text-gray-500 font-mono uppercase tracking-wider mb-1.5">Acceptance Rate</div>
+              <div className={`text-lg font-bold font-mono ${
+                signerMetrics.avgAcceptanceRate >= 90 ? 'text-green-400'
+                : signerMetrics.avgAcceptanceRate >= 70 ? 'text-yellow-400'
+                : 'text-red-400'
+              }`}>
+                {signerMetrics.avgAcceptanceRate}%
+              </div>
+              <div className="mt-2 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-blue-400 transition-all"
+                  style={{ width: `${signerMetrics.avgAcceptanceRate}%` }}
+                />
+              </div>
+            </div>
+            {/* Active Signers */}
+            <div className="bg-white/[0.03] rounded-xl p-3 border border-white/[0.06]">
+              <div className="text-[10px] text-gray-500 font-mono uppercase tracking-wider mb-1.5">Active Signers</div>
+              <div className="text-lg font-bold font-mono text-purple-400">
+                {signerMetrics.activeSigners}
+                <span className="text-sm text-gray-600">/{signerMetrics.totalSigners}</span>
+              </div>
+              <div className="mt-2 h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                <div
+                  className="h-full rounded-full bg-purple-400 transition-all"
+                  style={{ width: `${(signerMetrics.activeSigners / signerMetrics.totalSigners) * 100}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
