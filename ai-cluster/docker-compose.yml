@@ -135,7 +135,7 @@ services:
       - AGENT_ROLE=whale_tracker
       - OLLAMA_URL=http://da-vinci:11434
       - REDIS_URL=redis://redis-bus:6379
-      - SENTINEL_API=http://sentinel-api:3000
+      - SENTINEL_API=https://stacks-defi-sentinel-production.up.railway.app
       - MODEL=phi3:mini
       - POLL_INTERVAL=30
     volumes:
@@ -165,7 +165,7 @@ services:
       - AGENT_ROLE=dex_analyzer
       - OLLAMA_URL=http://da-vinci:11434
       - REDIS_URL=redis://redis-bus:6379
-      - SENTINEL_API=http://sentinel-api:3000
+      - SENTINEL_API=https://stacks-defi-sentinel-production.up.railway.app
       - MODEL=phi3:mini
       - POLL_INTERVAL=60
     volumes:
@@ -195,7 +195,7 @@ services:
       - AGENT_ROLE=security_scanner
       - OLLAMA_URL=http://da-vinci:11434
       - REDIS_URL=redis://redis-bus:6379
-      - SENTINEL_API=http://sentinel-api:3000
+      - SENTINEL_API=https://stacks-defi-sentinel-production.up.railway.app
       - MODEL=phi3:mini
       - POLL_INTERVAL=120
     volumes:
@@ -225,7 +225,7 @@ services:
       - AGENT_ROLE=reporter
       - OLLAMA_URL=http://da-vinci:11434
       - REDIS_URL=redis://redis-bus:6379
-      - SENTINEL_API=http://sentinel-api:3000
+      - SENTINEL_API=https://stacks-defi-sentinel-production.up.railway.app
       - MODEL=phi3:mini
       - REPORT_HOUR=7
     volumes:
