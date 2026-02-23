@@ -5,7 +5,7 @@ import {
   ChevronRight, Menu, X,
   Target, Star, Fuel,
   ChevronDown, Code, Server, Search,
-  Home, ChevronLeft, Brain,
+  Home, ChevronLeft, Brain, Bitcoin,
 } from 'lucide-react';
 
 import { StatCard } from './components/StatCard';
@@ -21,6 +21,7 @@ import AIAgents from './components/AIAgents';
 import GasTracker from './components/GasTracker';
 import StacksLeaderboard from './components/StacksLeaderboard';
 import StacksPredict from './components/StacksPredict';
+import SBTCBridgeMonitor from './components/SBTCBridgeMonitor';
 import { WalletProvider } from './contexts/WalletContext';
 import { useApi } from './hooks/useApi';
 import { useWebSocket } from './hooks/useWebSocket';
@@ -31,7 +32,7 @@ type TabType =
   | 'overview' | 'market' | 'network'
   | 'swaps' | 'price-alerts'
   | 'contracts' | 'alerts' | 'wallet-analytics'
-  | 'ai-agents'
+  | 'ai-agents' | 'sbtc'
   | 'gas' | 'leaderboard' | 'predict';
 
 interface NavItem { id: TabType; label: string; icon: React.ElementType; badge?: 'hot'|'new'|'live'; }
@@ -51,6 +52,9 @@ const NAV: NavSection[] = [
   { label: 'Live Data', items: [
     { id: 'swaps',        label: 'Swap History',  icon: ArrowRightLeft },
     { id: 'price-alerts', label: 'Price Alerts',  icon: Bell, badge: 'new' },
+  ]},
+  { label: 'Bitcoin', items: [
+    { id: 'sbtc', label: 'sBTC Bridge', icon: Bitcoin, badge: 'new' as const },
   ]},
   { label: 'AI', items: [
     { id: 'ai-agents', label: 'AI Agents', icon: Brain, badge: 'new' as const },
@@ -586,6 +590,9 @@ function App() {
               {/* ─── LIVE DATA ─── */}
               {activeTab === 'swaps'        && <SwapTable swaps={combinedSwaps} isLive={wsConnected} showAll />}
               {activeTab === 'price-alerts' && <div style={{ maxWidth: 600, margin: '0 auto' }}><PriceAlerts /></div>}
+
+              {/* ─── SBTC BRIDGE ─── */}
+              {activeTab === 'sbtc' && <div style={{ maxWidth: 960, margin: '0 auto' }}><SBTCBridgeMonitor /></div>}
 
               {/* ─── AI AGENTS ─── */}
               {activeTab === 'ai-agents' && <div style={{ maxWidth: 1000, margin: '0 auto' }}><AIAgents /></div>}
