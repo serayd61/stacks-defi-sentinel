@@ -1,12 +1,12 @@
 """
-ORCHESTRATOR — Agentic Cluster Yönetim API'si
+ORCHESTRATOR — Agentic Cluster Management API
 ──────────────────────────────────────────────
 Endpoints:
-  GET  /               → Cluster durum paneli (HTML)
-  GET  /api/status     → Tüm agent durumları (JSON)
-  GET  /api/insights   → Son AI analizleri
-  POST /api/command    → Agentlara komut gönder
-  GET  /api/health     → Cluster sağlık kontrolü
+  GET  /               -> Cluster dashboard (HTML)
+  GET  /api/status     -> All agent statuses (JSON)
+  GET  /api/insights   -> Recent AI analyses
+  POST /api/command    -> Send command to agents
+  GET  /api/health     -> Cluster health check
 """
 import os
 import json
@@ -25,9 +25,9 @@ AGENTS      = os.getenv("AGENTS", "satoshi,nakamoto,szabo,finney").split(",")
 
 r = redis.from_url(REDIS_URL, decode_responses=True)
 
-# ─── HTML Dashboard ───────────────────────────────────────────
+# --- HTML Dashboard ------------------------------------------------
 DASHBOARD_HTML = """<!DOCTYPE html>
-<html lang="tr">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -54,10 +54,10 @@ DASHBOARD_HTML = """<!DOCTYPE html>
 </style>
 </head>
 <body>
-<h1>⚡ AGENTIC AI CLUSTER</h1>
+<h1>AGENTIC AI CLUSTER</h1>
 <div class="subtitle">STACKS DEFI SENTINEL · CLOSED-LOOP NETWORK TOPOLOGY</div>
 
-<div id="app">Yükleniyor...</div>
+<div id="app">Loading...</div>
 
 <div class="refresh" id="refresh-info"></div>
 
@@ -80,12 +80,12 @@ function render(data) {
         ${a.online ? '● ONLINE' : '○ OFFLINE'}
       </span>
       <div class="stat"><span>Model</span><span class="stat-val">phi3:mini</span></div>
-      <div class="stat"><span>Mesaj</span><span class="stat-val">${a.message_count || 0}</span></div>
+      <div class="stat"><span>Messages</span><span class="stat-val">${a.message_count || 0}</span></div>
     </div>
   `).join('');
 
   document.getElementById('app').innerHTML = `
-    <p class="section-title">⚡ INFERENCE TIER</p>
+    <p class="section-title">INFERENCE TIER</p>
     <div class="grid">
       <div class="card">
         <h3>DA VINCI</h3>
@@ -93,28 +93,28 @@ function render(data) {
         <span class="badge ${cluster.ollama_ok ? 'badge-online' : 'badge-offline'}">
           ${cluster.ollama_ok ? '● ONLINE' : '○ OFFLINE'}
         </span>
-        <div class="stat"><span>Tip</span><span class="stat-val">PRIMARY INFERENCE</span></div>
+        <div class="stat"><span>Type</span><span class="stat-val">PRIMARY INFERENCE</span></div>
       </div>
     </div>
 
-    <p class="section-title">🤖 AGENTIC TIER · VIRTUAL TEAM</p>
+    <p class="section-title">AGENTIC TIER · VIRTUAL TEAM</p>
     <div class="grid">${cards}</div>
 
-    <p class="section-title">📊 SON ANALİZLER</p>
+    <p class="section-title">RECENT ANALYSES</p>
     <table>
-      <tr><th>AJAN</th><th>TİP</th><th>ZAMAN</th></tr>
+      <tr><th>AGENT</th><th>TYPE</th><th>TIME</th></tr>
       ${(data.recent_insights || []).slice(0,8).map(i => `
         <tr>
           <td style="color:#facc15">${i.agent || '-'}</td>
           <td>${i.type || '-'}</td>
-          <td style="color:#6b7280">${i.ts ? new Date(i.ts*1000).toLocaleTimeString('tr-TR') : '-'}</td>
+          <td style="color:#6b7280">${i.ts ? new Date(i.ts*1000).toLocaleTimeString('en-US') : '-'}</td>
         </tr>
       `).join('')}
     </table>
   `;
 
   document.getElementById('refresh-info').textContent =
-    'Son güncelleme: ' + new Date().toLocaleTimeString('tr-TR');
+    'Last update: ' + new Date().toLocaleTimeString('en-US');
 }
 
 fetchStatus();
@@ -124,7 +124,7 @@ setInterval(fetchStatus, 15000);
 </html>"""
 
 
-# ─── API Endpoints ────────────────────────────────────────────
+# --- API Endpoints -------------------------------------------------
 
 @app.route("/")
 def dashboard():
@@ -136,10 +136,10 @@ def dashboard():
 def status():
     agents_status = []
     agent_roles = {
-        "satoshi":  "Whale Takibi & Pattern Analizi",
-        "nakamoto": "DEX Arbitraj & Fiyat Analizi",
-        "szabo":    "Kontrat Güvenlik Taraması",
-        "finney":   "Kullanıcı Rapor & Bildirim"
+        "satoshi":  "Whale Tracking & Pattern Analysis",
+        "nakamoto": "DEX Arbitrage & Price Analysis",
+        "szabo":    "Contract Security Scanner",
+        "finney":   "User Reports & Notifications"
     }
 
     for agent in AGENTS:
@@ -155,7 +155,7 @@ def status():
             "message_count": int(msg_count)
         })
 
-    # Ollama sağlık kontrolü
+    # Ollama health check
     ollama_ok = False
     try:
         res = requests.get(f"{OLLAMA_URL}/api/tags", timeout=5)
@@ -163,7 +163,7 @@ def status():
     except Exception:
         pass
 
-    # Son insights
+    # Recent insights
     raw_insights = r.lrange("insights:recent", 0, 19)
     recent_insights = []
     for raw in raw_insights:
@@ -202,11 +202,11 @@ def command():
     body = request.get_json(silent=True) or {}
     cmd  = body.get("command", "")
     if not cmd:
-        return jsonify({"error": "command gerekli"}), 400
+        return jsonify({"error": "command is required"}), 400
 
     allowed = {"scan_whales", "scan_dex", "scan_contracts", "generate_report"}
     if cmd not in allowed:
-        return jsonify({"error": f"Bilinmeyen komut: {cmd}"}), 400
+        return jsonify({"error": f"Unknown command: {cmd}"}), 400
 
     r.publish("orchestrator:command", json.dumps({
         "command": cmd,
@@ -232,13 +232,13 @@ def health():
     })
 
 
-# ─── Insight Collector ────────────────────────────────────────
+# --- Insight Collector ---------------------------------------------
 def insight_collector():
     """
-    Sentinel API'dan gelen AI insight'larını Redis'e yazar.
-    Orchestrator bu endpoint'i dinler.
+    Writes AI insights from Sentinel API to Redis.
+    Orchestrator listens on this endpoint.
     """
-    pass  # Sentinel API entegrasyonu için hook noktası
+    pass  # Hook point for Sentinel API integration
 
 
 if __name__ == "__main__":

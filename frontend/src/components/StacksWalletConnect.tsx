@@ -82,7 +82,7 @@ const WALLETS: WalletInfo[] = [
 ];
 
 const StacksWalletConnect: React.FC = () => {
-  // 🔑 WalletContext kullan - artık tek kaynak
+  // Use WalletContext — single source of truth
   const {
     isConnected,
     isLoading,
@@ -101,7 +101,7 @@ const StacksWalletConnect: React.FC = () => {
   const [copied, setCopied] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Dropdown dışına tıklandığında kapat
+  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -112,7 +112,7 @@ const StacksWalletConnect: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showDropdown]);
 
-  // Modal açıkken scroll kilitle
+  // Lock scroll when modal is open
   useEffect(() => {
     if (showModal) document.body.style.overflow = 'hidden';
     else document.body.style.overflow = '';

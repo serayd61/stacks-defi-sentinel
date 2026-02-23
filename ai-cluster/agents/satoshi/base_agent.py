@@ -1,6 +1,6 @@
 """
-Base Agent — Tüm agentlar bu sınıfı miras alır.
-Ollama LLM iletişimi + Redis pub/sub + Sentinel API ortak katmanı.
+Base Agent — All agents inherit from this class.
+Ollama LLM communication + Redis pub/sub + Sentinel API shared layer.
 """
 import os
 import json
@@ -28,11 +28,11 @@ class BaseAgent:
         self.redis = redis.from_url(redis_url, decode_responses=True)
         self.pubsub = self.redis.pubsub()
 
-        self.log.info(f"Agent başlatıldı | rol={self.role} | model={self.model}")
+        self.log.info(f"Agent started | role={self.role} | model={self.model}")
 
-    # ─── LLM ──────────────────────────────────────────────────
+    # --- LLM -------------------------------------------------------
     def think(self, prompt: str, system: str = "") -> str:
-        """Ollama'ya istek at, yanıt döndür."""
+        """Send request to Ollama, return response."""
         payload = {
             "model": self.model,
             "prompt": prompt,
@@ -48,19 +48,19 @@ class BaseAgent:
             r.raise_for_status()
             return r.json().get("response", "").strip()
         except Exception as e:
-            self.log.error(f"LLM hatası: {e}")
+            self.log.error(f"LLM error: {e}")
             return ""
 
-    # ─── Redis Mesajlaşma ──────────────────────────────────────
+    # --- Redis Messaging -------------------------------------------
     def publish(self, channel: str, data: dict):
         data["from"] = self.name
         data["ts"]   = int(time.time())
         self.redis.publish(channel, json.dumps(data))
-        self.log.debug(f"Yayınlandı → {channel}")
+        self.log.debug(f"Published -> {channel}")
 
     def subscribe(self, *channels):
         self.pubsub.subscribe(*channels)
-        self.log.info(f"Dinleniyor: {list(channels)}")
+        self.log.info(f"Listening: {list(channels)}")
 
     def listen(self):
         for msg in self.pubsub.listen():
@@ -70,11 +70,11 @@ class BaseAgent:
                 except json.JSONDecodeError:
                     pass
 
-    # ─── Hiro API (direct) ────────────────────────────────────
+    # --- Hiro API (direct) -----------------------------------------
     HIRO_API = "https://api.hiro.so"
 
     def get_recent_txs(self, limit: int = 20) -> list:
-        """Hiro API'den son Stacks işlemlerini çek."""
+        """Fetch recent Stacks transactions from Hiro API."""
         try:
             r = requests.get(
                 f"{self.HIRO_API}/extended/v1/tx",
@@ -83,11 +83,11 @@ class BaseAgent:
             )
             return r.json().get("results", []) if r.ok else []
         except Exception as e:
-            self.log.error(f"Hiro transactions hatası: {e}")
+            self.log.error(f"Hiro transactions error: {e}")
             return []
 
     def get_whale_alerts(self) -> list:
-        """Hiro API'den büyük STX transferlerini çek."""
+        """Fetch large STX transfers from Hiro API."""
         whale_threshold_stx = int(os.getenv("WHALE_THRESHOLD_STX", "1000"))
         try:
             r = requests.get(
@@ -114,11 +114,11 @@ class BaseAgent:
                     })
             return whales
         except Exception as e:
-            self.log.error(f"Hiro whale hatası: {e}")
+            self.log.error(f"Hiro whale error: {e}")
             return []
 
     def get_dex_data(self) -> dict:
-        """CoinGecko'dan STX fiyatı + DEX özeti çek."""
+        """Fetch STX price + DEX summary from CoinGecko."""
         try:
             r = requests.get(
                 "https://api.coingecko.com/api/v3/simple/price",
@@ -139,20 +139,20 @@ class BaseAgent:
                 }
             return {}
         except Exception as e:
-            self.log.error(f"CoinGecko DEX hatası: {e}")
+            self.log.error(f"CoinGecko DEX error: {e}")
             return {}
 
     def post_insight(self, insight: dict):
-        """AI analiz sonucunu Sentinel'e kaydet."""
+        """Save AI analysis result to Sentinel."""
         try:
             requests.post(
                 f"{self.sentinel_api}/api/ai-insights",
                 json=insight, timeout=10
             )
         except Exception as e:
-            self.log.error(f"Insight gönderme hatası: {e}")
+            self.log.error(f"Insight post error: {e}")
 
-    # ─── Storage ───────────────────────────────────────────────
+    # --- Storage ---------------------------------------------------
     def cache_set(self, key: str, value, ttl: int = 3600):
         self.redis.setex(f"{self.name}:{key}", ttl, json.dumps(value))
 
@@ -161,4 +161,4 @@ class BaseAgent:
         return json.loads(raw) if raw else None
 
     def run(self):
-        raise NotImplementedError("Her agent kendi run() metodunu tanımlamalı.")
+        raise NotImplementedError("Each agent must implement its own run() method.")

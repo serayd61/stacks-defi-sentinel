@@ -1,9 +1,9 @@
 ;; ============================================================
-;; SENTINEL PORTFOLIO VAULT - Otomatik Portföy Yönetimi
+;; SENTINEL PORTFOLIO VAULT - Automated Portfolio Management
 ;; ============================================================
-;; Kullanıcılar hedef token dağılımı belirler. Vault otomatik
-;; rebalancing yapar. Herkes kendi vault'unu oluşturabilir.
-;; Sosyal vault özelliği ile başarılı portföylere yatırım yapılır.
+;; Users define target token allocation. Vault performs automatic
+;; rebalancing. Anyone can create their own vault.
+;; Social vault feature allows investing in successful portfolios.
 ;; ============================================================
 
 ;; ============================================================
@@ -28,28 +28,28 @@
 (define-constant err-vault-not-public     (err u114))
 (define-constant err-zero-deposit         (err u115))
 
-;; Vault parametreleri
-(define-constant MAX-TOKENS-PER-VAULT u10)      ;; Vault başına max token
-(define-constant ALLOCATION-PRECISION u10000)    ;; %100 = 10000 basis points
-(define-constant MAX-VAULTS u1000)               ;; Toplam max vault
-(define-constant REBALANCE-THRESHOLD u500)       ;; %5 sapma = rebalancing tetikle
+;; Vault parameters
+(define-constant MAX-TOKENS-PER-VAULT u10)      ;; Max tokens per vault
+(define-constant ALLOCATION-PRECISION u10000)    ;; 100% = 10000 basis points
+(define-constant MAX-VAULTS u1000)               ;; Total max vaults
+(define-constant REBALANCE-THRESHOLD u500)       ;; 5% deviation = trigger rebalancing
 (define-constant MIN-DEPOSIT-STX u5000000)       ;; Min 5 STX deposit
-(define-constant SOCIAL-VAULT-FEE u200)          ;; %2 social vault management fee
-(define-constant PROTOCOL-FEE-RATE u50)          ;; %0.5 protocol fee (rebalancing'de)
-(define-constant VAULT-LOCK-BLOCKS u144)         ;; Deposit sonrası 1 günlük lock
+(define-constant SOCIAL-VAULT-FEE u200)          ;; 2% social vault management fee
+(define-constant PROTOCOL-FEE-RATE u50)          ;; 0.5% protocol fee (on rebalancing)
+(define-constant VAULT-LOCK-BLOCKS u144)         ;; 1-day lock after deposit
 
-;; Desteklenen tokenlar (indeks)
+;; Supported tokens (index)
 (define-constant TOKEN-STX   u0)
 (define-constant TOKEN-SNTL  u1)
 (define-constant TOKEN-SBTC  u2)
 (define-constant TOKEN-ALEX  u3)
 (define-constant TOKEN-VELAR u4)
 
-;; Rebalancing stratejileri
-(define-constant STRATEGY-MANUAL     u0)  ;; Sadece manuel rebalancing
-(define-constant STRATEGY-AUTO-5PCT  u1)  ;; %5 sapma = otomatik rebalancing
-(define-constant STRATEGY-AUTO-10PCT u2)  ;; %10 sapma = otomatik rebalancing
-(define-constant STRATEGY-TIME-BASED u3)  ;; Her 1000 blokta rebalancing
+;; Rebalancing strategies
+(define-constant STRATEGY-MANUAL     u0)  ;; Manual rebalancing only
+(define-constant STRATEGY-AUTO-5PCT  u1)  ;; 5% deviation = automatic rebalancing
+(define-constant STRATEGY-AUTO-10PCT u2)  ;; 10% deviation = automatic rebalancing
+(define-constant STRATEGY-TIME-BASED u3)  ;; Rebalancing every 1000 blocks
 
 ;; ============================================================
 ;; DATA STRUCTURES
@@ -57,68 +57,68 @@
 
 (define-data-var next-vault-id uint u1)
 (define-data-var total-vaults uint u0)
-(define-data-var total-tvl-stx uint u0)          ;; Tüm vault'lardaki toplam STX
+(define-data-var total-tvl-stx uint u0)          ;; Total STX across all vaults
 (define-data-var total-rebalances uint u0)
 (define-data-var is-paused bool false)
 (define-data-var treasury principal contract-owner)
 
-;; Ana vault yapısı
+;; Main vault structure
 (define-map vaults uint {
   owner: principal,
   name: (string-ascii 50),
   description: (string-utf8 200),
   strategy: uint,               ;; 0=manual, 1=auto5%, 2=auto10%, 3=time
-  is-public: bool,              ;; Social vault özelliği
-  management-fee: uint,         ;; Social vault için yönetim ücreti (bps)
-  total-value-stx: uint,        ;; Toplam vault değeri (STX cinsinden)
-  total-deposits: uint,         ;; Toplam yatırılan STX
-  total-withdrawals: uint,      ;; Toplam çekilen STX
+  is-public: bool,              ;; Social vault feature
+  management-fee: uint,         ;; Management fee for social vault (bps)
+  total-value-stx: uint,        ;; Total vault value (in STX)
+  total-deposits: uint,         ;; Total deposited STX
+  total-withdrawals: uint,      ;; Total withdrawn STX
   total-rebalances: uint,
   created-at: uint,
   last-rebalanced-at: uint,
-  follower-count: uint,         ;; Social vault takipçi sayısı
+  follower-count: uint,         ;; Social vault follower count
   is-active: bool
 })
 
-;; Vault token hedef dağılımı
-;; (vault-id, token) -> hedef yüzde (basis points)
+;; Vault token target allocation
+;; (vault-id, token) -> target percentage (basis points)
 (define-map vault-allocations { vault-id: uint, token-index: uint } {
-  target-pct: uint,             ;; Hedef oran (basis points, 10000 = %100)
-  current-value-stx: uint,      ;; Şu anki STX değeri
-  amount: uint,                 ;; Token miktarı
+  target-pct: uint,             ;; Target ratio (basis points, 10000 = 100%)
+  current-value-stx: uint,      ;; Current STX value
+  amount: uint,                 ;; Token amount
   last-updated: uint
 })
 
-;; Vault'taki token listesi
-(define-map vault-token-count uint uint)  ;; vault-id -> token sayısı
+;; Token list in vault
+(define-map vault-token-count uint uint)  ;; vault-id -> token count
 
-;; Kullanıcı pozisyonu (tek vault başına)
+;; User position (per vault)
 (define-map user-vault-positions { vault-id: uint, user: principal } {
-  deposited-stx: uint,          ;; Yatırılan STX
-  vault-shares: uint,           ;; Vault share'i
+  deposited-stx: uint,          ;; Deposited STX
+  vault-shares: uint,           ;; Vault shares
   joined-at: uint,
   unlock-at: uint,
   accumulated-fees-paid: uint,
   last-harvest: uint
 })
 
-;; Social vault takibi
+;; Social vault tracking
 (define-map vault-followers { vault-id: uint, follower: principal } {
-  copy-amount-stx: uint,        ;; Kopyalanan miktar
+  copy-amount-stx: uint,        ;; Copied amount
   joined-at: uint,
   total-gained-stx: uint
 })
 
-;; Vault toplam share'i
+;; Vault total shares
 (define-map vault-total-shares uint uint)
 
-;; Kullanıcı vault'u (her kullanıcı 1 vault sahibi olabilir)
+;; User vault (each user can own 1 vault)
 (define-map user-owned-vault principal uint)
 
-;; Rebalancing geçmişi
+;; Rebalancing history
 (define-map rebalance-history { vault-id: uint, index: uint } {
-  before-allocations: (list 10 uint),  ;; Önceki dağılımlar
-  after-allocations: (list 10 uint),   ;; Sonraki dağılımlar
+  before-allocations: (list 10 uint),  ;; Previous allocations
+  after-allocations: (list 10 uint),   ;; New allocations
   rebalanced-at: uint,
   triggered-by: principal,
   gas-cost: uint
@@ -132,7 +132,7 @@
 
 (define-private (calculate-shares (deposit-stx uint) (total-value uint) (total-shares uint))
   (if (or (is-eq total-value u0) (is-eq total-shares u0))
-    deposit-stx  ;; İlk deposit: 1 share = 1 micro-STX
+    deposit-stx  ;; First deposit: 1 share = 1 micro-STX
     (/ (* deposit-stx total-shares) total-value)
   )
 )
@@ -145,8 +145,8 @@
 )
 
 (define-private (is-rebalance-needed (vault-id uint))
-  ;; Herhangi bir token %5'ten fazla sapıyorsa true döner (basitleştirilmiş)
-  ;; Gerçekte her token'ın mevcut ve hedef dağılımı kıyaslanır
+  ;; Returns true if any token deviates more than 5% (simplified)
+  ;; In practice, each token's current and target allocations are compared
   (match (map-get? vaults vault-id)
     vault (and
       (get is-active vault)
@@ -157,15 +157,15 @@
 )
 
 ;; ============================================================
-;; PUBLIC FUNCTIONS - VAULT OLUŞTURMA
+;; PUBLIC FUNCTIONS - VAULT CREATION
 ;; ============================================================
 
-;; YENİ VAULT OLUŞTUR
-;; name: Vault adı
-;; description: Açıklama
-;; strategy: Rebalancing stratejisi
-;; is-public: Social vault mı?
-;; management-fee: Social vault yönetim ücreti (0-500 bps = 0-5%)
+;; CREATE NEW VAULT
+;; name: Vault name
+;; description: Description
+;; strategy: Rebalancing strategy
+;; is-public: Is it a social vault?
+;; management-fee: Social vault management fee (0-500 bps = 0-5%)
 (define-public (create-vault
   (name (string-ascii 50))
   (description (string-utf8 200))
@@ -180,7 +180,7 @@
     (asserts! (is-none (map-get? user-owned-vault user)) err-vault-exists)
     (asserts! (< vault-id MAX-VAULTS) err-vault-not-found)
     (asserts! (<= strategy u3) err-invalid-allocation)
-    (asserts! (<= management-fee u500) err-invalid-allocation)  ;; Max %5
+    (asserts! (<= management-fee u500) err-invalid-allocation)  ;; Max 5%
 
     (map-set vaults vault-id {
       owner: user,
@@ -220,8 +220,8 @@
   )
 )
 
-;; TOKEN DAĞILIMI AYARLA (sadece vault sahibi)
-;; Toplam dağılım = 10000 (100%) olmalı
+;; SET TOKEN ALLOCATION (vault owner only)
+;; Total allocation must equal 10000 (100%)
 (define-public (set-allocation
   (vault-id uint)
   (token-index uint)
@@ -235,7 +235,7 @@
     (asserts! (<= token-index u4) err-invalid-allocation)
     (asserts! (> target-pct u0) err-invalid-allocation)
 
-    ;; Yeni token mu?
+    ;; Is it a new token?
     (if (is-none existing)
       (begin
         (asserts! (< token-count MAX-TOKENS-PER-VAULT) err-max-tokens-reached)
@@ -266,7 +266,7 @@
 ;; PUBLIC FUNCTIONS - DEPOSIT & WITHDRAW
 ;; ============================================================
 
-;; VAULT'A DEPOSIT YAP
+;; DEPOSIT INTO VAULT
 (define-public (deposit (vault-id uint) (amount-stx uint))
   (let (
     (user tx-sender)
@@ -281,10 +281,10 @@
     (asserts! (>= amount-stx MIN-DEPOSIT-STX) err-invalid-amount)
     (asserts! (>= (stx-get-balance user) amount-stx) err-insufficient-balance)
 
-    ;; STX'i vault'a kilitle
+    ;; Lock STX into vault
     (try! (stx-transfer? amount-stx user (as-contract tx-sender)))
 
-    ;; Pozisyonu güncelle
+    ;; Update position
     (map-set user-vault-positions { vault-id: vault-id, user: user } {
       deposited-stx: (+ (match existing-pos p (get deposited-stx p) u0) amount-stx),
       vault-shares: (+ current-shares new-shares),
@@ -294,16 +294,16 @@
       last-harvest: stacks-block-height
     })
 
-    ;; Vault'u güncelle
+    ;; Update vault
     (map-set vaults vault-id (merge vault {
       total-value-stx: (+ (get total-value-stx vault) amount-stx),
       total-deposits: (+ (get total-deposits vault) amount-stx)
     }))
 
-    ;; Toplam share güncelle
+    ;; Update total shares
     (map-set vault-total-shares vault-id (+ total-shares new-shares))
 
-    ;; Global TVL güncelle
+    ;; Update global TVL
     (var-set total-tvl-stx (+ (var-get total-tvl-stx) amount-stx))
 
     (print {
@@ -318,7 +318,7 @@
   )
 )
 
-;; VAULT'TAN ÇEKME
+;; WITHDRAW FROM VAULT
 (define-public (withdraw (vault-id uint) (shares-to-withdraw uint))
   (let (
     (user tx-sender)
@@ -339,7 +339,7 @@
     (asserts! (>= stacks-block-height (get unlock-at position)) err-vault-locked)
     (asserts! (> withdrawal-value u0) err-invalid-amount)
 
-    ;; STX ödemeleri
+    ;; STX payments
     (try! (as-contract (stx-transfer? net-withdrawal tx-sender user)))
     (if (> protocol-fee u0)
       (try! (as-contract (stx-transfer? protocol-fee tx-sender (var-get treasury))))
@@ -350,7 +350,7 @@
       true
     )
 
-    ;; Pozisyonu güncelle
+    ;; Update position
     (let ((new-shares (- (get vault-shares position) shares-to-withdraw)))
       (if (is-eq new-shares u0)
         (map-delete user-vault-positions { vault-id: vault-id, user: user })
@@ -366,7 +366,7 @@
       )
     )
 
-    ;; Vault güncelle
+    ;; Update vault
     (map-set vaults vault-id (merge vault {
       total-value-stx: (if (>= (get total-value-stx vault) withdrawal-value)
         (- (get total-value-stx vault) withdrawal-value) u0),
@@ -398,8 +398,8 @@
 ;; PUBLIC FUNCTIONS - REBALANCING
 ;; ============================================================
 
-;; MANUEL REBALANCING (Vault sahibi veya keeper)
-;; new-allocations: Her token için güncel STX değerleri (en fazla 10 eleman)
+;; MANUAL REBALANCING (Vault owner or keeper)
+;; new-allocations: Current STX values for each token (max 10 elements)
 (define-public (rebalance
   (vault-id uint)
   (token-values (list 10 { token-index: uint, new-value-stx: uint })))
@@ -410,13 +410,13 @@
   )
     (asserts! (not (var-get is-paused)) err-contract-paused)
     (asserts! (get is-active vault) err-vault-not-found)
-    ;; Sadece vault sahibi veya auto stratejide herkes rebalance edebilir
+    ;; Only vault owner or anyone can rebalance in auto strategy
     (asserts! (or
       (is-eq caller (get owner vault))
       (> (get strategy vault) STRATEGY-MANUAL)
     ) err-not-vault-owner)
 
-    ;; Her token değerini güncelle
+    ;; Update each token value
     (map (lambda (item)
       (match (map-get? vault-allocations { vault-id: vault-id, token-index: (get token-index item) })
         alloc (map-set vault-allocations
@@ -429,7 +429,7 @@
       )
     ) token-values)
 
-    ;; Vault'u güncelle
+    ;; Update vault
     (map-set vaults vault-id (merge vault {
       last-rebalanced-at: stacks-block-height,
       total-rebalances: (+ (get total-rebalances vault) u1)
@@ -453,7 +453,7 @@
 ;; PUBLIC FUNCTIONS - SOCIAL VAULT
 ;; ============================================================
 
-;; SOCIAL VAULT TAKİP ET
+;; FOLLOW SOCIAL VAULT
 (define-public (follow-vault (vault-id uint) (copy-amount-stx uint))
   (let (
     (follower tx-sender)
@@ -466,17 +466,17 @@
     (asserts! (>= copy-amount-stx MIN-DEPOSIT-STX) err-invalid-amount)
     (asserts! (not (is-eq follower (get owner vault))) err-not-vault-owner)
 
-    ;; Deposit yap
+    ;; Make deposit
     (try! (deposit vault-id copy-amount-stx))
 
-    ;; Takibi kaydet
+    ;; Record follow
     (map-set vault-followers { vault-id: vault-id, follower: follower } {
       copy-amount-stx: copy-amount-stx,
       joined-at: stacks-block-height,
       total-gained-stx: u0
     })
 
-    ;; Vault takipçi sayısını güncelle
+    ;; Update vault follower count
     (map-set vaults vault-id (merge vault {
       follower-count: (+ (get follower-count vault) u1)
     }))
@@ -492,7 +492,7 @@
   )
 )
 
-;; SOCIAL VAULT TAKİBİNİ BIRAK
+;; UNFOLLOW SOCIAL VAULT
 (define-public (unfollow-vault (vault-id uint) (shares-amount uint))
   (let (
     (follower tx-sender)
@@ -503,7 +503,7 @@
     ;; Withdraw
     (try! (withdraw vault-id shares-amount))
 
-    ;; Takibi kaldır
+    ;; Remove follow
     (map-delete vault-followers { vault-id: vault-id, follower: follower })
 
     (map-set vaults vault-id (merge vault {

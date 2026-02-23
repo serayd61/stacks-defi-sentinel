@@ -1,105 +1,68 @@
 import React, { useState, useEffect } from 'react';
 import {
   Activity, TrendingUp, Users, Wallet, Zap, Github, ExternalLink,
-  WifiOff, Bell, BarChart3, ArrowRightLeft, RefreshCw, CreditCard,
-  Crown, Trophy, Vote, ChevronRight, Menu, X, Landmark, Shield,
-  Coins, Target, Award, BookOpen, PieChart, Fuel, Gift, Layers,
-  Database, LineChart, Star, ChevronDown, Code, Server, Search,
-  Home, ChevronLeft, Brain,
+  WifiOff, Bell, ArrowRightLeft, RefreshCw,
+  ChevronRight, Menu, X,
+  Target, Star, Fuel,
+  ChevronDown, Code, Server, Search,
+  Home, ChevronLeft, Brain, Bitcoin,
 } from 'lucide-react';
 
 import { StatCard } from './components/StatCard';
 import { SwapTable } from './components/SwapTable';
 import { WhaleAlerts } from './components/WhaleAlerts';
 import { PoolsTable } from './components/PoolsTable';
-import SubscriptionPanel from './components/SubscriptionPanel';
-import WalletModal from './components/WalletModal';
-import SBTCDashboard from './components/SBTCDashboard';
-import StackingTracker from './components/StackingTracker';
-import BlockExplorer from './components/BlockExplorer';
-import TokenAnalytics from './components/TokenAnalytics';
-import SwapInterface from './components/SwapInterface';
-import NFTGallery from './components/NFTGallery';
-import TokenSale from './components/TokenSale';
-import StakePanel from './components/StakePanel';
-import ProMembership from './components/ProMembership';
-import SBTCBridgeMonitor from './components/SBTCBridgeMonitor';
-import DEXAggregator from './components/DEXAggregator';
-import StacksBadge from './components/StacksBadge';
-import StacksPredict from './components/StacksPredict';
-import StacksPassport from './components/StacksPassport';
-import StacksLeaderboard from './components/StacksLeaderboard';
-import PortfolioTracker from './components/PortfolioTracker';
-import GasTracker from './components/GasTracker';
-import DAOVoting from './components/DAOVoting';
-import ReferralSystem from './components/ReferralSystem';
-import LendingPool from './components/LendingPool';
-import LivePriceTicker from './components/LivePriceTicker';
 import NetworkHealth from './components/NetworkHealth';
-import ProtocolRankings from './components/ProtocolRankings';
 import ContractActivityMonitor from './components/ContractActivityMonitor';
 import WalletAnalytics from './components/WalletAnalytics';
 import PriceAlerts from './components/PriceAlerts';
 import MarketOverview from './components/MarketOverview';
 import AIAgents from './components/AIAgents';
-import { WalletProvider, useWallet } from './contexts/WalletContext';
+import GasTracker from './components/GasTracker';
+import StacksLeaderboard from './components/StacksLeaderboard';
+import StacksPredict from './components/StacksPredict';
+import SBTCBridgeMonitor from './components/SBTCBridgeMonitor';
+import { WalletProvider } from './contexts/WalletContext';
 import { useApi } from './hooks/useApi';
 import { useWebSocket } from './hooks/useWebSocket';
-import StacksWalletConnect from './components/StacksWalletConnect';
 
 const WS_URL = import.meta.env.VITE_WS_URL || 'wss://stacks-defi-sentinel-production.up.railway.app/ws';
 
 type TabType =
-  | 'overview' | 'swaps' | 'alerts' | 'ecosystem' | 'subscribe'
-  | 'token-sale' | 'stake' | 'lending' | 'membership' | 'sbtc'
-  | 'aggregator' | 'badges' | 'predict' | 'passport' | 'leaderboard'
-  | 'portfolio' | 'gas' | 'dao' | 'referral' | 'network' | 'protocols'
-  | 'contracts' | 'wallet-analytics' | 'price-alerts' | 'market' | 'ai-agents';
+  | 'overview' | 'market' | 'network'
+  | 'swaps' | 'price-alerts'
+  | 'contracts' | 'alerts' | 'wallet-analytics'
+  | 'ai-agents' | 'sbtc'
+  | 'gas' | 'leaderboard' | 'predict';
 
 interface NavItem { id: TabType; label: string; icon: React.ElementType; badge?: 'hot'|'new'|'live'; }
 interface NavSection { label: string; items: NavItem[]; }
 
 const NAV: NavSection[] = [
   { label: 'Overview', items: [
-    { id: 'overview',   label: 'Dashboard',     icon: Home,          badge: 'live' },
-    { id: 'market',     label: 'Market',         icon: TrendingUp,   badge: 'hot'  },
-    { id: 'network',    label: 'Network Health', icon: Server,        badge: 'new'  },
-    { id: 'protocols',  label: 'DeFi Rankings',  icon: Trophy },
-  ]},
-  { label: 'Trading', items: [
-    { id: 'aggregator',   label: 'DEX Aggregator', icon: Zap,          badge: 'hot' },
-    { id: 'swaps',        label: 'Swap History',   icon: ArrowRightLeft },
-    { id: 'price-alerts', label: 'Price Alerts',   icon: Bell,          badge: 'new' },
+    { id: 'overview',   label: 'Dashboard',      icon: Home,       badge: 'live' },
+    { id: 'market',     label: 'Market',          icon: TrendingUp, badge: 'hot'  },
+    { id: 'network',    label: 'Network Health',  icon: Server,     badge: 'new'  },
   ]},
   { label: 'Analytics', items: [
-    { id: 'contracts',        label: 'Contract Activity', icon: Code,   badge: 'new' },
+    { id: 'contracts',        label: 'Contract Activity', icon: Code,     badge: 'new' },
+    { id: 'alerts',           label: 'Whale Alerts',      icon: Activity },
     { id: 'wallet-analytics', label: 'Wallet Analyzer',   icon: Search },
-    { id: 'alerts',           label: 'Whale Alerts',       icon: Activity },
   ]},
-  { label: 'DeFi', items: [
-    { id: 'lending', label: 'Lending',    icon: Landmark },
-    { id: 'stake',   label: 'Staking',    icon: Coins },
-    { id: 'sbtc',    label: 'sBTC Bridge', icon: Database },
+  { label: 'Live Data', items: [
+    { id: 'swaps',        label: 'Swap History',  icon: ArrowRightLeft },
+    { id: 'price-alerts', label: 'Price Alerts',  icon: Bell, badge: 'new' },
   ]},
-  { label: 'Token', items: [
-    { id: 'token-sale', label: 'Token Sale',  icon: CreditCard, badge: 'hot' },
-    { id: 'membership', label: 'Pro Access',  icon: Crown },
-    { id: 'gas',        label: 'Gas Tracker', icon: Fuel },
-  ]},
-  { label: 'Governance', items: [
-    { id: 'dao',      label: 'DAO Voting', icon: Vote },
-    { id: 'passport', label: 'Passport',   icon: BookOpen },
-    { id: 'badges',   label: 'Badges',     icon: Award },
+  { label: 'Bitcoin', items: [
+    { id: 'sbtc', label: 'sBTC Bridge', icon: Bitcoin, badge: 'new' as const },
   ]},
   { label: 'AI', items: [
     { id: 'ai-agents', label: 'AI Agents', icon: Brain, badge: 'new' as const },
   ]},
-  { label: 'More', items: [
-    { id: 'ecosystem',   label: 'Explore',     icon: Layers },
-    { id: 'portfolio',   label: 'Portfolio',   icon: PieChart },
-    { id: 'leaderboard', label: 'Leaderboard', icon: Star },
-    { id: 'predict',     label: 'Predictions', icon: Target },
-    { id: 'referral',    label: 'Referrals',   icon: Gift },
+  { label: 'Explore', items: [
+    { id: 'gas',         label: 'Gas Tracker',  icon: Fuel },
+    { id: 'leaderboard', label: 'Leaderboard',  icon: Star },
+    { id: 'predict',     label: 'Predictions',  icon: Target },
   ]},
 ];
 
@@ -165,10 +128,10 @@ const Sidebar: React.FC<{
         {open && (
           <div style={{ overflow: 'hidden' }}>
             <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#fff', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
-              DeFi Sentinel
+              Stacks Sentinel
             </div>
             <div style={{ fontSize: '0.68rem', color: '#475569', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
-              Stacks Mainnet
+              Stacks Mainnet · AI-Powered
             </div>
           </div>
         )}
@@ -277,8 +240,8 @@ const Sidebar: React.FC<{
             borderRadius: 10, padding: '10px 12px', marginBottom: 10,
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 500 }}>Total Value Locked</span>
-              <span style={{ fontSize: '0.68rem', color: '#22c55e', fontWeight: 600 }}>+12.5%</span>
+              <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 500 }}>Stacks TVL</span>
+              <span style={{ fontSize: '0.68rem', color: '#22c55e', fontWeight: 600 }}>Live</span>
             </div>
             <div style={{ fontWeight: 700, fontSize: '1.05rem', color: '#fff', letterSpacing: '-0.02em' }}>
               {fmt(tvl)}
@@ -312,9 +275,8 @@ const Sidebar: React.FC<{
 function App() {
   const { dashboardStats, isLoading, isRefreshing, error, fetchDashboard } = useApi();
   const { isConnected: wsConnected, events } = useWebSocket(WS_URL);
-  const { isConnected: walletConnected, userAddress } = useWallet();
 
-  const [activeTab, setActiveTab] = useState<TabType>('overview');
+  const [activeTab, setActiveTab] = useState<TabType>('ai-agents');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(new Date());
@@ -374,7 +336,7 @@ function App() {
                 <div style={{ width: 34, height: 34, borderRadius: 9, background: 'linear-gradient(135deg,#5546FF,#FC6432)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <Zap size={16} color="white" />
                 </div>
-                <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>DeFi Sentinel</span>
+                <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>Stacks Sentinel</span>
               </div>
               <button onClick={() => setMobileOpen(false)} style={{ background: 'none', border: 'none', color: '#64748b', cursor: 'pointer' }}>
                 <X size={20} />
@@ -433,7 +395,7 @@ function App() {
                 <Menu size={18} />
               </button>
               <div className="hidden sm:flex" style={{ alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: '0.75rem', color: '#334155', fontWeight: 500 }}>DeFi Sentinel</span>
+                <span style={{ fontSize: '0.75rem', color: '#334155', fontWeight: 500 }}>Stacks Sentinel</span>
                 <ChevronRight size={12} color="#1e293b" />
                 {currentItem && (
                   <>
@@ -465,6 +427,22 @@ function App() {
                 )}
               </div>
 
+              {/* AI Agents shortcut */}
+              <button
+                onClick={() => setActiveTab('ai-agents')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px',
+                  background: activeTab === 'ai-agents' ? 'rgba(85,70,255,0.18)' : 'rgba(255,255,255,0.04)',
+                  border: `1px solid ${activeTab === 'ai-agents' ? 'rgba(85,70,255,0.35)' : 'rgba(255,255,255,0.07)'}`,
+                  color: activeTab === 'ai-agents' ? '#818cf8' : '#64748b',
+                  cursor: 'pointer', borderRadius: 9, fontSize: '0.72rem', fontWeight: 600,
+                  transition: 'all 0.15s', fontFamily: 'inherit',
+                }}
+              >
+                <Brain size={13} />
+                <span className="hidden sm:inline">AI</span>
+              </button>
+
               {/* Alerts */}
               {combinedAlerts.length > 0 && (
                 <button onClick={() => setActiveTab('alerts')} style={{
@@ -493,11 +471,8 @@ function App() {
                 <RefreshCw size={15} style={{ animation: isRefreshing ? 'spinCW 0.8s linear infinite' : 'none' }} />
               </button>
 
-              {/* Wallet */}
-              <StacksWalletConnect />
-
               {/* GitHub */}
-              <a className="hidden md:flex" href="https://github.com/serayd61/stacks-defi-sentinel"
+              <a href="https://github.com/serayd61/stacks-defi-sentinel"
                 target="_blank" rel="noopener noreferrer"
                 style={{
                   background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)',
@@ -512,10 +487,6 @@ function App() {
             </div>
           </div>
 
-          {/* Price ticker strip */}
-          <div style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
-            <LivePriceTicker />
-          </div>
         </header>
 
         {/* PAGE BODY */}
@@ -548,12 +519,12 @@ function App() {
                   border: '3px solid rgba(85,70,255,0.12)', borderTopColor: '#5546FF',
                   borderRadius: '50%', animation: 'spinCW 0.8s linear infinite',
                 }} />
-                <p style={{ color: '#475569', fontSize: '0.85rem' }}>Loading DeFi data...</p>
+                <p style={{ color: '#475569', fontSize: '0.85rem' }}>Loading Stacks data...</p>
               </div>
             </div>
           ) : (
             <>
-              {/* ─── OVERVIEW ─── */}
+              {/* ─── OVERVIEW / DASHBOARD ─── */}
               {activeTab === 'overview' && (
                 <>
                   <div style={{
@@ -574,7 +545,18 @@ function App() {
                 </>
               )}
 
-              {activeTab === 'swaps' && <SwapTable swaps={combinedSwaps} isLive={wsConnected} showAll />}
+              {/* ─── MARKET ─── */}
+              {activeTab === 'market' && <div style={{ maxWidth: 1100, margin: '0 auto' }}><MarketOverview /></div>}
+
+              {/* ─── NETWORK HEALTH ─── */}
+              {activeTab === 'network' && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+                  <NetworkHealth /><ContractActivityMonitor />
+                </div>
+              )}
+
+              {/* ─── ANALYTICS ─── */}
+              {activeTab === 'contracts' && <div style={{ maxWidth: 920, margin: '0 auto' }}><ContractActivityMonitor /></div>}
 
               {activeTab === 'alerts' && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
@@ -603,47 +585,93 @@ function App() {
                 </div>
               )}
 
-              {activeTab === 'ecosystem' && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 18 }}>
-                    <SwapInterface /><TokenAnalytics />
+              {activeTab === 'wallet-analytics' && <div style={{ maxWidth: 800, margin: '0 auto' }}><WalletAnalytics /></div>}
+
+              {/* ─── LIVE DATA ─── */}
+              {activeTab === 'swaps'        && <SwapTable swaps={combinedSwaps} isLive={wsConnected} showAll />}
+              {activeTab === 'price-alerts' && <div style={{ maxWidth: 600, margin: '0 auto' }}><PriceAlerts /></div>}
+
+              {/* ─── SBTC BRIDGE ─── */}
+              {activeTab === 'sbtc' && <div style={{ maxWidth: 960, margin: '0 auto' }}><SBTCBridgeMonitor /></div>}
+
+              {/* ─── AI AGENTS ─── */}
+              {activeTab === 'ai-agents' && <div style={{ maxWidth: 1000, margin: '0 auto' }}><AIAgents /></div>}
+
+              {/* ─── EXPLORE ─── */}
+              {activeTab === 'gas'         && <div style={{ maxWidth: 800, margin: '0 auto' }}><GasTracker /></div>}
+              {activeTab === 'leaderboard' && <div style={{ maxWidth: 920, margin: '0 auto' }}><StacksLeaderboard /></div>}
+              {activeTab === 'predict'     && <div style={{ maxWidth: 800, margin: '0 auto' }}><StacksPredict /></div>}
+
+              {/* ─── DONATE BANNER ─── */}
+              <div style={{
+                marginTop: 48,
+                background: 'linear-gradient(135deg,rgba(85,70,255,0.08),rgba(252,100,50,0.06))',
+                border: '1px solid rgba(85,70,255,0.2)',
+                borderRadius: 14, padding: '18px 22px',
+                display: 'flex', flexWrap: 'wrap', alignItems: 'center',
+                justifyContent: 'space-between', gap: 14,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{
+                    width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+                    background: 'linear-gradient(135deg,#5546FF,#FC6432)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 4px 12px rgba(85,70,255,0.3)',
+                  }}>
+                    <Zap size={17} color="white" />
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
-                    <SBTCDashboard /><StackingTracker />
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
-                    <NFTGallery /><BlockExplorer />
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#e2e8f0', marginBottom: 2 }}>
+                      Support Stacks Sentinel
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b', maxWidth: 440 }}>
+                      This tool is free & open-source. If it helps you, consider supporting development with a STX donation.
+                    </div>
                   </div>
                 </div>
-              )}
-
-              {activeTab === 'network' && (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
-                  <NetworkHealth /><ContractActivityMonitor />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  {/* STX donate */}
+                  <a
+                    href="https://explorer.stacks.co/address/SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB?chain=mainnet"
+                    target="_blank" rel="noopener noreferrer"
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 7,
+                      padding: '7px 14px', borderRadius: 9,
+                      background: 'linear-gradient(135deg,rgba(85,70,255,0.2),rgba(124,58,237,0.12))',
+                      border: '1px solid rgba(85,70,255,0.3)',
+                      textDecoration: 'none', transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(85,70,255,0.32)'; }}
+                    onMouseLeave={e => { (e.currentTarget as any).style.background = 'linear-gradient(135deg,rgba(85,70,255,0.2),rgba(124,58,237,0.12))'; }}
+                  >
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#a5b4fc' }}>STX</span>
+                    <span style={{ fontFamily: 'monospace', fontSize: '0.68rem', color: '#64748b' }}>
+                      SP2PEB…D9WJB
+                    </span>
+                    <ExternalLink size={11} color="#6366f1" />
+                  </a>
+                  {/* BTC donate */}
+                  <a
+                    href="https://mempool.space/address/bc1q8jrgvvmu8ufjaqd47mrjpc8yr3x2rfhgkt9lx7"
+                    target="_blank" rel="noopener noreferrer"
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 7,
+                      padding: '7px 14px', borderRadius: 9,
+                      background: 'linear-gradient(135deg,rgba(252,100,50,0.15),rgba(251,146,60,0.08))',
+                      border: '1px solid rgba(252,100,50,0.28)',
+                      textDecoration: 'none', transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(252,100,50,0.28)'; }}
+                    onMouseLeave={e => { (e.currentTarget as any).style.background = 'linear-gradient(135deg,rgba(252,100,50,0.15),rgba(251,146,60,0.08))'; }}
+                  >
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fb923c' }}>BTC</span>
+                    <span style={{ fontFamily: 'monospace', fontSize: '0.68rem', color: '#64748b' }}>
+                      bc1q8j…lx7
+                    </span>
+                    <ExternalLink size={11} color="#fb923c" />
+                  </a>
                 </div>
-              )}
-
-              {activeTab === 'sbtc'            && <div style={{ maxWidth: 1000, margin: '0 auto' }}><SBTCBridgeMonitor /></div>}
-              {activeTab === 'aggregator'      && <div style={{ maxWidth: 800, margin: '0 auto' }}><DEXAggregator /></div>}
-              {activeTab === 'token-sale'      && <div style={{ maxWidth: 800, margin: '0 auto' }}><TokenSale /></div>}
-              {activeTab === 'stake'           && <div style={{ maxWidth: 800, margin: '0 auto' }}><StakePanel /></div>}
-              {activeTab === 'lending'         && <div style={{ maxWidth: 800, margin: '0 auto' }}><LendingPool /></div>}
-              {activeTab === 'membership'      && <div style={{ maxWidth: 920, margin: '0 auto' }}><ProMembership /></div>}
-              {activeTab === 'passport'        && <div style={{ maxWidth: 920, margin: '0 auto' }}><StacksPassport /></div>}
-              {activeTab === 'badges'          && <div style={{ maxWidth: 920, margin: '0 auto' }}><StacksBadge /></div>}
-              {activeTab === 'predict'         && <div style={{ maxWidth: 800, margin: '0 auto' }}><StacksPredict /></div>}
-              {activeTab === 'leaderboard'     && <div style={{ maxWidth: 920, margin: '0 auto' }}><StacksLeaderboard /></div>}
-              {activeTab === 'portfolio'       && <div style={{ maxWidth: 800, margin: '0 auto' }}><PortfolioTracker /></div>}
-              {activeTab === 'gas'             && <div style={{ maxWidth: 800, margin: '0 auto' }}><GasTracker /></div>}
-              {activeTab === 'dao'             && <div style={{ maxWidth: 920, margin: '0 auto' }}><DAOVoting /></div>}
-              {activeTab === 'referral'        && <div style={{ maxWidth: 800, margin: '0 auto' }}><ReferralSystem /></div>}
-              {activeTab === 'subscribe'       && <div style={{ maxWidth: 600, margin: '0 auto' }}><SubscriptionPanel /></div>}
-              {activeTab === 'market'          && <div style={{ maxWidth: 1100, margin: '0 auto' }}><MarketOverview /></div>}
-              {activeTab === 'ai-agents'      && <div style={{ maxWidth: 1000, margin: '0 auto' }}><AIAgents /></div>}
-              {activeTab === 'protocols'       && <div style={{ maxWidth: 920, margin: '0 auto' }}><ProtocolRankings /></div>}
-              {activeTab === 'contracts'       && <div style={{ maxWidth: 920, margin: '0 auto' }}><ContractActivityMonitor /></div>}
-              {activeTab === 'wallet-analytics'&& <div style={{ maxWidth: 800, margin: '0 auto' }}><WalletAnalytics /></div>}
-              {activeTab === 'price-alerts'    && <div style={{ maxWidth: 600, margin: '0 auto' }}><PriceAlerts /></div>}
+              </div>
 
               {/* FOOTER */}
               <footer style={{
@@ -656,17 +684,18 @@ function App() {
                       <Zap size={13} color="white" />
                     </div>
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: '0.82rem', color: '#e2e8f0' }}>DeFi Sentinel</div>
+                      <div style={{ fontWeight: 600, fontSize: '0.82rem', color: '#e2e8f0' }}>Stacks Sentinel</div>
                       <div style={{ fontSize: '0.7rem', color: '#475569' }}>
-                        Powered by <span style={{ color: '#818cf8' }}>Chainhooks</span> · Stacks Builder Challenge 2024
+                        Powered by <span style={{ color: '#818cf8' }}>Chainhooks</span> · <span style={{ color: '#fb923c' }}>llama3.2:1b</span> AI · Hetzner VPS
                       </div>
                     </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
                     {[
-                      { label: 'Docs',     href: 'https://docs.hiro.so/chainhooks' },
-                      { label: 'GitHub',   href: 'https://github.com/serayd61/stacks-defi-sentinel' },
-                      { label: 'Hiro',     href: 'https://platform.hiro.so' },
+                      { label: 'Docs',   href: 'https://docs.hiro.so/chainhooks' },
+                      { label: 'GitHub', href: 'https://github.com/serayd61/stacks-defi-sentinel' },
+                      { label: 'Hiro',   href: 'https://platform.hiro.so' },
+                      { label: 'Stacks', href: 'https://stacks.co' },
                     ].map(link => (
                       <a key={link.label} href={link.href} target="_blank" rel="noopener noreferrer"
                         style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.78rem', color: '#475569', textDecoration: 'none' }}
@@ -687,9 +716,9 @@ function App() {
                 }}>
                   {[
                     { dot: wsConnected ? '#22c55e' : '#f59e0b', label: `WebSocket: ${wsConnected ? 'Live' : 'Reconnecting'}` },
-                    { dot: walletConnected ? '#22c55e' : '#334155', label: walletConnected && userAddress ? `Wallet: ${userAddress.slice(0,8)}...` : 'Wallet: Not connected' },
+                    { dot: '#818cf8', label: 'AI Cluster: Hetzner VPS · 4 Agents' },
                     { dot: '#60a5fa', label: `Updated: ${lastUpdate.toLocaleTimeString()}` },
-                    { dot: '#818cf8', label: 'Network: Stacks Mainnet' },
+                    { dot: '#fb923c', label: 'Network: Stacks Mainnet' },
                   ].map(s => (
                     <span key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                       <span style={{ width: 6, height: 6, borderRadius: '50%', background: s.dot, flexShrink: 0 }} />
@@ -710,11 +739,10 @@ function App() {
   );
 }
 
-const AppWithWallet: React.FC = () => (
+const AppWithProviders: React.FC = () => (
   <WalletProvider>
     <App />
-    <WalletModal />
   </WalletProvider>
 );
 
-export default AppWithWallet;
+export default AppWithProviders;
