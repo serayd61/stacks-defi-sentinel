@@ -623,33 +623,45 @@ function App() {
                   </div>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  {/* STX address copy */}
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: 8,
-                    padding: '7px 12px', borderRadius: 9,
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                  }}>
-                    <span style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: '#94a3b8' }}>
-                      SP2V3...SERKAN
-                    </span>
-                  </div>
+                  {/* STX donate */}
                   <a
-                    href="https://explorer.stacks.co/address/SP2VHRPQX8NWFHSDGT5ZEPVE7YGZCS4RXHZPRTVP?chain=mainnet"
+                    href="https://explorer.stacks.co/address/SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB?chain=mainnet"
                     target="_blank" rel="noopener noreferrer"
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 6,
+                      display: 'flex', alignItems: 'center', gap: 7,
                       padding: '7px 14px', borderRadius: 9,
-                      background: 'linear-gradient(135deg,rgba(85,70,255,0.25),rgba(124,58,237,0.15))',
-                      border: '1px solid rgba(85,70,255,0.35)',
-                      color: '#a5b4fc', fontSize: '0.78rem', fontWeight: 600,
+                      background: 'linear-gradient(135deg,rgba(85,70,255,0.2),rgba(124,58,237,0.12))',
+                      border: '1px solid rgba(85,70,255,0.3)',
                       textDecoration: 'none', transition: 'all 0.15s',
                     }}
-                    onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(85,70,255,0.35)'; }}
-                    onMouseLeave={e => { (e.currentTarget as any).style.background = 'linear-gradient(135deg,rgba(85,70,255,0.25),rgba(124,58,237,0.15))'; }}
+                    onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(85,70,255,0.32)'; }}
+                    onMouseLeave={e => { (e.currentTarget as any).style.background = 'linear-gradient(135deg,rgba(85,70,255,0.2),rgba(124,58,237,0.12))'; }}
                   >
-                    <ExternalLink size={13} />
-                    Donate STX
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#a5b4fc' }}>STX</span>
+                    <span style={{ fontFamily: 'monospace', fontSize: '0.68rem', color: '#64748b' }}>
+                      SP2PEB…D9WJB
+                    </span>
+                    <ExternalLink size={11} color="#6366f1" />
+                  </a>
+                  {/* BTC donate */}
+                  <a
+                    href="https://mempool.space/address/bc1q8jrgvvmu8ufjaqd47mrjpc8yr3x2rfhgkt9lx7"
+                    target="_blank" rel="noopener noreferrer"
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 7,
+                      padding: '7px 14px', borderRadius: 9,
+                      background: 'linear-gradient(135deg,rgba(252,100,50,0.15),rgba(251,146,60,0.08))',
+                      border: '1px solid rgba(252,100,50,0.28)',
+                      textDecoration: 'none', transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(252,100,50,0.28)'; }}
+                    onMouseLeave={e => { (e.currentTarget as any).style.background = 'linear-gradient(135deg,rgba(252,100,50,0.15),rgba(251,146,60,0.08))'; }}
+                  >
+                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fb923c' }}>BTC</span>
+                    <span style={{ fontFamily: 'monospace', fontSize: '0.68rem', color: '#64748b' }}>
+                      bc1q8j…lx7
+                    </span>
+                    <ExternalLink size={11} color="#fb923c" />
                   </a>
                 </div>
               </div>
