@@ -595,6 +595,65 @@ function App() {
               {activeTab === 'leaderboard' && <div style={{ maxWidth: 920, margin: '0 auto' }}><StacksLeaderboard /></div>}
               {activeTab === 'predict'     && <div style={{ maxWidth: 800, margin: '0 auto' }}><StacksPredict /></div>}
 
+              {/* ─── DONATE BANNER ─── */}
+              <div style={{
+                marginTop: 48,
+                background: 'linear-gradient(135deg,rgba(85,70,255,0.08),rgba(252,100,50,0.06))',
+                border: '1px solid rgba(85,70,255,0.2)',
+                borderRadius: 14, padding: '18px 22px',
+                display: 'flex', flexWrap: 'wrap', alignItems: 'center',
+                justifyContent: 'space-between', gap: 14,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{
+                    width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+                    background: 'linear-gradient(135deg,#5546FF,#FC6432)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    boxShadow: '0 4px 12px rgba(85,70,255,0.3)',
+                  }}>
+                    <Zap size={17} color="white" />
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#e2e8f0', marginBottom: 2 }}>
+                      Support Stacks Sentinel
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#64748b', maxWidth: 440 }}>
+                      This tool is free & open-source. If it helps you, consider supporting development with a STX donation.
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  {/* STX address copy */}
+                  <div style={{
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    padding: '7px 12px', borderRadius: 9,
+                    background: 'rgba(255,255,255,0.04)',
+                    border: '1px solid rgba(255,255,255,0.08)',
+                  }}>
+                    <span style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: '#94a3b8' }}>
+                      SP2V3...SERKAN
+                    </span>
+                  </div>
+                  <a
+                    href="https://explorer.stacks.co/address/SP2VHRPQX8NWFHSDGT5ZEPVE7YGZCS4RXHZPRTVP?chain=mainnet"
+                    target="_blank" rel="noopener noreferrer"
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 6,
+                      padding: '7px 14px', borderRadius: 9,
+                      background: 'linear-gradient(135deg,rgba(85,70,255,0.25),rgba(124,58,237,0.15))',
+                      border: '1px solid rgba(85,70,255,0.35)',
+                      color: '#a5b4fc', fontSize: '0.78rem', fontWeight: 600,
+                      textDecoration: 'none', transition: 'all 0.15s',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(85,70,255,0.35)'; }}
+                    onMouseLeave={e => { (e.currentTarget as any).style.background = 'linear-gradient(135deg,rgba(85,70,255,0.25),rgba(124,58,237,0.15))'; }}
+                  >
+                    <ExternalLink size={13} />
+                    Donate STX
+                  </a>
+                </div>
+              </div>
+
               {/* FOOTER */}
               <footer style={{
                 marginTop: 52, paddingTop: 24,

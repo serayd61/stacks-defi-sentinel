@@ -1,11 +1,11 @@
 """
-SZABO — Kontrat Güvenlik Taraması Ajanı
+SZABO — Contract Security Scanner Agent
 ─────────────────────────────────────────
-Görev:
-  • Her 2 dk'da yeni deploy edilen Clarity kontratlarını tarar
-  • LLM ile güvenlik açığı analizi yapar (reentrancy, overflow, access control)
-  • Satoshi'den yüksek riskli whale uyarısı alınca ilgili kontratı inceler
-  • Tehdit tespit edince orchestrator'a bildirir
+Task:
+  • Scans newly deployed Clarity contracts every 2 minutes
+  • Performs security vulnerability analysis with LLM (reentrancy, overflow, access control)
+  • Scans related contract when high-risk whale alert received from Satoshi
+  • Notifies orchestrator when threat detected
 """
 import time
 import os
@@ -16,11 +16,11 @@ from base_agent import BaseAgent
 POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", "120"))
 
 SYSTEM_PROMPT = """
-Sen bir Clarity akıllı kontrat güvenlik analistisın.
-Stacks blockchain'deki Clarity kontratlarını inceler,
-reentrancy saldırıları, erişim kontrolü açıkları, integer overflow,
-unauthorized mint/burn gibi güvenlik açıklarını tespit edersin.
-Yanıtlarını JSON formatında ver.
+You are a Clarity smart contract security analyst AI agent.
+You analyze Clarity contracts on the Stacks blockchain,
+detecting security vulnerabilities such as reentrancy attacks,
+access control flaws, integer overflow, and unauthorized mint/burn.
+Always respond in English. Return your answers in JSON format.
 """
 
 
@@ -33,18 +33,18 @@ class SzaboAgent(BaseAgent):
 
     def scan_contract(self, contract_id: str, contract_code: str = "") -> dict:
         prompt = f"""
-Aşağıdaki Clarity kontratını güvenlik açısından analiz et:
+Analyze the following Clarity contract for security vulnerabilities:
 
-Kontrat ID: {contract_id}
-Kod (varsa):
-{contract_code[:1000] if contract_code else "Kod mevcut değil, ID üzerinden analiz yap."}
+Contract ID: {contract_id}
+Code (if available):
+{contract_code[:1000] if contract_code else "No code available, analyze based on contract ID."}
 
-Güvenlik raporu (JSON):
+Security report (JSON):
 {{
   "severity": "none|low|medium|high|critical",
-  "vulnerabilities": ["varsa açıklar listesi"],
-  "safe_functions": ["güvenli fonksiyon listesi"],
-  "recommendation": "önerilen eylem",
+  "vulnerabilities": ["list of vulnerabilities if any"],
+  "safe_functions": ["list of safe functions"],
+  "recommendation": "recommended action in English",
   "blacklist": true/false
 }}
 """
@@ -64,7 +64,7 @@ Güvenlik raporu (JSON):
         }
 
     def get_new_contracts(self) -> list:
-        """Hiro API'den son deploy edilen Clarity kontratları al."""
+        """Fetch recently deployed Clarity contracts from Hiro API."""
         try:
             import requests
             r = requests.get(
@@ -85,15 +85,15 @@ Güvenlik raporu (JSON):
                 })
             return contracts
         except Exception as e:
-            self.log.error(f"Hiro contracts hatası: {e}")
+            self.log.error(f"Hiro contracts fetch error: {e}")
             return []
 
     def run_scan(self):
-        self.log.info("Kontrat güvenlik taraması başlıyor...")
+        self.log.info("Starting contract security scan...")
         contracts = self.get_new_contracts()
 
         if not contracts:
-            self.log.info("Yeni kontrat bulunamadı.")
+            self.log.info("No new contracts found.")
             return
 
         for contract in contracts:
@@ -104,11 +104,11 @@ Güvenlik raporu (JSON):
                 continue
 
             self.scanned_contracts.add(cid)
-            self.log.info(f"Taranıyor: {cid}")
+            self.log.info(f"Scanning: {cid}")
 
-            report = self.scan_contract(cid, code)
+            report   = self.scan_contract(cid, code)
             severity = report.get("severity", "none")
-            self.log.info(f"Güvenlik raporu → {cid} | severity={severity}")
+            self.log.info(f"Security report → {cid} | severity={severity}")
 
             self.post_insight({
                 "agent": self.name,
@@ -123,21 +123,21 @@ Güvenlik raporu (JSON):
                     "severity": severity,
                     "report": report
                 })
-                self.log.warning(f"GÜVENLİK UYARISI: {cid} → {severity}")
+                self.log.warning(f"SECURITY ALERT: {cid} → {severity}")
 
-        # Bellek yönetimi
+        # Memory management
         if len(self.scanned_contracts) > 500:
             self.scanned_contracts = set(list(self.scanned_contracts)[-250:])
 
     def handle_whale_alert(self, whale_data: dict):
-        """Whale hareketi varsa ilgili kontratları tara."""
+        """Scan related contracts when whale movement detected."""
         txid = whale_data.get("txid", "")
-        self.log.info(f"Whale TX için kontrat taraması: {txid[:12]}...")
+        self.log.info(f"Contract scan for whale TX: {txid[:12]}...")
 
         contract_id = whale_data.get("contract_id", "")
         if contract_id and contract_id not in self.scanned_contracts:
             report = self.scan_contract(contract_id)
-            self.log.info(f"Whale kontrat taraması → {contract_id} | severity={report.get('severity')}")
+            self.log.info(f"Whale contract scan → {contract_id} | severity={report.get('severity')}")
             self.post_insight({
                 "agent": self.name,
                 "type": "whale_contract_scan",
@@ -150,17 +150,17 @@ Güvenlik raporu (JSON):
         msg = self.pubsub.get_message(timeout=0.1)
         if msg and msg["type"] == "message":
             try:
-                data = json.loads(msg["data"])
+                data    = json.loads(msg["data"])
                 channel = msg.get("channel", "")
                 if "whale_alert" in channel:
                     self.handle_whale_alert(data)
                 elif data.get("command") == "scan_contracts":
                     self.run_scan()
             except Exception as e:
-                self.log.error(f"Mesaj işleme hatası: {e}")
+                self.log.error(f"Message processing error: {e}")
 
     def run(self):
-        self.log.info("SZABO aktif — güvenlik taraması başlıyor.")
+        self.log.info("SZABO active — starting security scanner.")
         schedule.every(POLL_INTERVAL).seconds.do(self.run_scan)
         self.run_scan()
 

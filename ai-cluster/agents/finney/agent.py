@@ -1,11 +1,11 @@
 """
-FINNEY — Kullanıcı Rapor & Bildirim Ajanı
+FINNEY — User Report & Notification Agent
 ──────────────────────────────────────────
-Görev:
-  • Tüm agentlardan gelen Redis mesajlarını dinler
-  • Her sabah 07:00'de günlük DeFi özet raporu üretir
-  • Acil uyarıları anlık push eder
-  • LLM ile insan okunabilir özet yazar
+Task:
+  • Listens to Redis messages from all agents
+  • Generates daily DeFi summary report every morning at 07:00
+  • Instantly pushes urgent alerts
+  • Writes human-readable summaries with LLM
 """
 import time
 import os
@@ -17,10 +17,10 @@ from base_agent import BaseAgent
 REPORT_HOUR = int(os.getenv("REPORT_HOUR", "7"))
 
 SYSTEM_PROMPT = """
-Sen bir DeFi analiz raporu yazarısın.
-Teknik verileri, blockchain yeni başlayanların da anlayabileceği
-sade, güven veren ve eyleme yönelik bir dille aktarırsın.
-Türkçe veya İngilizce yazabilirsin, bağlama göre karar ver.
+You are a DeFi analysis report writer AI agent.
+You translate technical data into clear, trustworthy, and actionable language
+that even blockchain beginners can understand.
+Always write in English.
 """
 
 
@@ -37,27 +37,27 @@ class FinneyAgent(BaseAgent):
             "orchestrator:command"
         )
 
-    # ─── Rapor Üretimi ─────────────────────────────────────────
+    # ─── Report Generation ──────────────────────────────────────
     def generate_daily_report(self) -> str:
         if not self.daily_events:
-            return "Bugün kayda değer bir olay tespit edilmedi."
+            return "No significant events detected today."
 
         events_str = json.dumps(self.daily_events[-50:], ensure_ascii=False, indent=2)
         prompt = f"""
-Aşağıdaki DeFi olaylarını kullanarak günlük bir özet raporu yaz.
-Rapor; önemli whale hareketlerini, DEX fırsatlarını ve güvenlik uyarılarını kapsamalı.
-Kısa tutarsın: maksimum 5 paragraf.
+Using the following DeFi events, write a daily summary report in English.
+The report should cover significant whale movements, DEX opportunities, and security alerts.
+Keep it concise: maximum 5 paragraphs.
 
-Olaylar:
+Events:
 {events_str[:2000]}
 
-Raporu doğal dil ile yaz, JSON değil.
+Write the report in natural language, not JSON.
 """
         report = self.think(prompt, SYSTEM_PROMPT)
-        return report if report else "Rapor üretilemedi."
+        return report if report else "Report could not be generated."
 
     def send_daily_report(self):
-        self.log.info("Günlük rapor hazırlanıyor...")
+        self.log.info("Generating daily report...")
         report_text = self.generate_daily_report()
 
         report = {
@@ -69,37 +69,37 @@ Raporu doğal dil ile yaz, JSON değil.
         }
 
         self.post_insight(report)
-        self.log.info(f"Günlük rapor gönderildi ({len(self.daily_events)} olay).")
+        self.log.info(f"Daily report sent ({len(self.daily_events)} events).")
 
-        # Günlük olayları temizle
+        # Clear daily events
         self.daily_events.clear()
 
-    # ─── Anlık Uyarılar ────────────────────────────────────────
+    # ─── Instant Alerts ─────────────────────────────────────────
     def format_urgent_alert(self, data: dict, alert_type: str) -> str:
         if alert_type == "whale":
             amount   = data.get("amount", 0)
             analysis = data.get("analysis", {})
             prompt = (
-                f"Şu whale olayını 2 cümleyle özetle: "
-                f"{amount} STX transfer edildi, risk={analysis.get('risk_level')}, "
-                f"pattern={analysis.get('pattern')}. Kullanıcıya ne yapmasını önerirsin?"
+                f"Summarize the following whale event in 2 sentences in English: "
+                f"{amount} STX transferred, risk={analysis.get('risk_level')}, "
+                f"pattern={analysis.get('pattern')}. What do you recommend the user do?"
             )
         elif alert_type == "security":
-            cid      = data.get("contract_id", "bilinmiyor")
+            cid      = data.get("contract_id", "unknown")
             severity = data.get("severity", "?")
             prompt   = (
-                f"Kontrat güvenlik uyarısı: {cid} kontratı {severity} seviye risk taşıyor. "
-                f"Kullanıcıya 2 cümleyle ne yapmasını söylersin?"
+                f"Contract security alert: {cid} contract carries {severity} level risk. "
+                f"Tell the user in 2 sentences what they should do."
             )
         elif alert_type == "dex":
             analysis = data.get("analysis", {})
             prompt   = (
-                f"DEX uyarısı: {analysis.get('recommendation', '')} "
+                f"DEX alert: {analysis.get('recommendation', '')} "
                 f"urgency={analysis.get('urgency')}. "
-                f"Kullanıcıya 2 cümleyle fırsat veya riski açıkla."
+                f"Explain the opportunity or risk to the user in 2 sentences in English."
             )
         else:
-            prompt = f"Şu olayı kısaca özetle: {json.dumps(data)[:300]}"
+            prompt = f"Briefly summarize the following event in English: {json.dumps(data)[:300]}"
 
         return self.think(prompt, SYSTEM_PROMPT)
 
@@ -113,9 +113,9 @@ Raporu doğal dil ile yaz, JSON değil.
             "timestamp": datetime.now().isoformat()
         }
         self.post_insight(alert)
-        self.log.info(f"Anlık uyarı gönderildi [{alert_type}]: {message[:80]}...")
+        self.log.info(f"Instant alert sent [{alert_type}]: {message[:80]}...")
 
-    # ─── Mesaj Dinleyici ───────────────────────────────────────
+    # ─── Message Listener ───────────────────────────────────────
     def handle_messages(self):
         msg = self.pubsub.get_message(timeout=0.1)
         if not msg or msg["type"] != "message":
@@ -125,10 +125,10 @@ Raporu doğal dil ile yaz, JSON değil.
             data    = json.loads(msg["data"])
             channel = msg.get("channel", "")
 
-            # Günlük olaylar listesine ekle
+            # Add to daily events list
             self.daily_events.append({"channel": channel, **data})
 
-            # Acil uyarılar
+            # Urgent alerts
             if "whale_alert" in channel:
                 self.push_alert("whale", data, data)
             elif "security_alert" in channel:
@@ -139,10 +139,10 @@ Raporu doğal dil ile yaz, JSON değil.
                 self.send_daily_report()
 
         except Exception as e:
-            self.log.error(f"Mesaj işleme hatası: {e}")
+            self.log.error(f"Message processing error: {e}")
 
     def run(self):
-        self.log.info(f"FINNEY aktif — günlük rapor saati: {REPORT_HOUR:02d}:00")
+        self.log.info(f"FINNEY active — daily report time: {REPORT_HOUR:02d}:00")
 
         schedule.every().day.at(f"{REPORT_HOUR:02d}:00").do(self.send_daily_report)
 
