@@ -260,7 +260,7 @@ export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (fastify, opts
 
   // ── Agent Data Endpoints (proxy → Hiro Stacks API) ───────────────────────
   const HIRO = 'https://api.hiro.so';
-  const WHALE_THRESHOLD_MICRO = 10_000 * 1_000_000; // 10,000 STX in microSTX
+  const WHALE_THRESHOLD_MICRO = 1_000 * 1_000_000; // 1,000 STX in microSTX
 
   // GET /api/whale-alerts — büyük STX transferlerini Hiro'dan çek
   fastify.get('/whale-alerts', async (_req: FastifyRequest, reply: FastifyReply) => {

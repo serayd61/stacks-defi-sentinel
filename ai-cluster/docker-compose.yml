@@ -138,6 +138,7 @@ services:
       - SENTINEL_API=https://stacks-defi-sentinel-production.up.railway.app
       - MODEL=phi3:mini
       - POLL_INTERVAL=30
+      - WHALE_THRESHOLD_STX=1000
     volumes:
       - agent-shared:/shared
     depends_on:
