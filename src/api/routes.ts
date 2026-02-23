@@ -2,8 +2,10 @@ import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
 import { AnalyticsService } from '../services/analytics';
 import { DeFiChainhooksManager } from '../chainhooks/client';
 import { EventProcessor } from '../services/event-processor';
+import { HiroDataService } from '../services/hiro-data';
 import { apiKeyService, ApiTier, TIER_LIMITS, TIER_PRICES } from '../services/api-keys';
 import { notificationService, NotificationChannel } from '../services/notifications';
+import { getAggregatedQuote, scanArbitrageOpportunities, getSupportedTokens, getDEXInfo } from '../dex-aggregator';
 import { WebhookPayload } from '../types';
 import { logger } from '../utils/logger';
 
@@ -11,22 +13,39 @@ interface RouteOptions {
   analytics: AnalyticsService;
   chainhooksManager: DeFiChainhooksManager;
   eventProcessor: EventProcessor;
+  hiroDataService: HiroDataService;
 }
 
 // ── AI Insights Store (in-memory, max 100) ──────────────────────────────────
 let aiInsights: object[] = [];
 
 export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (fastify, opts) => {
-  const { analytics, chainhooksManager, eventProcessor } = opts;
+  const { analytics, chainhooksManager, eventProcessor, hiroDataService } = opts;
 
-  // AI Insights — GET (frontend okur)
+  // AI Insights — GET (frontend reads, filtered for quality)
   fastify.get('/ai-insights', async (_req: FastifyRequest, reply: FastifyReply) => {
-    return reply.send({ insights: aiInsights, count: aiInsights.length });
+    // Filter out error/invalid insights before sending to frontend
+    const filtered = aiInsights.filter((ins: Record<string, unknown>) => {
+      const content = String(ins['content'] || ins['message'] || ins['analysis'] || '');
+      const errorPatterns = [
+        'error', 'failed', 'timeout', 'rate limit', 'invalid',
+        'could not', 'unable to', 'exception', 'unavailable',
+      ];
+      const isError = errorPatterns.some((p) => content.toLowerCase().includes(p));
+      return !isError || content.length > 200; // Keep long insights even if they mention errors
+    });
+    return reply.send({ insights: filtered, count: filtered.length, total: aiInsights.length });
   });
 
-  // AI Insights — POST (VPS agentları yazar)
+  // AI Insights — POST (VPS agents write insights, with validation)
   fastify.post('/ai-insights', async (req: FastifyRequest, reply: FastifyReply) => {
-    const insight = req.body as object;
+    const insight = req.body as Record<string, unknown>;
+
+    // Basic validation
+    if (!insight['agent'] && !insight['type']) {
+      return reply.status(400).send({ error: 'agent or type field required' });
+    }
+
     aiInsights.unshift({ ...insight, receivedAt: new Date().toISOString() });
     if (aiInsights.length > 100) aiInsights = aiInsights.slice(0, 100);
     return reply.send({ ok: true });
@@ -262,7 +281,7 @@ export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (fastify, opts
   const HIRO = 'https://api.hiro.so';
   const WHALE_THRESHOLD_MICRO = 1_000 * 1_000_000; // 1,000 STX in microSTX
 
-  // GET /api/whale-alerts — büyük STX transferlerini Hiro'dan çek
+  // GET /api/whale-alerts — fetch large STX transfers from Hiro
   fastify.get('/whale-alerts', async (_req: FastifyRequest, reply: FastifyReply) => {
     try {
       const res = await fetch(
@@ -295,39 +314,30 @@ export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (fastify, opts
     }
   });
 
-  // GET /api/dex — STX fiyatı + DEX pool özeti
+  // GET /api/dex — STX price + real DEX pool data from analytics & aggregator
   fastify.get('/dex', async (_req: FastifyRequest, reply: FastifyReply) => {
     try {
-      // STX USD fiyatını Hiro token endpoint'inden çek
-      const priceRes = await fetch(
-        `${HIRO}/extended/v1/address/SP000000000000000000002Q6VF78/transactions?limit=1`,
-        { headers: { 'Accept': 'application/json' } }
-      );
+      const stxPrice = hiroDataService.getStxPrice();
+      const stxToken = analytics.getTokenStatsBySymbol('STX');
+      const pools = analytics.getAllPoolStats();
 
-      // CoinGecko'dan STX fiyatı al
-      const cgRes = await fetch(
-        'https://api.coingecko.com/api/v3/simple/price?ids=blockstack&vs_currencies=usd&include_24hr_change=true',
-        { headers: { 'Accept': 'application/json' } }
-      );
-
-      let stxPrice = 0;
-      let change24h = 0;
-      if (cgRes.ok) {
-        const cgData = await cgRes.json() as { blockstack?: { usd?: number; usd_24h_change?: number } };
-        stxPrice  = cgData?.blockstack?.usd ?? 0;
-        change24h = cgData?.blockstack?.usd_24h_change ?? 0;
-      }
-
-      void priceRes; // suppress unused warning
+      // If no pools from polling yet, try fetching directly
+      const poolData = pools.length > 0 ? pools.map((p) => ({
+        name: p.name,
+        exchange: p.name.includes('alex') ? 'ALEX' : p.name.includes('velar') ? 'Velar' : 'DEX',
+        volume_24h: p.volume24h,
+        liquidity: p.tvl,
+        apr: p.apr,
+      })) : [
+        { name: 'STX/USDA', exchange: 'Velar', volume_24h: 0, liquidity: 0, apr: 0 },
+        { name: 'STX/xBTC', exchange: 'ALEX', volume_24h: 0, liquidity: 0, apr: 0 },
+      ];
 
       return reply.send({
-        stx_price_usd:    stxPrice,
-        change_24h_pct:   change24h,
-        pools: [
-          { name: 'STX/USDA', exchange: 'Velar',    volume_24h: 0, liquidity: 0 },
-          { name: 'STX/xBTC', exchange: 'ALEX',     volume_24h: 0, liquidity: 0 },
-          { name: 'STX/USDA', exchange: 'Arkadiko',  volume_24h: 0, liquidity: 0 },
-        ],
+        stx_price_usd: stxPrice,
+        change_24h_pct: stxToken?.change24h ?? 0,
+        pools: poolData,
+        tokens: analytics.getTopTokens(10),
         timestamp: new Date().toISOString(),
       });
     } catch (err) {
@@ -336,7 +346,205 @@ export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (fastify, opts
     }
   });
 
-  // GET /api/transactions — son Stacks işlemleri
+  // GET /api/dex/quote — aggregated DEX quote
+  fastify.get('/dex/quote', async (req: FastifyRequest, reply: FastifyReply) => {
+    const { tokenIn, tokenOut, amount } = req.query as {
+      tokenIn?: string; tokenOut?: string; amount?: string;
+    };
+    if (!tokenIn || !tokenOut || !amount) {
+      return reply.status(400).send({ error: 'tokenIn, tokenOut, and amount are required' });
+    }
+    try {
+      const quote = await getAggregatedQuote(tokenIn, tokenOut, amount);
+      return reply.send(quote || { error: 'No quotes available' });
+    } catch (err) {
+      logger.error('dex quote error:', err);
+      return reply.status(500).send({ error: 'Failed to get quote' });
+    }
+  });
+
+  // GET /api/dex/arbitrage — scan for arbitrage opportunities
+  fastify.get('/dex/arbitrage', async (_req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const opportunities = await scanArbitrageOpportunities();
+      return reply.send({ opportunities });
+    } catch (err) {
+      logger.error('arbitrage scan error:', err);
+      return reply.send({ opportunities: [] });
+    }
+  });
+
+  // GET /api/dex/tokens — supported tokens
+  fastify.get('/dex/tokens', async (_req: FastifyRequest, reply: FastifyReply) => {
+    return reply.send({ tokens: getSupportedTokens(), dexes: getDEXInfo() });
+  });
+
+  // GET /api/stacking — PoX stacking data
+  fastify.get('/stacking', async (_req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const stackingInfo = hiroDataService.getStackingInfo();
+      // Also fetch cycle signers
+      let signers: unknown[] = [];
+      if (stackingInfo?.currentCycle) {
+        try {
+          const signerRes = await fetch(
+            `${HIRO}/signer-metrics/v1/cycles/${stackingInfo.currentCycle}/signers`,
+            { headers: { Accept: 'application/json' } }
+          );
+          if (signerRes.ok) {
+            const signerData = await signerRes.json() as { results?: unknown[] };
+            signers = signerData.results || [];
+          }
+        } catch { /* ignore signer fetch errors */ }
+      }
+      return reply.send({ ...stackingInfo, signers });
+    } catch (err) {
+      logger.error('stacking error:', err);
+      return reply.send({ error: 'Failed to fetch stacking data' });
+    }
+  });
+
+  // GET /api/supply — STX supply data
+  fastify.get('/supply', async (_req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      return reply.send(hiroDataService.getSupplyInfo());
+    } catch (err) {
+      logger.error('supply error:', err);
+      return reply.send({ totalSupply: 0, circulatingSupply: 0, lockedSupply: 0 });
+    }
+  });
+
+  // GET /api/network — network info
+  fastify.get('/network', async (_req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      return reply.send(hiroDataService.getNetworkInfo());
+    } catch (err) {
+      logger.error('network error:', err);
+      return reply.send({ stacksHeight: 0, burnHeight: 0, peerCount: 0 });
+    }
+  });
+
+  // GET /api/blocks — recent blocks
+  fastify.get('/blocks', async (req: FastifyRequest, reply: FastifyReply) => {
+    const limit = Math.min(Number((req.query as { limit?: string }).limit ?? 20), 50);
+    try {
+      const res = await fetch(
+        `${HIRO}/extended/v2/blocks?limit=${limit}`,
+        { headers: { Accept: 'application/json' } }
+      );
+      if (!res.ok) return reply.send({ results: [] });
+      const data = await res.json() as { results?: unknown[] };
+      return reply.send({ results: data.results || [] });
+    } catch (err) {
+      logger.error('blocks error:', err);
+      return reply.send({ results: [] });
+    }
+  });
+
+  // GET /api/address/:address/balances — full address balance
+  fastify.get('/address/:address/balances', async (req: FastifyRequest, reply: FastifyReply) => {
+    const { address } = req.params as { address: string };
+    try {
+      const res = await fetch(
+        `${HIRO}/extended/v1/address/${address}/balances`,
+        { headers: { Accept: 'application/json' } }
+      );
+      if (!res.ok) return reply.status(res.status).send({ error: 'Failed to fetch balances' });
+      const data = await res.json();
+      return reply.send(data);
+    } catch (err) {
+      logger.error('address balances error:', err);
+      return reply.status(500).send({ error: 'Failed to fetch balances' });
+    }
+  });
+
+  // GET /api/address/:address/transactions — address transaction history
+  fastify.get('/address/:address/transactions', async (req: FastifyRequest, reply: FastifyReply) => {
+    const { address } = req.params as { address: string };
+    const limit = Math.min(Number((req.query as { limit?: string }).limit ?? 20), 50);
+    try {
+      const res = await fetch(
+        `${HIRO}/extended/v1/address/${address}/transactions_with_transfers?limit=${limit}`,
+        { headers: { Accept: 'application/json' } }
+      );
+      if (!res.ok) return reply.status(res.status).send({ error: 'Failed to fetch transactions' });
+      const data = await res.json();
+      return reply.send(data);
+    } catch (err) {
+      logger.error('address transactions error:', err);
+      return reply.status(500).send({ error: 'Failed to fetch transactions' });
+    }
+  });
+
+  // GET /api/nfts/:address — NFT holdings
+  fastify.get('/nfts/:address', async (req: FastifyRequest, reply: FastifyReply) => {
+    const { address } = req.params as { address: string };
+    const limit = Math.min(Number((req.query as { limit?: string }).limit ?? 50), 200);
+    try {
+      const res = await fetch(
+        `${HIRO}/extended/v1/tokens/nft/holdings?principal=${address}&limit=${limit}`,
+        { headers: { Accept: 'application/json' } }
+      );
+      if (!res.ok) return reply.send({ results: [] });
+      const data = await res.json();
+      return reply.send(data);
+    } catch (err) {
+      logger.error('nfts error:', err);
+      return reply.send({ results: [] });
+    }
+  });
+
+  // GET /api/search/:query — universal search
+  fastify.get('/search/:query', async (req: FastifyRequest, reply: FastifyReply) => {
+    const { query } = req.params as { query: string };
+    try {
+      const res = await fetch(
+        `${HIRO}/extended/v1/search/${encodeURIComponent(query)}`,
+        { headers: { Accept: 'application/json' } }
+      );
+      if (!res.ok) return reply.status(res.status).send({ error: 'Search failed' });
+      const data = await res.json();
+      return reply.send(data);
+    } catch (err) {
+      logger.error('search error:', err);
+      return reply.status(500).send({ error: 'Search failed' });
+    }
+  });
+
+  // GET /api/mempool — mempool stats
+  fastify.get('/mempool', async (_req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const [statsRes, txRes] = await Promise.all([
+        fetch(`${HIRO}/extended/v1/tx/mempool/stats`, { headers: { Accept: 'application/json' } }),
+        fetch(`${HIRO}/extended/v1/tx/mempool?limit=20`, { headers: { Accept: 'application/json' } }),
+      ]);
+      const stats = statsRes.ok ? await statsRes.json() : {};
+      const txData = txRes.ok ? await txRes.json() as { results?: unknown[] } : { results: [] };
+      return reply.send({ stats, transactions: txData.results || [] });
+    } catch (err) {
+      logger.error('mempool error:', err);
+      return reply.send({ stats: {}, transactions: [] });
+    }
+  });
+
+  // GET /api/contract/:contractId — contract details
+  fastify.get('/contract/:contractId', async (req: FastifyRequest, reply: FastifyReply) => {
+    const { contractId } = req.params as { contractId: string };
+    try {
+      const res = await fetch(
+        `${HIRO}/extended/v1/contract/${contractId}`,
+        { headers: { Accept: 'application/json' } }
+      );
+      if (!res.ok) return reply.status(res.status).send({ error: 'Contract not found' });
+      const data = await res.json();
+      return reply.send(data);
+    } catch (err) {
+      logger.error('contract error:', err);
+      return reply.status(500).send({ error: 'Failed to fetch contract' });
+    }
+  });
+
+  // GET /api/transactions — recent Stacks transactions
   fastify.get('/transactions', async (req: FastifyRequest, reply: FastifyReply) => {
     const limit = Math.min(Number((req.query as { limit?: string }).limit ?? 20), 50);
     try {
@@ -353,7 +561,7 @@ export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (fastify, opts
     }
   });
 
-  // GET /api/contracts/recent — son deploy edilen smart contract'lar
+  // GET /api/contracts/recent — recently deployed smart contracts
   fastify.get('/contracts/recent', async (req: FastifyRequest, reply: FastifyReply) => {
     const limit = Math.min(Number((req.query as { limit?: string }).limit ?? 10), 20);
     try {

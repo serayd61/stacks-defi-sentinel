@@ -4,7 +4,7 @@
  * Supports: ALEX, Velar, Arkadiko
  */
 
-import { logger } from './logger';
+import { logger } from './utils/logger';
 
 // DEX Contract Addresses
 export const DEX_CONTRACTS = {

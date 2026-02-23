@@ -93,6 +93,28 @@ export class AnalyticsService {
     return this.alerts.slice(0, limit);
   }
 
+  // ── Direct update methods (used by HiroDataService) ──────────────────────
+
+  updatePoolStats(poolId: string, stats: PoolStats): void {
+    this.poolStats.set(poolId, stats);
+  }
+
+  updateTokenStats(symbol: string, stats: TokenStats): void {
+    this.tokenStats.set(symbol, stats);
+  }
+
+  getTokenStatsBySymbol(symbol: string): TokenStats | undefined {
+    return this.tokenStats.get(symbol);
+  }
+
+  getAllPoolStats(): PoolStats[] {
+    return Array.from(this.poolStats.values());
+  }
+
+  getAllTokenStats(): TokenStats[] {
+    return Array.from(this.tokenStats.values());
+  }
+
   private cleanupOldData(): void {
     const weekAgo = Date.now() - 7 * this.DAY_MS;
 
