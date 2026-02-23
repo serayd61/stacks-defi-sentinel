@@ -1,11 +1,11 @@
 """
-NAKAMOTO — DEX Arbitraj & Fiyat Analizi Ajanı
-───────────────────────────────────────────────
-Görev:
-  • Her 60 sn'de DEX verilerini çeker (Velar, ALEX, Arkadiko)
-  • LLM ile arbitraj fırsatı ve fiyat sapması analizi yapar
-  • Satoshi'den whale uyarısı alınca DEX etkisini hesaplar
-  • Finney'ye özet rapor gönderir
+NAKAMOTO — DEX Arbitrage & Price Analysis Agent
+────────────────────────────────────────────────
+Task:
+  • Fetches DEX data every 60s (Velar, ALEX, Arkadiko)
+  • Performs arbitrage opportunity and price deviation analysis with LLM
+  • Calculates DEX impact when whale alert received from Satoshi
+  • Sends summary report to Finney
 """
 import time
 import os
@@ -16,10 +16,10 @@ from base_agent import BaseAgent
 POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", "60"))
 
 SYSTEM_PROMPT = """
-Sen bir DeFi DEX analisti yapay zeka ajanısın.
-Stacks blockchain'deki merkeziyetsiz borsaları (Velar, ALEX, Arkadiko) izler,
-fiyat farklılıkları, arbitraj fırsatları ve likidite değişimlerini tespit edersin.
-Kısa ve net JSON yanıtlar verirsin.
+You are a DeFi DEX analyst AI agent.
+You monitor decentralized exchanges on the Stacks blockchain (Velar, ALEX, Arkadiko),
+detecting price discrepancies, arbitrage opportunities, and liquidity changes.
+Always respond in English. Return concise and clear JSON answers.
 """
 
 
@@ -34,17 +34,17 @@ class NakamotoAgent(BaseAgent):
             return {}
 
         prompt = f"""
-Aşağıdaki DEX verilerini analiz et:
+Analyze the following DEX data:
 
 {json.dumps(dex_data, indent=2)[:1500]}
 
-Şu soruları yanıtla (JSON):
+Answer the following questions (JSON):
 {{
   "arbitrage_opportunity": true/false,
-  "best_pair": "TOKEN/STX gibi",
+  "best_pair": "e.g. TOKEN/STX",
   "price_deviation_pct": 0.0,
   "liquidity_trend": "increasing|decreasing|stable",
-  "recommendation": "kısa açıklama",
+  "recommendation": "short explanation in English",
   "urgency": "low|medium|high"
 }}
 """
@@ -59,19 +59,19 @@ Aşağıdaki DEX verilerini analiz et:
         return {"arbitrage_opportunity": False, "recommendation": response[:200]}
 
     def analyze_whale_dex_impact(self, whale_data: dict):
-        """Satoshi'den whale uyarısı gelince DEX etkisini hesapla."""
+        """Calculate DEX impact when whale alert received from Satoshi."""
         amount  = whale_data.get("amount", 0)
         pattern = whale_data.get("analysis", {}).get("pattern", "")
 
         prompt = f"""
-{amount} STX değerinde bir whale hareketi tespit edildi.
-Hareket paterni: {pattern}
+A whale movement of {amount} STX has been detected.
+Movement pattern: {pattern}
 
-Bu hareket Stacks DEX'lerini nasıl etkiler? (JSON):
+How will this movement affect Stacks DEX platforms? (JSON):
 {{
   "expected_price_impact_pct": 0.0,
   "affected_pools": ["pool1", "pool2"],
-  "suggested_action": "açıklama",
+  "suggested_action": "explanation in English",
   "window_minutes": 0
 }}
 """
@@ -81,7 +81,7 @@ Bu hareket Stacks DEX'lerini nasıl etkiler? (JSON):
             end   = response.rfind("}") + 1
             if start >= 0 and end > start:
                 impact = json.loads(response[start:end])
-                self.log.info(f"Whale DEX etkisi: {impact}")
+                self.log.info(f"Whale DEX impact: {impact}")
                 self.publish("nakamoto:dex_impact", {
                     "whale_amount": amount,
                     "impact": impact
@@ -93,13 +93,13 @@ Bu hareket Stacks DEX'lerini nasıl etkiler? (JSON):
                     "impact": impact
                 })
         except Exception as e:
-            self.log.error(f"DEX etki analizi hatası: {e}")
+            self.log.error(f"DEX impact analysis error: {e}")
 
     def scan_dex(self):
-        self.log.info("DEX taraması başlıyor...")
+        self.log.info("Starting DEX scan...")
         dex_data = self.get_dex_data()
         if not dex_data:
-            self.log.warning("DEX verisi alınamadı.")
+            self.log.warning("Could not fetch DEX data.")
             return
 
         analysis = self.analyze_dex(dex_data)
@@ -107,7 +107,7 @@ Bu hareket Stacks DEX'lerini nasıl etkiler? (JSON):
             return
 
         self.log.info(
-            f"DEX analiz → arbitraj={analysis.get('arbitrage_opportunity')} "
+            f"DEX analysis → arbitrage={analysis.get('arbitrage_opportunity')} "
             f"urgency={analysis.get('urgency', 'low')}"
         )
 
@@ -121,7 +121,7 @@ Bu hareket Stacks DEX'lerini nasıl etkiler? (JSON):
         if analysis.get("urgency") == "high":
             self.publish("nakamoto:dex_alert", {"analysis": analysis})
 
-        # Finney'e periyodik özet
+        # Periodic summary to Finney
         self.publish("nakamoto:summary", {
             "type": "dex_summary",
             "analysis": analysis
@@ -137,10 +137,10 @@ Bu hareket Stacks DEX'lerini nasıl etkiler? (JSON):
                 elif data.get("command") == "scan_dex":
                     self.scan_dex()
             except Exception as e:
-                self.log.error(f"Mesaj işleme hatası: {e}")
+                self.log.error(f"Message processing error: {e}")
 
     def run(self):
-        self.log.info("NAKAMOTO aktif — DEX analizi başlıyor.")
+        self.log.info("NAKAMOTO active — starting DEX analysis.")
         schedule.every(POLL_INTERVAL).seconds.do(self.scan_dex)
         self.scan_dex()
 

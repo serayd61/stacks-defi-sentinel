@@ -1,9 +1,9 @@
 ;; ============================================================
-;; SENTINEL YIELD FARMING - Çok Havuzlu LP Token Farming
+;; SENTINEL YIELD FARMING - Multi-Pool LP Token Farming
 ;; ============================================================
-;; LP token sahipleri havuzlara stake ederek SNTL kazanır.
-;; Her havuzun kendine özel ağırlığı ve APY'si vardır.
-;; Compound ödül mekanizması ile sürekli kazanç sağlanır.
+;; LP token holders earn SNTL by staking in pools.
+;; Each pool has its own weight and APY.
+;; Compound reward mechanism provides continuous earnings.
 ;; ============================================================
 
 ;; ============================================================
@@ -23,15 +23,15 @@
 (define-constant err-contract-paused      (err u109))
 (define-constant err-already-exists       (err u110))
 
-;; Toplam blok başına SNTL emission (tüm havuzlara dağıtılacak)
-;; 100 SNTL/blok = 100_000_000 micro-SNTL
+;; Total SNTL emission per block (to be distributed across all pools)
+;; 100 SNTL/block = 100_000_000 micro-SNTL
 (define-constant BLOCKS-PER-DAY u144)
 (define-constant SNTL-PER-BLOCK u100000000)  ;; 100 SNTL (6 decimal)
 (define-constant MAX-POOLS u20)
-(define-constant PRECISION u1000000)          ;; 10^6 hassasiyet çarpanı
+(define-constant PRECISION u1000000)          ;; 10^6 precision multiplier
 
-;; Lock period multiplier (ek ödül için)
-;; 0 blok lock = 1x, 1000 blok = 1.5x, 5000 blok = 2x, 10000 blok = 3x
+;; Lock period multiplier (for bonus rewards)
+;; 0 blocks lock = 1x, 1000 blocks = 1.5x, 5000 blocks = 2x, 10000 blocks = 3x
 (define-constant LOCK-MULTIPLIER-BASE u100)   ;; 1x = 100
 
 ;; ============================================================
@@ -44,39 +44,39 @@
 (define-data-var total-sntl-distributed uint u0)
 (define-data-var last-reward-block uint stacks-block-height)
 
-;; Farming havuzu
+;; Farming pool
 (define-map pools uint {
-  lp-token-contract: principal,  ;; LP token contract adresi
-  pool-name: (string-ascii 50),  ;; Havuz adı (ör: "SNTL-STX LP")
-  alloc-points: uint,            ;; Ağırlık puanı (daha fazla = daha çok ödül)
-  last-reward-block: uint,       ;; Son ödül hesaplama bloğu
-  acc-sntl-per-share: uint,      ;; Birikimli SNTL/share (PRECISION ile çarpılı)
-  total-staked: uint,            ;; Toplam stake edilen LP token
-  total-stakers: uint,           ;; Toplam staker sayısı
-  lock-required-blocks: uint,    ;; Minimum lock süresi (blok)
-  is-active: bool,               ;; Havuz aktif mi?
-  created-at: uint               ;; Oluşturulma bloğu
+  lp-token-contract: principal,  ;; LP token contract address
+  pool-name: (string-ascii 50),  ;; Pool name (e.g.: "SNTL-STX LP")
+  alloc-points: uint,            ;; Weight points (more = more rewards)
+  last-reward-block: uint,       ;; Last reward calculation block
+  acc-sntl-per-share: uint,      ;; Accumulated SNTL/share (multiplied by PRECISION)
+  total-staked: uint,            ;; Total staked LP tokens
+  total-stakers: uint,           ;; Total number of stakers
+  lock-required-blocks: uint,    ;; Minimum lock period (blocks)
+  is-active: bool,               ;; Is pool active?
+  created-at: uint               ;; Creation block
 })
 
-;; Kullanıcı pozisyonu (pool_id, user) -> pozisyon
+;; User position (pool_id, user) -> position
 (define-map user-positions { pool-id: uint, user: principal } {
-  amount: uint,             ;; Stake edilen LP token miktarı
-  reward-debt: uint,        ;; Ödül borcu (çifte sayım önlemek için)
-  pending-reward: uint,     ;; Birikmiş bekleyen ödül
-  staked-at: uint,          ;; Stake bloğu
-  unlock-at: uint,          ;; Unlock bloğu
-  lock-multiplier: uint,    ;; Ödül çarpanı (100 = 1x, 200 = 2x)
-  total-earned: uint        ;; Toplam kazanılan SNTL
+  amount: uint,             ;; Staked LP token amount
+  reward-debt: uint,        ;; Reward debt (to prevent double counting)
+  pending-reward: uint,     ;; Accumulated pending reward
+  staked-at: uint,          ;; Staking block
+  unlock-at: uint,          ;; Unlock block
+  lock-multiplier: uint,    ;; Reward multiplier (100 = 1x, 200 = 2x)
+  total-earned: uint        ;; Total earned SNTL
 })
 
-;; Kullanıcı başına toplam stake
+;; Total stake per user
 (define-map user-total-stake principal uint)
 
 ;; ============================================================
 ;; PRIVATE FUNCTIONS
 ;; ============================================================
 
-;; Mevcut bloğa kadar olan havuz ödüllerini hesapla
+;; Calculate pool rewards up to the current block
 (define-private (get-pool-reward (pool-id uint))
   (match (map-get? pools pool-id)
     pool
@@ -95,7 +95,7 @@
   )
 )
 
-;; Kullanıcının bekleyen ödülünü hesapla
+;; Calculate user's pending reward
 (define-private (calculate-pending-reward (pool-id uint) (user principal))
   (match (map-get? user-positions { pool-id: pool-id, user: user })
     position
@@ -114,7 +114,7 @@
           (- base-reward (get reward-debt position))
           u0
         ))
-        ;; Lock multiplier uygula
+        ;; Apply lock multiplier
         (multiplied-reward (/ (* reward-before-mult (get lock-multiplier position)) LOCK-MULTIPLIER-BASE))
       )
         (+ (get pending-reward position) multiplied-reward)
@@ -125,7 +125,7 @@
   )
 )
 
-;; Havuz durumunu güncelle (her işlemden önce çağrılır)
+;; Update pool state (called before each operation)
 (define-private (update-pool (pool-id uint))
   (match (map-get? pools pool-id)
     pool
@@ -146,7 +146,7 @@
   )
 )
 
-;; Lock süresine göre multiplier hesapla
+;; Calculate multiplier based on lock period
 (define-private (calculate-lock-multiplier (lock-blocks uint))
   (if (>= lock-blocks u10000)
     u300  ;; 3x for 10000+ blocks
@@ -164,7 +164,7 @@
 ;; PUBLIC FUNCTIONS - POOL MANAGEMENT (OWNER)
 ;; ============================================================
 
-;; Yeni farming havuzu ekle
+;; Add new farming pool
 (define-public (add-pool
   (lp-token-contract principal)
   (pool-name (string-ascii 50))
@@ -205,7 +205,7 @@
   )
 )
 
-;; Havuz ağırlığını güncelle
+;; Update pool weight
 (define-public (update-pool-alloc (pool-id uint) (new-alloc-points uint))
   (let (
     (pool (unwrap! (map-get? pools pool-id) err-pool-not-found))
@@ -222,7 +222,7 @@
   )
 )
 
-;; Havuzu aktif/pasif yap
+;; Set pool active/inactive
 (define-public (set-pool-active (pool-id uint) (active bool))
   (let ((pool (unwrap! (map-get? pools pool-id) err-pool-not-found)))
     (asserts! (is-eq tx-sender contract-owner) err-owner-only)
@@ -235,10 +235,10 @@
 ;; PUBLIC FUNCTIONS - USER ACTIONS
 ;; ============================================================
 
-;; LP TOKEN STAKE ET
-;; pool-id: Hangi havuza stake yapılacak
-;; amount: Kaç LP token
-;; lock-blocks: Ne kadar kilitlensin (min: pool'un lock_required_blocks'u)
+;; STAKE LP TOKEN
+;; pool-id: Which pool to stake in
+;; amount: How many LP tokens
+;; lock-blocks: How long to lock (min: pool's lock_required_blocks)
 (define-public (deposit (pool-id uint) (amount uint) (lock-blocks uint))
   (let (
     (pool (unwrap! (map-get? pools pool-id) err-pool-not-found))
@@ -252,14 +252,14 @@
     (asserts! (> amount u0) err-zero-amount)
     (asserts! (>= lock-blocks (get lock-required-blocks pool)) err-lock-period-active)
 
-    ;; Havuzu güncelle
+    ;; Update pool
     (update-pool pool-id)
 
     (let (
       (updated-pool (unwrap! (map-get? pools pool-id) err-pool-not-found))
       (acc-per-share (get acc-sntl-per-share updated-pool))
     )
-      ;; Eğer mevcut pozisyon varsa bekleyen ödülü topla
+      ;; If existing position exists, collect pending reward
       (let (
         (pending (match existing-pos
           pos (let (
@@ -279,10 +279,10 @@
         (new-amount (+ current-amount amount))
         (new-reward-debt (/ (* new-amount acc-per-share) PRECISION))
       )
-        ;; LP token'ı contract'a transfer et (mock - gerçekte lp-token-contract'a call yapılır)
+        ;; Transfer LP token to contract (mock - in production calls lp-token-contract)
         ;; (try! (contract-call? (get lp-token-contract pool) transfer amount user (as-contract tx-sender) none))
 
-        ;; Pozisyonu güncelle veya oluştur
+        ;; Update or create position
         (map-set user-positions { pool-id: pool-id, user: user } {
           amount: new-amount,
           reward-debt: new-reward-debt,
@@ -293,7 +293,7 @@
           total-earned: current-earned
         })
 
-        ;; Havuz toplam stake güncelle
+        ;; Update pool total stake
         (map-set pools pool-id (merge updated-pool {
           total-staked: (+ (get total-staked updated-pool) amount),
           total-stakers: (if (is-none existing-pos)
@@ -302,7 +302,7 @@
           )
         }))
 
-        ;; Kullanıcı toplam stake güncelle
+        ;; Update user total stake
         (map-set user-total-stake user
           (+ (default-to u0 (map-get? user-total-stake user)) amount))
 
@@ -322,7 +322,7 @@
   )
 )
 
-;; ÖDÜL TOPLA (withdraw yapmadan)
+;; HARVEST REWARDS (without withdrawing)
 (define-public (harvest (pool-id uint))
   (let (
     (user tx-sender)
@@ -330,7 +330,7 @@
   )
     (asserts! (not (var-get is-paused)) err-contract-paused)
 
-    ;; Havuzu güncelle
+    ;; Update pool
     (update-pool pool-id)
 
     (let (
@@ -347,10 +347,10 @@
     )
       (asserts! (> total-pending u0) err-insufficient-rewards)
 
-      ;; SNTL ödülünü mint et
+      ;; Mint SNTL reward
       (try! (contract-call? .sentinel-token mint total-pending user))
 
-      ;; Pozisyonu güncelle
+      ;; Update position
       (map-set user-positions { pool-id: pool-id, user: user }
         (merge position {
           reward-debt: (/ (* (get amount position) acc-per-share) PRECISION),
@@ -373,8 +373,8 @@
   )
 )
 
-;; LP TOKEN ÇEKME
-;; amount: Çekilecek LP token miktarı (0 = sadece ödül topla)
+;; WITHDRAW LP TOKEN
+;; amount: LP token amount to withdraw (0 = harvest rewards only)
 (define-public (withdraw (pool-id uint) (amount uint))
   (let (
     (user tx-sender)
@@ -383,10 +383,10 @@
   )
     (asserts! (not (var-get is-paused)) err-contract-paused)
     (asserts! (<= amount (get amount position)) err-zero-amount)
-    ;; Lock kontrolü
+    ;; Lock check
     (asserts! (>= stacks-block-height (get unlock-at position)) err-lock-period-active)
 
-    ;; Havuzu güncelle
+    ;; Update pool
     (update-pool pool-id)
 
     (let (
@@ -399,16 +399,16 @@
       (total-pending (+ (get pending-reward position) multiplied-reward))
       (new-amount (- (get amount position) amount))
     )
-      ;; Ödülü dağıt
+      ;; Distribute reward
       (if (> total-pending u0)
         (try! (contract-call? .sentinel-token mint total-pending user))
         true
       )
 
-      ;; LP tokenı iade et
+      ;; Return LP token
       ;; (try! (as-contract (contract-call? (get lp-token-contract pool) transfer amount tx-sender user none)))
 
-      ;; Pozisyonu güncelle veya sil
+      ;; Update or delete position
       (if (is-eq new-amount u0)
         (map-delete user-positions { pool-id: pool-id, user: user })
         (map-set user-positions { pool-id: pool-id, user: user }
@@ -421,7 +421,7 @@
         )
       )
 
-      ;; Havuz toplam güncelle
+      ;; Update pool totals
       (map-set pools pool-id (merge updated-pool {
         total-staked: (- (get total-staked updated-pool) amount),
         total-stakers: (if (is-eq new-amount u0)

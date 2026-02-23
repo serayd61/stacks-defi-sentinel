@@ -1,8 +1,8 @@
 ;; ============================================================
 ;; SENTINEL LIMIT ORDERS - On-Chain DEX Limit Order Book
 ;; ============================================================
-;; Kullanıcılar belirli fiyat seviyelerinden al/sat emirleri verir.
-;; Keeper'lar emirleri execute ederek fee kazanır.
+;; Users place buy/sell orders at specific price levels.
+;; Keepers earn fees by executing orders.
 ;; ============================================================
 
 ;; ============================================================
@@ -24,8 +24,8 @@
 (define-constant err-zero-address          (err u111))
 
 ;; Order types
-(define-constant ORDER-TYPE-BUY  u0)  ;; STX ile SNTL al
-(define-constant ORDER-TYPE-SELL u1)  ;; SNTL sat, STX al
+(define-constant ORDER-TYPE-BUY  u0)  ;; Buy SNTL with STX
+(define-constant ORDER-TYPE-SELL u1)  ;; Sell SNTL, receive STX
 
 ;; Order statuses
 (define-constant STATUS-OPEN      u0)
@@ -37,14 +37,14 @@
 (define-constant FEE-NUMERATOR   u30)
 (define-constant FEE-DENOMINATOR u10000)
 
-;; Keeper fee: order fill fee'nin %10'u keeper'a gider
+;; Keeper fee: 10% of order fill fee goes to keeper
 (define-constant KEEPER-SHARE u10)
 (define-constant KEEPER-SHARE-DENOM u100)
 
 ;; Minimum order amount: 1 STX (1_000_000 micro-STX)
 (define-constant MIN-ORDER-STX u1000000)
 
-;; Maximum order expiry: 52560 blocks (~1 yıl)
+;; Maximum order expiry: 52560 blocks (~1 year)
 (define-constant MAX-EXPIRY-BLOCKS u52560)
 
 ;; ============================================================
@@ -58,30 +58,30 @@
 (define-data-var is-paused bool false)
 (define-data-var treasury-address principal contract-owner)
 
-;; Order kayıtları
+;; Order records
 (define-map orders uint {
   owner: principal,
   order-type: uint,           ;; 0=buy, 1=sell
   status: uint,               ;; 0=open, 1=filled, 2=cancelled, 3=expired
-  target-price: uint,         ;; 1 SNTL için istenilen STX fiyatı (micro-STX, 6 decimals)
-  amount-in: uint,            ;; Gönderilen miktar (buy=STX, sell=SNTL)
-  amount-out-min: uint,       ;; Minimum alınacak miktar (slippage koruması)
-  amount-filled: uint,        ;; Ne kadar fill edildi
-  created-at: uint,           ;; Oluşturulma block'u
-  expires-at: uint,           ;; Bitiş block'u
-  filled-at: uint,            ;; Doldurulma block'u
-  filled-by: (optional principal),  ;; Kim execute etti
-  fee-paid: uint              ;; Ödenen fee
+  target-price: uint,         ;; Desired STX price per 1 SNTL (micro-STX, 6 decimals)
+  amount-in: uint,            ;; Amount sent (buy=STX, sell=SNTL)
+  amount-out-min: uint,       ;; Minimum amount to receive (slippage protection)
+  amount-filled: uint,        ;; How much has been filled
+  created-at: uint,           ;; Creation block
+  expires-at: uint,           ;; Expiration block
+  filled-at: uint,            ;; Fill block
+  filled-by: (optional principal),  ;; Who executed the order
+  fee-paid: uint              ;; Fee paid
 })
 
-;; Kullanıcı başına order listesi (max 50 açık emir)
+;; Per-user order list (max 50 open orders)
 (define-map user-order-count principal uint)
 
-;; Open order indeksi (keeper'ların tarayabilmesi için)
-(define-map open-orders-by-price uint uint)  ;; price -> order-id (basit index)
+;; Open order index (for keepers to scan)
+(define-map open-orders-by-price uint uint)  ;; price -> order-id (simple index)
 (define-data-var open-order-count uint u0)
 
-;; Keeper istatistikleri
+;; Keeper statistics
 (define-map keeper-stats principal {
   executions: uint,
   total-earned: uint,
@@ -118,11 +118,11 @@
 ;; PUBLIC FUNCTIONS - ORDER MANAGEMENT
 ;; ============================================================
 
-;; BUY EMRİ: STX kilitle, belirli fiyatta SNTL al
-;; amount-stx: Harcamak istediğin STX miktarı
-;; target-price: 1 SNTL için max ödeyeceğin STX (micro-STX)
-;; min-sntl-out: Minimum alacağın SNTL miktarı
-;; expiry-blocks: Kaç block sonra expire olsun
+;; BUY ORDER: Lock STX, buy SNTL at specific price
+;; amount-stx: Amount of STX to spend
+;; target-price: Max STX to pay per 1 SNTL (micro-STX)
+;; min-sntl-out: Minimum SNTL amount to receive
+;; expiry-blocks: Number of blocks until expiry
 (define-public (place-buy-order
   (amount-stx uint)
   (target-price uint)
@@ -134,7 +134,7 @@
     (fee (calculate-fee amount-stx))
     (net-amount (- amount-stx fee))
   )
-    ;; Validasyonlar
+    ;; Validations
     (asserts! (not (var-get is-paused)) err-contract-paused)
     (asserts! (>= amount-stx MIN-ORDER-STX) err-invalid-amount)
     (asserts! (> target-price u0) err-invalid-price)
@@ -142,10 +142,10 @@
     (asserts! (<= expiry-blocks MAX-EXPIRY-BLOCKS) err-invalid-price)
     (asserts! (>= (stx-get-balance tx-sender) amount-stx) err-insufficient-balance)
 
-    ;; STX'i contract'a kilitle
+    ;; Lock STX in contract
     (try! (stx-transfer? amount-stx tx-sender (as-contract tx-sender)))
 
-    ;; Emri kaydet
+    ;; Save the order
     (map-set orders order-id {
       owner: tx-sender,
       order-type: ORDER-TYPE-BUY,
@@ -161,7 +161,7 @@
       fee-paid: u0
     })
 
-    ;; Sayaçları güncelle
+    ;; Update counters
     (var-set next-order-id (+ order-id u1))
     (var-set total-orders (+ (var-get total-orders) u1))
     (var-set open-order-count (+ (var-get open-order-count) u1))
@@ -181,11 +181,11 @@
   )
 )
 
-;; SELL EMRİ: SNTL kilitle, belirli fiyatta STX al
-;; amount-sntl: Satmak istediğin SNTL miktarı
-;; target-price: 1 SNTL için min istediğin STX (micro-STX)
-;; min-stx-out: Minimum alacağın STX miktarı
-;; expiry-blocks: Kaç block sonra expire olsun
+;; SELL ORDER: Lock SNTL, sell for STX at specific price
+;; amount-sntl: Amount of SNTL to sell
+;; target-price: Min STX to receive per 1 SNTL (micro-STX)
+;; min-stx-out: Minimum STX amount to receive
+;; expiry-blocks: Number of blocks until expiry
 (define-public (place-sell-order
   (amount-sntl uint)
   (target-price uint)
@@ -195,18 +195,18 @@
     (order-id (var-get next-order-id))
     (expire-block (+ stacks-block-height expiry-blocks))
   )
-    ;; Validasyonlar
+    ;; Validations
     (asserts! (not (var-get is-paused)) err-contract-paused)
     (asserts! (> amount-sntl u0) err-invalid-amount)
     (asserts! (> target-price u0) err-invalid-price)
     (asserts! (> min-stx-out u0) err-invalid-amount)
     (asserts! (<= expiry-blocks MAX-EXPIRY-BLOCKS) err-invalid-price)
 
-    ;; SNTL'i contract'a kilitle
+    ;; Lock SNTL in contract
     (try! (contract-call? .sentinel-token transfer
       amount-sntl tx-sender (as-contract tx-sender) none))
 
-    ;; Emri kaydet
+    ;; Save the order
     (map-set orders order-id {
       owner: tx-sender,
       order-type: ORDER-TYPE-SELL,
@@ -222,7 +222,7 @@
       fee-paid: u0
     })
 
-    ;; Sayaçları güncelle
+    ;; Update counters
     (var-set next-order-id (+ order-id u1))
     (var-set total-orders (+ (var-get total-orders) u1))
     (var-set open-order-count (+ (var-get open-order-count) u1))
@@ -242,10 +242,10 @@
   )
 )
 
-;; EXECUTE BUY EMRİ: Keeper çağırır, güncel fiyat target'ı karşılıyorsa fill eder
-;; order-id: Execute edilecek emir
-;; current-price: Şu anki 1 SNTL = X micro-STX fiyatı (oracle'dan)
-;; sntl-amount: Kaç SNTL verecek keeper
+;; EXECUTE BUY ORDER: Keeper calls this; fills if current price meets target
+;; order-id: Order to execute
+;; current-price: Current price of 1 SNTL in micro-STX (from oracle)
+;; sntl-amount: Amount of SNTL the keeper will provide
 (define-public (execute-buy-order (order-id uint) (current-price uint) (sntl-amount uint))
   (let (
     (order (unwrap! (map-get? orders order-id) err-order-not-found))
@@ -259,28 +259,28 @@
     (treasury-fee (- fee keeper-fee))
     (net-stx (- amount-stx fee))
   )
-    ;; Validasyonlar
+    ;; Validations
     (asserts! (not (var-get is-paused)) err-contract-paused)
     (asserts! (is-eq (get status order) STATUS-OPEN) err-order-not-open)
     (asserts! (is-eq (get order-type order) ORDER-TYPE-BUY) err-invalid-order-type)
     (asserts! (< (stacks-block-height) (get expires-at order)) err-order-not-open)
-    ;; Fiyat kontrolü: mevcut fiyat <= hedef fiyat olmalı (buy için)
+    ;; Price check: current price must be <= target price (for buy)
     (asserts! (<= current-price target-price) err-price-not-met)
-    ;; Slippage kontrolü
+    ;; Slippage check
     (asserts! (>= sntl-amount min-sntl-out) err-slippage-exceeded)
 
-    ;; Keeper SNTL'i order owner'a gönderir
+    ;; Keeper sends SNTL to order owner
     (try! (contract-call? .sentinel-token transfer
       sntl-amount keeper order-owner none))
 
-    ;; Contract'taki STX'i keeper'a gönder (net_stx - keeper_fee)
+    ;; Send STX from contract to keeper (net_stx - keeper_fee)
     (try! (as-contract (stx-transfer? (- net-stx keeper-fee) tx-sender keeper)))
-    ;; Treasury fee gönder
+    ;; Send treasury fee
     (try! (as-contract (stx-transfer? treasury-fee tx-sender (var-get treasury-address))))
-    ;; Keeper fee gönder
-    ;; (keeper zaten net_stx aldı - treasury_fee)
+    ;; Send keeper fee
+    ;; (keeper already received net_stx - treasury_fee)
 
-    ;; Emri güncelle
+    ;; Update order
     (map-set orders order-id (merge order {
       status: STATUS-FILLED,
       amount-filled: sntl-amount,
@@ -289,7 +289,7 @@
       fee-paid: fee
     }))
 
-    ;; Keeper istatistiklerini güncelle
+    ;; Update keeper statistics
     (let ((k-stats (default-to { executions: u0, total-earned: u0, last-execution: u0 }
                    (map-get? keeper-stats keeper))))
       (map-set keeper-stats keeper {
@@ -299,7 +299,7 @@
       })
     )
 
-    ;; Global istatistikler
+    ;; Global statistics
     (var-set total-volume-stx (+ (var-get total-volume-stx) amount-stx))
     (var-set total-fees-collected (+ (var-get total-fees-collected) fee))
     (var-set open-order-count (- (var-get open-order-count) u1))
@@ -320,7 +320,7 @@
   )
 )
 
-;; EXECUTE SELL EMRİ: Keeper, güncel fiyat target'ı karşılıyorsa fill eder
+;; EXECUTE SELL ORDER: Keeper fills if current price meets target
 (define-public (execute-sell-order (order-id uint) (current-price uint) (stx-amount uint))
   (let (
     (order (unwrap! (map-get? orders order-id) err-order-not-found))
@@ -334,31 +334,31 @@
     (treasury-fee (- fee keeper-fee))
     (net-stx (- stx-amount fee))
   )
-    ;; Validasyonlar
+    ;; Validations
     (asserts! (not (var-get is-paused)) err-contract-paused)
     (asserts! (is-eq (get status order) STATUS-OPEN) err-order-not-open)
     (asserts! (is-eq (get order-type order) ORDER-TYPE-SELL) err-invalid-order-type)
     (asserts! (< stacks-block-height (get expires-at order)) err-order-not-open)
-    ;; Fiyat kontrolü: mevcut fiyat >= hedef fiyat olmalı (sell için)
+    ;; Price check: current price must be >= target price (for sell)
     (asserts! (>= current-price target-price) err-price-not-met)
-    ;; Slippage kontrolü
+    ;; Slippage check
     (asserts! (>= net-stx min-stx-out) err-slippage-exceeded)
-    ;; Keeper yeterli STX'e sahip mi?
+    ;; Does keeper have enough STX?
     (asserts! (>= (stx-get-balance keeper) stx-amount) err-insufficient-balance)
 
-    ;; Keeper STX'i order owner'a gönderir (net)
+    ;; Keeper sends STX to order owner (net)
     (try! (stx-transfer? net-stx keeper order-owner))
     ;; Treasury fee
     (try! (stx-transfer? treasury-fee keeper (var-get treasury-address)))
 
-    ;; Contract'taki SNTL'i keeper'a gönder
+    ;; Send SNTL from contract to keeper
     (try! (as-contract (contract-call? .sentinel-token transfer
       amount-sntl tx-sender keeper none)))
 
-    ;; Keeper'a ekstra SNTL reward (incentive)
-    ;; keeper_fee kadar STX'i SNTL olarak verebilirdik ama basit tutalım
+    ;; Extra SNTL reward for keeper (incentive)
+    ;; Could convert keeper_fee STX to SNTL but keeping it simple
 
-    ;; Emri güncelle
+    ;; Update order
     (map-set orders order-id (merge order {
       status: STATUS-FILLED,
       amount-filled: stx-amount,
@@ -396,7 +396,7 @@
   )
 )
 
-;; EMRİ İPTAL ET: Sadece emir sahibi iptal edebilir
+;; CANCEL ORDER: Only the order owner can cancel
 (define-public (cancel-order (order-id uint))
   (let (
     (order (unwrap! (map-get? orders order-id) err-order-not-found))
@@ -404,16 +404,16 @@
     (asserts! (is-eq tx-sender (get owner order)) err-not-order-owner)
     (asserts! (is-eq (get status order) STATUS-OPEN) err-order-not-open)
 
-    ;; Kilitlenen tokenleri iade et
+    ;; Refund locked tokens
     (if (is-eq (get order-type order) ORDER-TYPE-BUY)
-      ;; STX iade
+      ;; Refund STX
       (try! (as-contract (stx-transfer? (get amount-in order) tx-sender (get owner order))))
-      ;; SNTL iade
+      ;; Refund SNTL
       (try! (as-contract (contract-call? .sentinel-token transfer
         (get amount-in order) tx-sender (get owner order) none)))
     )
 
-    ;; Emri iptal edildi olarak işaretle
+    ;; Mark order as cancelled
     (map-set orders order-id (merge order { status: STATUS-CANCELLED }))
     (var-set open-order-count (- (var-get open-order-count) u1))
     (decrement-order-count (get owner order))
@@ -429,7 +429,7 @@
   )
 )
 
-;; EXPIRE ETKİLEŞİMİ: Süresi dolmuş emirleri temizle
+;; EXPIRE INTERACTION: Clean up expired orders
 (define-public (expire-order (order-id uint))
   (let (
     (order (unwrap! (map-get? orders order-id) err-order-not-found))
@@ -437,7 +437,7 @@
     (asserts! (is-eq (get status order) STATUS-OPEN) err-order-not-open)
     (asserts! (>= stacks-block-height (get expires-at order)) err-order-not-open)
 
-    ;; Tokenleri iade et
+    ;; Refund tokens
     (if (is-eq (get order-type order) ORDER-TYPE-BUY)
       (try! (as-contract (stx-transfer? (get amount-in order) tx-sender (get owner order))))
       (try! (as-contract (contract-call? .sentinel-token transfer

@@ -1,9 +1,9 @@
 ;; ============================================================
-;; SENTINEL ALERTS REGISTRY - Zincir Üstü Fiyat Alarm Sistemi
+;; SENTINEL ALERTS REGISTRY - On-Chain Price Alert System
 ;; ============================================================
-;; Kullanıcılar belirli fiyat koşulları için alarm kaydeder.
-;; Keeper'lar alarm koşulları gerçekleştiğinde tetikler ve
-;; SNTL ödül kazanır. Alarm başına STX deposit gereklidir.
+;; Users register alerts for specific price conditions.
+;; Keepers trigger alerts when conditions are met and
+;; earn SNTL rewards. STX deposit is required per alert.
 ;; ============================================================
 
 ;; ============================================================
@@ -24,35 +24,35 @@
 (define-constant err-max-alerts-reached   (err u110))
 (define-constant err-cooldown-active      (err u111))
 
-;; Alert koşul tipleri
-(define-constant COND-PRICE-ABOVE  u0)   ;; Fiyat X'in üzerine çıkarsa
-(define-constant COND-PRICE-BELOW  u1)   ;; Fiyat X'in altına düşerse
-(define-constant COND-PRICE-CHANGE u2)   ;; Fiyat %X değişirse
-(define-constant COND-VOLUME-ABOVE u3)   ;; 24h hacim X'i geçerse
-(define-constant COND-WHALE-TX     u4)   ;; X'ten büyük transfer olursa
+;; Alert condition types
+(define-constant COND-PRICE-ABOVE  u0)   ;; Price rises above X
+(define-constant COND-PRICE-BELOW  u1)   ;; Price drops below X
+(define-constant COND-PRICE-CHANGE u2)   ;; Price changes by X%
+(define-constant COND-VOLUME-ABOVE u3)   ;; 24h volume exceeds X
+(define-constant COND-WHALE-TX     u4)   ;; Transfer larger than X occurs
 
-;; Alert token tipleri
+;; Alert token types
 (define-constant TOKEN-STX  u0)
 (define-constant TOKEN-SNTL u1)
 (define-constant TOKEN-SBTC u2)
 
-;; Minimum deposit: 0.5 STX (keeper ödülü için)
+;; Minimum deposit: 0.5 STX (for keeper reward)
 (define-constant MIN-DEPOSIT-STX u500000)
 
-;; Keeper ödülü: deposit'in %80'i
+;; Keeper reward: 80% of deposit
 (define-constant KEEPER-REWARD-RATE u80)
 (define-constant RATE-DENOMINATOR u100)
 
-;; Protocol fee: deposit'in %20'si
+;; Protocol fee: 20% of deposit
 (define-constant PROTOCOL-FEE-RATE u20)
 
-;; Kullanıcı başına max alert
+;; Max alerts per user
 (define-constant MAX-USER-ALERTS u50)
 
-;; Alert cooldown (aynı alertin tekrar tetiklenmesi için)
-(define-constant ALERT-COOLDOWN-BLOCKS u144)  ;; ~1 gün
+;; Alert cooldown (for re-triggering the same alert)
+(define-constant ALERT-COOLDOWN-BLOCKS u144)  ;; ~1 day
 
-;; Max expiry: 365 gün
+;; Max expiry: 365 days
 (define-constant MAX-EXPIRY-BLOCKS u52560)
 
 ;; ============================================================
@@ -67,31 +67,31 @@
 (define-data-var is-paused bool false)
 (define-data-var treasury principal contract-owner)
 
-;; Fiyat alarm kaydı
+;; Price alert record
 (define-map alerts uint {
   owner: principal,
   token: uint,                       ;; 0=STX, 1=SNTL, 2=sBTC
   condition: uint,                   ;; 0=above, 1=below, 2=change, 3=volume, 4=whale
-  threshold: uint,                   ;; Eşik değeri (micro-STX veya %)
-  repeat: bool,                      ;; Tekrarlanabilir mi?
-  cooldown-until: uint,              ;; Tekrar tetiklenemez blok
+  threshold: uint,                   ;; Threshold value (micro-STX or %)
+  repeat: bool,                      ;; Is it repeatable?
+  cooldown-until: uint,              ;; Block until which re-triggering is disabled
   status: uint,                      ;; 0=active, 1=triggered, 2=cancelled, 3=expired
-  deposit: uint,                     ;; Kilitlenen STX (keeper ödülü)
+  deposit: uint,                     ;; Locked STX (for keeper reward)
   created-at: uint,
   expires-at: uint,
   last-triggered-at: uint,
-  trigger-count: uint,               ;; Kaç kez tetiklendi
-  webhook-url: (optional (string-utf8 200)),   ;; Bildirim URL'i (off-chain)
-  note: (string-utf8 100)            ;; Kullanıcı notu
+  trigger-count: uint,               ;; How many times triggered
+  webhook-url: (optional (string-utf8 200)),   ;; Notification URL (off-chain)
+  note: (string-utf8 100)            ;; User note
 })
 
-;; Kullanıcı alert sayısı
+;; User alert count
 (define-map user-alert-count principal uint)
 
-;; Kullanıcı alert indeksi
+;; User alert index
 (define-map user-alerts { user: principal, index: uint } uint)  ;; index -> alert-id
 
-;; Keeper istatistikleri
+;; Keeper statistics
 (define-map keeper-leaderboard principal {
   triggers: uint,
   total-earned-stx: uint,
@@ -99,7 +99,7 @@
   success-rate: uint    ;; 0-100
 })
 
-;; Tetikleme geçmişi
+;; Trigger history
 (define-map trigger-history { alert-id: uint, trigger-index: uint } {
   keeper: principal,
   price-at-trigger: uint,
@@ -107,7 +107,7 @@
   triggered-at: uint
 })
 
-(define-map alert-trigger-count uint uint)  ;; alert-id -> trigger sayısı
+(define-map alert-trigger-count uint uint)  ;; alert-id -> trigger count
 
 ;; ============================================================
 ;; PRIVATE FUNCTIONS
@@ -123,7 +123,7 @@
     (if (is-eq condition COND-PRICE-BELOW)
       (<= current-value threshold)
       (if (is-eq condition COND-PRICE-CHANGE)
-        ;; %X değişim: |current - previous| / previous * 100 >= threshold
+        ;; X% change: |current - previous| / previous * 100 >= threshold
         (let (
           (diff (if (>= current-value previous-value)
             (- current-value previous-value)
@@ -140,7 +140,7 @@
           (>= current-value threshold)
           (if (is-eq condition COND-WHALE-TX)
             (>= current-value threshold)
-            false  ;; Bilinmeyen koşul
+            false  ;; Unknown condition
           )
         )
       )
@@ -149,18 +149,18 @@
 )
 
 ;; ============================================================
-;; PUBLIC FUNCTIONS - ALERT YÖNETIMI
+;; PUBLIC FUNCTIONS - ALERT MANAGEMENT
 ;; ============================================================
 
-;; ALARM OLUŞTUR
-;; token: İzlenecek token (0=STX, 1=SNTL, 2=sBTC)
-;; condition: Tetiklenme koşulu (0-4)
-;; threshold: Eşik değer
-;; repeat: Tekrar tetiklensin mi?
-;; expiry-blocks: Ne kadar süre aktif kalacak
-;; deposit-stx: Keeper ödülü için kilitlenecek STX
-;; webhook-url: Bildirim URL'i (opsiyonel, off-chain)
-;; note: Kişisel not
+;; CREATE ALERT
+;; token: Token to monitor (0=STX, 1=SNTL, 2=sBTC)
+;; condition: Trigger condition (0-4)
+;; threshold: Threshold value
+;; repeat: Should it re-trigger?
+;; expiry-blocks: How long the alert stays active
+;; deposit-stx: STX to be locked for keeper reward
+;; webhook-url: Notification URL (optional, off-chain)
+;; note: Personal note
 (define-public (create-alert
   (token uint)
   (condition uint)
@@ -185,10 +185,10 @@
     (asserts! (<= token u2) err-invalid-condition)
     (asserts! (>= (stx-get-balance user) deposit-stx) err-insufficient-deposit)
 
-    ;; Deposit'i kilitle
+    ;; Lock the deposit
     (try! (stx-transfer? deposit-stx user (as-contract tx-sender)))
 
-    ;; Alarmı kaydet
+    ;; Save the alert
     (map-set alerts alert-id {
       owner: user,
       token: token,
@@ -206,12 +206,12 @@
       note: note
     })
 
-    ;; Kullanıcı indeksini güncelle
+    ;; Update user index
     (map-set user-alerts { user: user, index: user-count } alert-id)
     (map-set user-alert-count user (+ user-count u1))
     (map-set alert-trigger-count alert-id u0)
 
-    ;; Global sayaçlar
+    ;; Global counters
     (var-set next-alert-id (+ alert-id u1))
     (var-set total-alerts (+ (var-get total-alerts) u1))
     (var-set total-active-alerts (+ (var-get total-active-alerts) u1))
@@ -232,10 +232,10 @@
   )
 )
 
-;; ALARMI TETİKLE (Keeper çağırır)
-;; alert-id: Tetiklenecek alarm
-;; current-value: Şu anki değer (fiyat/hacim)
-;; previous-value: Önceki değer (%değişim hesabı için)
+;; TRIGGER ALERT (Called by keeper)
+;; alert-id: Alert to trigger
+;; current-value: Current value (price/volume)
+;; previous-value: Previous value (for % change calculation)
 (define-public (trigger-alert (alert-id uint) (current-value uint) (previous-value uint))
   (let (
     (keeper tx-sender)
@@ -246,7 +246,7 @@
     (asserts! (< stacks-block-height (get expires-at alert)) err-alert-expired)
     (asserts! (>= stacks-block-height (get cooldown-until alert)) err-cooldown-active)
 
-    ;; Koşul kontrolü
+    ;; Condition check
     (asserts! (check-condition
       (get condition alert)
       (get threshold alert)
@@ -260,12 +260,12 @@
       (protocol-fee (/ (* deposit PROTOCOL-FEE-RATE) RATE-DENOMINATOR))
       (trigger-index (default-to u0 (map-get? alert-trigger-count alert-id)))
     )
-      ;; Keeper'a ödülü gönder
+      ;; Send reward to keeper
       (try! (as-contract (stx-transfer? keeper-reward tx-sender keeper)))
-      ;; Protocol fee'yi treasury'ye gönder
+      ;; Send protocol fee to treasury
       (try! (as-contract (stx-transfer? protocol-fee tx-sender (var-get treasury))))
 
-      ;; Tetikleme geçmişini kaydet
+      ;; Record trigger history
       (map-set trigger-history { alert-id: alert-id, trigger-index: trigger-index } {
         keeper: keeper,
         price-at-trigger: current-value,
@@ -274,17 +274,17 @@
       })
       (map-set alert-trigger-count alert-id (+ trigger-index u1))
 
-      ;; Alert durumunu güncelle
+      ;; Update alert status
       (if (get repeat alert)
-        ;; Tekrarlanabilir: cooldown'a al ve depozit'i sıfırla
+        ;; Repeatable: set cooldown and reset deposit
         (map-set alerts alert-id (merge alert {
-          status: u0,  ;; Hala aktif
+          status: u0,  ;; Still active
           cooldown-until: (+ stacks-block-height ALERT-COOLDOWN-BLOCKS),
           last-triggered-at: stacks-block-height,
           trigger-count: (+ (get trigger-count alert) u1),
-          deposit: u0  ;; Deposit kullanıldı
+          deposit: u0  ;; Deposit used
         }))
-        ;; Tek seferlik: tamamlandı
+        ;; One-time: completed
         (begin
           (map-set alerts alert-id (merge alert {
             status: u1,  ;; triggered
@@ -296,7 +296,7 @@
         )
       )
 
-      ;; Keeper leaderboard güncelle
+      ;; Update keeper leaderboard
       (let ((k-stats (default-to
           { triggers: u0, total-earned-stx: u0, last-trigger-block: u0, success-rate: u100 }
           (map-get? keeper-leaderboard keeper))))
@@ -327,7 +327,7 @@
   )
 )
 
-;; ALARMI İPTAL ET (Deposit iade edilir)
+;; CANCEL ALERT (Deposit is refunded)
 (define-public (cancel-alert (alert-id uint))
   (let (
     (user tx-sender)
@@ -336,7 +336,7 @@
     (asserts! (is-eq user (get owner alert)) err-not-alert-owner)
     (asserts! (is-eq (get status alert) u0) err-alert-not-active)
 
-    ;; Kalan depositi iade et
+    ;; Refund remaining deposit
     (if (> (get deposit alert) u0)
       (try! (as-contract (stx-transfer? (get deposit alert) tx-sender user)))
       true
@@ -356,7 +356,7 @@
   )
 )
 
-;; ALARI DOLDUR (Deposit ekle - tekrarlanan alert için)
+;; REFILL ALERT (Add deposit - for repeating alerts)
 (define-public (refill-alert (alert-id uint) (additional-deposit uint))
   (let (
     (user tx-sender)
@@ -381,7 +381,7 @@
   )
 )
 
-;; SÜRESİ DOLAN ALARMI TEMİZLE
+;; CLEAN UP EXPIRED ALERT
 (define-public (expire-alert (alert-id uint))
   (let (
     (alert (unwrap! (map-get? alerts alert-id) err-alert-not-found))
@@ -390,7 +390,7 @@
     (asserts! (is-eq (get status alert) u0) err-alert-not-active)
     (asserts! (>= stacks-block-height (get expires-at alert)) err-alert-not-active)
 
-    ;; Kalan depositi iade et
+    ;; Refund remaining deposit
     (if (> (get deposit alert) u0)
       (try! (as-contract (stx-transfer? (get deposit alert) tx-sender (get owner alert))))
       true
