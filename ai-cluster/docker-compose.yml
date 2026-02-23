@@ -136,7 +136,7 @@ services:
       - OLLAMA_URL=http://da-vinci:11434
       - REDIS_URL=redis://redis-bus:6379
       - SENTINEL_API=https://stacks-defi-sentinel-production.up.railway.app
-      - MODEL=phi3:mini
+      - MODEL=llama3.2:1b
       - POLL_INTERVAL=30
       - WHALE_THRESHOLD_STX=1000
     volumes:
@@ -167,7 +167,7 @@ services:
       - OLLAMA_URL=http://da-vinci:11434
       - REDIS_URL=redis://redis-bus:6379
       - SENTINEL_API=https://stacks-defi-sentinel-production.up.railway.app
-      - MODEL=phi3:mini
+      - MODEL=llama3.2:1b
       - POLL_INTERVAL=60
     volumes:
       - agent-shared:/shared
@@ -197,7 +197,7 @@ services:
       - OLLAMA_URL=http://da-vinci:11434
       - REDIS_URL=redis://redis-bus:6379
       - SENTINEL_API=https://stacks-defi-sentinel-production.up.railway.app
-      - MODEL=phi3:mini
+      - MODEL=llama3.2:1b
       - POLL_INTERVAL=120
     volumes:
       - agent-shared:/shared
@@ -227,7 +227,7 @@ services:
       - OLLAMA_URL=http://da-vinci:11434
       - REDIS_URL=redis://redis-bus:6379
       - SENTINEL_API=https://stacks-defi-sentinel-production.up.railway.app
-      - MODEL=phi3:mini
+      - MODEL=llama3.2:1b
       - REPORT_HOUR=7
     volumes:
       - agent-shared:/shared
