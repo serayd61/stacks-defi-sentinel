@@ -24,7 +24,7 @@
   },
   "action": {
     "type": "http_post",
-    "url": "https://stacks-defi-sentinel-production.up.railway.app/webhooks/staking"
+    "url": "https://stacks-defi-sentinel-production.up.railway.app/api/webhooks/staking"
   },
   "options": {
     "decode_clarity_values": true,

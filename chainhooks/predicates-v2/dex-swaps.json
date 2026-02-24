@@ -39,7 +39,7 @@
   },
   "action": {
     "type": "http_post",
-    "url": "https://stacks-defi-sentinel-production.up.railway.app/webhooks/swaps"
+    "url": "https://stacks-defi-sentinel-production.up.railway.app/api/webhooks/swaps"
   },
   "options": {
     "decode_clarity_values": true,

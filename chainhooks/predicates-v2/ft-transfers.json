@@ -21,7 +21,7 @@
   },
   "action": {
     "type": "http_post",
-    "url": "https://stacks-defi-sentinel-production.up.railway.app/webhooks/ft-transfers"
+    "url": "https://stacks-defi-sentinel-production.up.railway.app/api/webhooks/ft-transfers"
   },
   "options": {
     "decode_clarity_values": true,

@@ -14,7 +14,7 @@
   },
   "action": {
     "type": "http_post",
-    "url": "https://stacks-defi-sentinel-production.up.railway.app/webhooks/token-transfer"
+    "url": "https://stacks-defi-sentinel-production.up.railway.app/api/webhooks/token-transfer"
   },
   "options": {
     "decode_clarity_values": true,
