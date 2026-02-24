@@ -68,8 +68,8 @@ function Card(props: { title: string; children: React.ReactNode }) {
   return (
     <div
       style={{
-        background: 'rgba(255,255,255,0.02)',
-        border: '1px solid rgba(255,255,255,0.07)',
+        background: 'rgba(15,23,42,0.8)',
+        border: '1px solid rgba(255,255,255,0.08)',
         borderRadius: 14,
         padding: '18px 20px',
       }}
@@ -222,11 +222,11 @@ const AnalyticsTab: React.FC = () => {
             <AreaChart data={overview.days}>
               <defs>
                 <linearGradient id="gradRevenue" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.35} />
-                  <stop offset="100%" stopColor="#38bdf8" stopOpacity={0.02} />
+                  <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.6} />
+                  <stop offset="100%" stopColor="#38bdf8" stopOpacity={0.05} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
               <XAxis
                 dataKey="date"
                 tick={{ fill: '#64748b', fontSize: 11 }}
@@ -246,7 +246,7 @@ const AnalyticsTab: React.FC = () => {
                 type="monotone"
                 dataKey="revenue"
                 stroke="#38bdf8"
-                strokeWidth={2.5}
+                strokeWidth={3}
                 fill="url(#gradRevenue)"
                 dot={false}
               />
@@ -259,15 +259,15 @@ const AnalyticsTab: React.FC = () => {
             <AreaChart data={overview.days}>
               <defs>
                 <linearGradient id="gradDau" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#a855f7" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="#a855f7" stopOpacity={0.02} />
+                  <stop offset="0%" stopColor="#a855f7" stopOpacity={0.5} />
+                  <stop offset="100%" stopColor="#a855f7" stopOpacity={0.05} />
                 </linearGradient>
                 <linearGradient id="gradNewUsers" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#22c55e" stopOpacity={0.25} />
-                  <stop offset="100%" stopColor="#22c55e" stopOpacity={0.02} />
+                  <stop offset="0%" stopColor="#22c55e" stopOpacity={0.45} />
+                  <stop offset="100%" stopColor="#22c55e" stopOpacity={0.05} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
               <XAxis
                 dataKey="date"
                 tick={{ fill: '#64748b', fontSize: 11 }}
@@ -290,7 +290,7 @@ const AnalyticsTab: React.FC = () => {
                 type="monotone"
                 dataKey="dau"
                 stroke="#a855f7"
-                strokeWidth={2.5}
+                strokeWidth={3}
                 fill="url(#gradDau)"
                 dot={false}
                 name="DAU"
@@ -299,7 +299,7 @@ const AnalyticsTab: React.FC = () => {
                 type="monotone"
                 dataKey="newUsers"
                 stroke="#22c55e"
-                strokeWidth={2.5}
+                strokeWidth={3}
                 fill="url(#gradNewUsers)"
                 dot={false}
                 name="New Users"
@@ -315,11 +315,11 @@ const AnalyticsTab: React.FC = () => {
           <AreaChart data={overview.days}>
             <defs>
               <linearGradient id="gradVolume" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="#fb923c" stopOpacity={0.35} />
-                <stop offset="100%" stopColor="#fb923c" stopOpacity={0.02} />
+                <stop offset="0%" stopColor="#fb923c" stopOpacity={0.6} />
+                <stop offset="100%" stopColor="#fb923c" stopOpacity={0.05} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
             <XAxis
               dataKey="date"
               tick={{ fill: '#64748b', fontSize: 11 }}
@@ -339,7 +339,7 @@ const AnalyticsTab: React.FC = () => {
               type="monotone"
               dataKey="txVolume"
               stroke="#fb923c"
-              strokeWidth={2.5}
+              strokeWidth={3}
               fill="url(#gradVolume)"
               dot={false}
               name="Tx Volume (USD)"
@@ -364,7 +364,7 @@ const AnalyticsTab: React.FC = () => {
           >
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={funnel.steps}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
                 <XAxis
                   dataKey="stepName"
                   tick={{ fill: '#64748b', fontSize: 11 }}
