@@ -293,7 +293,7 @@ export class ChainhooksV2Manager {
       },
       action: {
         type: 'http_post',
-        url: `${this.webhookBaseUrl}/webhooks/stx-transfers`,
+        url: `${this.webhookBaseUrl}/api/webhooks/whale-alerts`,
       },
       options: {
         decode_clarity_values: true,
@@ -326,7 +326,7 @@ export class ChainhooksV2Manager {
       filters: { events },
       action: {
         type: 'http_post',
-        url: `${this.webhookBaseUrl}/webhooks/contract-calls`,
+        url: `${this.webhookBaseUrl}/api/webhooks/swaps`,
       },
       options: {
         decode_clarity_values: true,
@@ -357,7 +357,7 @@ export class ChainhooksV2Manager {
       filters: { events },
       action: {
         type: 'http_post',
-        url: `${this.webhookBaseUrl}/webhooks/ft-transfers`,
+        url: `${this.webhookBaseUrl}/api/webhooks/ft-transfers`,
       },
       options: {
         decode_clarity_values: true,
@@ -385,7 +385,7 @@ export class ChainhooksV2Manager {
       },
       action: {
         type: 'http_post',
-        url: `${this.webhookBaseUrl}/webhooks/nft-events`,
+        url: `${this.webhookBaseUrl}/api/webhooks/nft-events`,
       },
       options: {
         decode_clarity_values: true,

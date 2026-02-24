@@ -141,6 +141,103 @@ export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (fastify, opts
     }
   });
 
+  // Webhook: Whale Alerts (STX large transfers)
+  fastify.post('/webhooks/whale-alerts', async (req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const payload = req.body as WebhookPayload;
+      const events = await eventProcessor.processTransferEvent(payload);
+
+      for (const event of events) {
+        analytics.recordTransfer(event);
+      }
+
+      return reply.send({ success: true, processed: events.length });
+    } catch (error) {
+      logger.error('Failed to process whale-alerts webhook', error);
+      return reply.status(500).send({ error: 'Failed to process webhook' });
+    }
+  });
+
+  // Webhook: FT Transfers (fungible token transfers)
+  fastify.post('/webhooks/ft-transfers', async (req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const payload = req.body as WebhookPayload;
+      const events = await eventProcessor.processTransferEvent(payload);
+
+      for (const event of events) {
+        analytics.recordTransfer(event);
+      }
+
+      return reply.send({ success: true, processed: events.length });
+    } catch (error) {
+      logger.error('Failed to process ft-transfers webhook', error);
+      return reply.status(500).send({ error: 'Failed to process webhook' });
+    }
+  });
+
+  // Webhook: NFT Events (mint + transfer)
+  fastify.post('/webhooks/nft-events', async (req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const payload = req.body as WebhookPayload;
+      if (!payload?.apply) return reply.send({ success: true, processed: 0 });
+
+      let count = 0;
+      for (const block of payload.apply) {
+        if (!block?.transactions) continue;
+        for (const tx of block.transactions) {
+          if (!tx?.metadata?.success) continue;
+          count++;
+          logger.info(`NFT event: ${tx.transaction_identifier.hash}`);
+        }
+      }
+
+      return reply.send({ success: true, processed: count });
+    } catch (error) {
+      logger.error('Failed to process nft-events webhook', error);
+      return reply.status(500).send({ error: 'Failed to process webhook' });
+    }
+  });
+
+  // Webhook: Staking Events (stake, unstake, claim-rewards)
+  fastify.post('/webhooks/staking', async (req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const payload = req.body as WebhookPayload;
+      if (!payload?.apply) return reply.send({ success: true, processed: 0 });
+
+      let count = 0;
+      for (const block of payload.apply) {
+        if (!block?.transactions) continue;
+        for (const tx of block.transactions) {
+          if (!tx?.metadata?.success) continue;
+          count++;
+          logger.info(`Staking event: ${tx.transaction_identifier.hash} by ${tx.metadata.sender}`);
+        }
+      }
+
+      return reply.send({ success: true, processed: count });
+    } catch (error) {
+      logger.error('Failed to process staking webhook', error);
+      return reply.status(500).send({ error: 'Failed to process webhook' });
+    }
+  });
+
+  // Webhook: Token Transfer (sentinel token)
+  fastify.post('/webhooks/token-transfer', async (req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const payload = req.body as WebhookPayload;
+      const events = await eventProcessor.processTransferEvent(payload);
+
+      for (const event of events) {
+        analytics.recordTransfer(event);
+      }
+
+      return reply.send({ success: true, processed: events.length });
+    } catch (error) {
+      logger.error('Failed to process token-transfer webhook', error);
+      return reply.status(500).send({ error: 'Failed to process webhook' });
+    }
+  });
+
   // Health check
   fastify.get('/health', async (_req: FastifyRequest, reply: FastifyReply) => {
     try {

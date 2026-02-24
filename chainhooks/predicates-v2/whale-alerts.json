@@ -12,7 +12,7 @@
   },
   "action": {
     "type": "http_post",
-    "url": "https://stacks-defi-sentinel-production.up.railway.app/webhooks/whale-alerts"
+    "url": "https://stacks-defi-sentinel-production.up.railway.app/api/webhooks/whale-alerts"
   },
   "options": {
     "decode_clarity_values": true,
