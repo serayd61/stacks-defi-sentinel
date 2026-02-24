@@ -110,6 +110,7 @@ services:
       - nakamoto
       - szabo
       - finney
+      - gauss
     healthcheck:
       test: ["CMD", "nginx", "-t"]
       interval: 30s
@@ -241,6 +242,39 @@ services:
         limits:
           memory: 512M
 
+  # Agent 5: GAUSS — Wallet Clustering & Smart Money Divergence
+  gauss:
+    build:
+      context: ./agents/gauss
+      dockerfile: Dockerfile
+    container_name: gauss
+    restart: unless-stopped
+    networks:
+      sentinel-net:
+        ipv4_address: 172.28.0.45
+    environment:
+      - AGENT_NAME=gauss
+      - AGENT_ROLE=wallet_clustering
+      - OLLAMA_URL=http://da-vinci:11434
+      - REDIS_URL=redis://redis-bus:6379
+      - SENTINEL_API=https://stacks-defi-sentinel-production.up.railway.app
+      - MODEL=llama3.2:1b
+      - POLL_INTERVAL=30
+      - CLUSTER_INTERVAL=300
+      - WHALE_THRESHOLD_STX=1000
+      - MAX_WALLETS=5000
+    volumes:
+      - agent-shared:/shared
+    depends_on:
+      redis:
+        condition: service_healthy
+      da-vinci:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 768M
+
   # ──────────────────────────────────────────
   # ORCHESTRATOR — Cluster yönetim paneli
   # ──────────────────────────────────────────
@@ -258,7 +292,7 @@ services:
     environment:
       - REDIS_URL=redis://redis-bus:6379
       - OLLAMA_URL=http://da-vinci:11434
-      - AGENTS=satoshi,nakamoto,szabo,finney
+      - AGENTS=satoshi,nakamoto,szabo,finney,gauss
     volumes:
       - agent-shared:/shared
     depends_on:
@@ -267,3 +301,4 @@ services:
       - nakamoto
       - szabo
       - finney
+      - gauss

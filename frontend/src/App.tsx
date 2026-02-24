@@ -18,6 +18,7 @@ import WalletAnalytics from './components/WalletAnalytics';
 import PriceAlerts from './components/PriceAlerts';
 import MarketOverview from './components/MarketOverview';
 import AIAgents from './components/AIAgents';
+import SmartMoneyDashboard from './components/SmartMoneyDashboard';
 import GasTracker from './components/GasTracker';
 import StacksLeaderboard from './components/StacksLeaderboard';
 import StacksPredict from './components/StacksPredict';
@@ -32,7 +33,7 @@ type TabType =
   | 'overview' | 'market' | 'network'
   | 'swaps' | 'price-alerts'
   | 'contracts' | 'alerts' | 'wallet-analytics'
-  | 'ai-agents' | 'sbtc'
+  | 'ai-agents' | 'smart-money' | 'sbtc'
   | 'gas' | 'leaderboard' | 'predict';
 
 interface NavItem { id: TabType; label: string; icon: React.ElementType; badge?: 'hot'|'new'|'live'; }
@@ -57,7 +58,8 @@ const NAV: NavSection[] = [
     { id: 'sbtc', label: 'sBTC Bridge', icon: Bitcoin, badge: 'new' as const },
   ]},
   { label: 'AI', items: [
-    { id: 'ai-agents', label: 'AI Agents', icon: Brain, badge: 'new' as const },
+    { id: 'ai-agents',    label: 'AI Agents',    icon: Brain,      badge: 'new' as const },
+    { id: 'smart-money',  label: 'Smart Money',  icon: TrendingUp, badge: 'hot' as const },
   ]},
   { label: 'Explore', items: [
     { id: 'gas',         label: 'Gas Tracker',  icon: Fuel },
@@ -596,6 +598,7 @@ function App() {
 
               {/* ─── AI AGENTS ─── */}
               {activeTab === 'ai-agents' && <div style={{ maxWidth: 1000, margin: '0 auto' }}><AIAgents /></div>}
+              {activeTab === 'smart-money' && <div style={{ maxWidth: 1100, margin: '0 auto' }}><SmartMoneyDashboard /></div>}
 
               {/* ─── EXPLORE ─── */}
               {activeTab === 'gas'         && <div style={{ maxWidth: 800, margin: '0 auto' }}><GasTracker /></div>}
@@ -716,7 +719,7 @@ function App() {
                 }}>
                   {[
                     { dot: wsConnected ? '#22c55e' : '#f59e0b', label: `WebSocket: ${wsConnected ? 'Live' : 'Reconnecting'}` },
-                    { dot: '#818cf8', label: 'AI Cluster: Hetzner VPS · 4 Agents' },
+                    { dot: '#818cf8', label: 'AI Cluster: Hetzner VPS · 5 Agents' },
                     { dot: '#60a5fa', label: `Updated: ${lastUpdate.toLocaleTimeString()}` },
                     { dot: '#fb923c', label: 'Network: Stacks Mainnet' },
                   ].map(s => (

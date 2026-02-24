@@ -139,7 +139,8 @@ def status():
         "satoshi":  "Whale Tracking & Pattern Analysis",
         "nakamoto": "DEX Arbitrage & Price Analysis",
         "szabo":    "Contract Security Scanner",
-        "finney":   "User Reports & Notifications"
+        "finney":   "User Reports & Notifications",
+        "gauss":    "Wallet Clustering & Smart Money Divergence"
     }
 
     for agent in AGENTS:
@@ -204,7 +205,7 @@ def command():
     if not cmd:
         return jsonify({"error": "command is required"}), 400
 
-    allowed = {"scan_whales", "scan_dex", "scan_contracts", "generate_report"}
+    allowed = {"scan_whales", "scan_dex", "scan_contracts", "generate_report", "scan_clusters"}
     if cmd not in allowed:
         return jsonify({"error": f"Unknown command: {cmd}"}), 400
 

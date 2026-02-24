@@ -7,6 +7,9 @@ import {
   TokenStats,
   DashboardStats,
   WhaleAlert,
+  WalletCluster,
+  ClusterSummary,
+  DivergenceSignal,
 } from '../types';
 
 /**
@@ -20,6 +23,9 @@ export class AnalyticsService {
   private alerts: WhaleAlert[] = [];
   private poolStats: Map<string, PoolStats> = new Map();
   private tokenStats: Map<string, TokenStats> = new Map();
+  private clusterData: WalletCluster[] = [];
+  private clusterSummary: ClusterSummary | null = null;
+  private divergenceSignals: DivergenceSignal[] = [];
 
   private readonly HOUR_MS = 60 * 60 * 1000;
   private readonly DAY_MS = 24 * this.HOUR_MS;
@@ -91,6 +97,46 @@ export class AnalyticsService {
 
   getWhaleAlerts(limit = 20): WhaleAlert[] {
     return this.alerts.slice(0, limit);
+  }
+
+  // ── Cluster Data ────────────────────────────────────
+  recordClusterUpdate(summary: ClusterSummary, clusters: WalletCluster[]): void {
+    this.clusterSummary = summary;
+    this.clusterData = clusters;
+    logger.info(`Cluster data updated: ${clusters.length} clusters`);
+  }
+
+  getClusters(): ClusterSummary & { clusters: WalletCluster[] } {
+    return {
+      ...(this.clusterSummary || {
+        totalClusters: 0, whaleGroups: 0, botNetworks: 0, exchanges: 0,
+        marketMakers: 0, retail: 0, smartMoneyCount: 0, smartMoneyClusters: [],
+        topAccumulators: [], topDistributors: [], totalWallets: 0,
+        lastUpdate: '',
+      }),
+      clusters: this.clusterData,
+    };
+  }
+
+  getClusterById(id: string): WalletCluster | undefined {
+    return this.clusterData.find((c) => c.id === id);
+  }
+
+  getClusterByWallet(address: string): WalletCluster | undefined {
+    return this.clusterData.find((c) => c.wallets.includes(address));
+  }
+
+  // ── Divergence Signals ──────────────────────────────
+  recordDivergenceSignal(signal: DivergenceSignal): void {
+    this.divergenceSignals.unshift(signal);
+    if (this.divergenceSignals.length > 50) {
+      this.divergenceSignals = this.divergenceSignals.slice(0, 50);
+    }
+    logger.info(`Divergence signal: ${signal.type} strength=${signal.strength}`);
+  }
+
+  getDivergenceSignals(limit = 20): DivergenceSignal[] {
+    return this.divergenceSignals.slice(0, limit);
   }
 
   private cleanupOldData(): void {
