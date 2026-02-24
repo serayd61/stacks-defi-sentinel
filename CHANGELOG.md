@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [Daily Update] - 2026-02-24
+
+### Changes
+- test: add edge case tests [mlzt3jcd]
+- feat: translate all Turkish text to English for global audience
+- feat: add sBTC Bridge Monitor — fully powered by Hiro API
+- feat: integrate Hiro APIs — real fees, signer metrics, token metadata
+- fix: update donate banner with real STX and BTC addresses
+- fix: translate all AI agent prompts to English + add donate banner
+- test: fix flaky tests [mlz1t94i]
+- feat: streamline UI — remove token ticker & DeFi Rankings tab
+- fix: switch model from phi3:mini to llama3.2:1b (memory constraint)
+- fix: agents fetch data directly from Hiro API (bypass Railway timeout)
+- chore: Auto-update CHANGELOG [skip ci]
+
+
 ## [Daily Update] - 2026-02-23
 
 ### Changes
