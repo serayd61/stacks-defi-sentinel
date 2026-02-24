@@ -17,7 +17,7 @@ export function useWebSocket(wsUrl: string) {
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectAttemptsRef = useRef(0);
-  const maxReconnectAttempts = 5;
+  const keepAliveRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) return;
@@ -30,11 +30,19 @@ export function useWebSocket(wsUrl: string) {
         console.log('WebSocket connected');
         setIsConnected(true);
         reconnectAttemptsRef.current = 0;
-        
+
         // Subscribe to channels
         ws.send(JSON.stringify({ type: 'subscribe', channel: 'swaps' }));
         ws.send(JSON.stringify({ type: 'subscribe', channel: 'alerts' }));
         ws.send(JSON.stringify({ type: 'subscribe', channel: 'liquidity' }));
+
+        // Keep-alive ping every 30 seconds
+        if (keepAliveRef.current) clearInterval(keepAliveRef.current);
+        keepAliveRef.current = setInterval(() => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'ping' }));
+          }
+        }, 30000);
       };
 
       ws.onmessage = (event) => {
@@ -63,17 +71,16 @@ export function useWebSocket(wsUrl: string) {
         console.log('WebSocket disconnected');
         setIsConnected(false);
         wsRef.current = null;
-        
-        // Attempt to reconnect
-        if (reconnectAttemptsRef.current < maxReconnectAttempts) {
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
-          console.log(`Reconnecting in ${delay}ms...`);
-          
-          reconnectTimeoutRef.current = setTimeout(() => {
-            reconnectAttemptsRef.current++;
-            connect();
-          }, delay);
-        }
+        if (keepAliveRef.current) { clearInterval(keepAliveRef.current); keepAliveRef.current = null; }
+
+        // Always attempt to reconnect with exponential backoff (max 60s)
+        const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 60000);
+        console.log(`Reconnecting in ${delay}ms (attempt ${reconnectAttemptsRef.current + 1})...`);
+
+        reconnectTimeoutRef.current = setTimeout(() => {
+          reconnectAttemptsRef.current++;
+          connect();
+        }, delay);
       };
 
       ws.onerror = (error) => {
@@ -91,12 +98,9 @@ export function useWebSocket(wsUrl: string) {
     connect();
 
     return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
+      if (reconnectTimeoutRef.current) clearTimeout(reconnectTimeoutRef.current);
+      if (keepAliveRef.current) clearInterval(keepAliveRef.current);
+      if (wsRef.current) wsRef.current.close();
     };
   }, [connect]);
 

@@ -6,6 +6,7 @@ import {
   Target, Star, Fuel,
   ChevronDown, Code, Server, Search,
   Home, ChevronLeft, Brain, Bitcoin,
+  Layers, Image, BarChart3, Link2, PieChart, Blocks,
 } from 'lucide-react';
 
 import { StatCard } from './components/StatCard';
@@ -22,6 +23,13 @@ import GasTracker from './components/GasTracker';
 import StacksLeaderboard from './components/StacksLeaderboard';
 import StacksPredict from './components/StacksPredict';
 import SBTCBridgeMonitor from './components/SBTCBridgeMonitor';
+import BlockExplorer from './components/BlockExplorer';
+import PortfolioTracker from './components/PortfolioTracker';
+import StackingTracker from './components/StackingTracker';
+import DEXAggregator from './components/DEXAggregator';
+import NFTGallery from './components/NFTGallery';
+import ChainhooksMonitor from './components/ChainhooksMonitor';
+import TokenAnalytics from './components/TokenAnalytics';
 import { WalletProvider } from './contexts/WalletContext';
 import { useApi } from './hooks/useApi';
 import { useWebSocket } from './hooks/useWebSocket';
@@ -30,10 +38,10 @@ const WS_URL = import.meta.env.VITE_WS_URL || 'wss://stacks-defi-sentinel-produc
 
 type TabType =
   | 'overview' | 'market' | 'network'
-  | 'swaps' | 'price-alerts'
-  | 'contracts' | 'alerts' | 'wallet-analytics'
+  | 'swaps' | 'price-alerts' | 'block-explorer' | 'dex'
+  | 'contracts' | 'alerts' | 'wallet-analytics' | 'portfolio' | 'stacking' | 'token-analytics' | 'chainhooks'
   | 'ai-agents' | 'sbtc'
-  | 'gas' | 'leaderboard' | 'predict';
+  | 'gas' | 'leaderboard' | 'predict' | 'nfts';
 
 interface NavItem { id: TabType; label: string; icon: React.ElementType; badge?: 'hot'|'new'|'live'; }
 interface NavSection { label: string; items: NavItem[]; }
@@ -42,27 +50,34 @@ const NAV: NavSection[] = [
   { label: 'Overview', items: [
     { id: 'overview',   label: 'Dashboard',      icon: Home,       badge: 'live' },
     { id: 'market',     label: 'Market',          icon: TrendingUp, badge: 'hot'  },
-    { id: 'network',    label: 'Network Health',  icon: Server,     badge: 'new'  },
+    { id: 'network',    label: 'Network Health',  icon: Server },
   ]},
   { label: 'Analytics', items: [
-    { id: 'contracts',        label: 'Contract Activity', icon: Code,     badge: 'new' },
+    { id: 'contracts',        label: 'Contract Activity', icon: Code },
     { id: 'alerts',           label: 'Whale Alerts',      icon: Activity },
     { id: 'wallet-analytics', label: 'Wallet Analyzer',   icon: Search },
+    { id: 'portfolio',        label: 'Portfolio',          icon: PieChart,   badge: 'new' },
+    { id: 'stacking',         label: 'Stacking',           icon: Layers,     badge: 'new' },
+    { id: 'token-analytics',  label: 'Token Analytics',    icon: BarChart3,  badge: 'new' },
   ]},
   { label: 'Live Data', items: [
-    { id: 'swaps',        label: 'Swap History',  icon: ArrowRightLeft },
-    { id: 'price-alerts', label: 'Price Alerts',  icon: Bell, badge: 'new' },
+    { id: 'swaps',          label: 'Swap History',    icon: ArrowRightLeft },
+    { id: 'dex',            label: 'DEX Aggregator',  icon: Link2,     badge: 'new' },
+    { id: 'block-explorer', label: 'Block Explorer',  icon: Blocks,    badge: 'new' },
+    { id: 'price-alerts',   label: 'Price Alerts',    icon: Bell },
   ]},
   { label: 'Bitcoin', items: [
-    { id: 'sbtc', label: 'sBTC Bridge', icon: Bitcoin, badge: 'new' as const },
+    { id: 'sbtc', label: 'sBTC Bridge', icon: Bitcoin, badge: 'live' as const },
   ]},
   { label: 'AI', items: [
-    { id: 'ai-agents', label: 'AI Agents', icon: Brain, badge: 'new' as const },
+    { id: 'ai-agents',  label: 'AI Agents',    icon: Brain,  badge: 'live' as const },
+    { id: 'chainhooks',  label: 'Chainhooks',    icon: Link2 },
   ]},
   { label: 'Explore', items: [
-    { id: 'gas',         label: 'Gas Tracker',  icon: Fuel },
-    { id: 'leaderboard', label: 'Leaderboard',  icon: Star },
-    { id: 'predict',     label: 'Predictions',  icon: Target },
+    { id: 'gas',         label: 'Gas Tracker',   icon: Fuel },
+    { id: 'nfts',        label: 'NFT Gallery',   icon: Image,  badge: 'new' },
+    { id: 'leaderboard', label: 'Leaderboard',   icon: Star },
+    { id: 'predict',     label: 'Predictions',   icon: Target },
   ]},
 ];
 
@@ -587,18 +602,27 @@ function App() {
 
               {activeTab === 'wallet-analytics' && <div style={{ maxWidth: 800, margin: '0 auto' }}><WalletAnalytics /></div>}
 
+              {/* ─── ANALYTICS (new) ─── */}
+              {activeTab === 'portfolio'        && <div style={{ maxWidth: 1000, margin: '0 auto' }}><PortfolioTracker /></div>}
+              {activeTab === 'stacking'         && <div style={{ maxWidth: 1000, margin: '0 auto' }}><StackingTracker /></div>}
+              {activeTab === 'token-analytics'  && <div style={{ maxWidth: 1000, margin: '0 auto' }}><TokenAnalytics /></div>}
+
               {/* ─── LIVE DATA ─── */}
-              {activeTab === 'swaps'        && <SwapTable swaps={combinedSwaps} isLive={wsConnected} showAll />}
-              {activeTab === 'price-alerts' && <div style={{ maxWidth: 600, margin: '0 auto' }}><PriceAlerts /></div>}
+              {activeTab === 'swaps'          && <SwapTable swaps={combinedSwaps} isLive={wsConnected} showAll />}
+              {activeTab === 'dex'            && <div style={{ maxWidth: 1100, margin: '0 auto' }}><DEXAggregator /></div>}
+              {activeTab === 'block-explorer' && <div style={{ maxWidth: 1100, margin: '0 auto' }}><BlockExplorer /></div>}
+              {activeTab === 'price-alerts'   && <div style={{ maxWidth: 600, margin: '0 auto' }}><PriceAlerts /></div>}
 
               {/* ─── SBTC BRIDGE ─── */}
               {activeTab === 'sbtc' && <div style={{ maxWidth: 960, margin: '0 auto' }}><SBTCBridgeMonitor /></div>}
 
               {/* ─── AI AGENTS ─── */}
-              {activeTab === 'ai-agents' && <div style={{ maxWidth: 1000, margin: '0 auto' }}><AIAgents /></div>}
+              {activeTab === 'ai-agents'  && <div style={{ maxWidth: 1000, margin: '0 auto' }}><AIAgents /></div>}
+              {activeTab === 'chainhooks' && <div style={{ maxWidth: 1000, margin: '0 auto' }}><ChainhooksMonitor /></div>}
 
               {/* ─── EXPLORE ─── */}
               {activeTab === 'gas'         && <div style={{ maxWidth: 800, margin: '0 auto' }}><GasTracker /></div>}
+              {activeTab === 'nfts'        && <div style={{ maxWidth: 1100, margin: '0 auto' }}><NFTGallery /></div>}
               {activeTab === 'leaderboard' && <div style={{ maxWidth: 920, margin: '0 auto' }}><StacksLeaderboard /></div>}
               {activeTab === 'predict'     && <div style={{ maxWidth: 800, margin: '0 auto' }}><StacksPredict /></div>}
 

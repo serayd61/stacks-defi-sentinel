@@ -36,125 +36,57 @@ const StacksLeaderboard: React.FC = () => {
 
   const fetchLeaderboard = async () => {
     try {
-      // Builder Challenge leaderboard data
-      const mockLeaderboard: LeaderboardEntry[] = [
-        {
-          rank: 1,
-          address: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB',
-          ensName: 'debielily',
-          avatar: '👑',
-          githubProgress: 95.5,
-          onchainProgress: 88.2,
-          rewards: 600,
-          weeklyChange: 0,
-          activitySummary: 'Built Stacks DeFi Protocol with 50+ commits',
-          badges: ['🏆', '⭐', '🔥'],
-        },
-        {
-          rank: 2,
-          address: 'SP3K8BC0PPEVCV7NZ6QSRWPQ2JE9E5B6N3PA0KR9H',
-          ensName: 'investorphem.base.eth',
-          avatar: '🦍',
-          githubProgress: 82.3,
-          onchainProgress: 91.5,
-          rewards: 600,
-          weeklyChange: 0,
-          activitySummary: 'Created NFT marketplace and staking contracts',
-          badges: ['🥈', '💎'],
-        },
-        {
-          rank: 3,
-          address: 'SP1Y5YSTAHZ88XYK1VPDH24GY0HPX5J4JECTMY4A1',
-          ensName: 'devqueen.base.eth',
-          avatar: '👸',
-          githubProgress: 78.9,
-          onchainProgress: 85.4,
-          rewards: 600,
-          weeklyChange: 0,
-          activitySummary: 'Developed DAO governance tools',
-          badges: ['🥉', '🚀'],
-        },
-        {
-          rank: 4,
-          address: 'SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR',
-          ensName: 'winsznx',
-          avatar: '🎯',
-          githubProgress: 75.2,
-          onchainProgress: 82.1,
-          rewards: 600,
-          weeklyChange: 0,
-          activitySummary: 'Built analytics dashboard with real-time data',
-          badges: ['⚡'],
-        },
-        {
-          rank: 5,
-          address: 'SP3NE8YJHGX32GNGZ9NPDH0M65YWB3PFCN5J3PX9Z',
-          ensName: 'sanmipaul',
-          avatar: '🔮',
-          githubProgress: 71.8,
-          onchainProgress: 79.3,
-          rewards: 600,
-          weeklyChange: 0,
-          activitySummary: 'Contributed to RenV Protocol',
-          badges: ['💫'],
-        },
-        {
-          rank: 6,
-          address: 'SP2PA9S93VBG8ZJE5T78Z45G7X0D4EXRQ8VG4WN8K',
-          ensName: 'masaun',
-          avatar: '🧙',
-          githubProgress: 68.5,
-          onchainProgress: 76.8,
-          rewards: 600,
-          weeklyChange: 0,
-          activitySummary: 'Built cross-chain bridge integration',
-          badges: ['🌉'],
-        },
-        {
-          rank: 7,
-          address: 'SP1HTBVD3JG9C05J7HBJTHGR0GGW7KXW28M5JS8QE',
-          ensName: 'rampop',
-          avatar: '🎮',
-          githubProgress: 65.2,
-          onchainProgress: 73.9,
-          rewards: 600,
-          weeklyChange: 2,
-          activitySummary: 'Created Quest system smart contracts',
-          badges: ['🎯'],
-        },
-        {
-          rank: 8,
-          address: 'SP2D5BGGJ956A635JG7CJQ59FTRFRB0893514EZPJ',
-          ensName: 'bamzzz',
-          avatar: '💥',
-          githubProgress: 62.1,
-          onchainProgress: 71.2,
-          rewards: 600,
-          weeklyChange: 1,
-          activitySummary: 'Made significant changes to smart contracts',
-          badges: ['🔧'],
-        },
-        // Your position (serayd61)
-        {
-          rank: 41,
-          address: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB',
-          ensName: 'serayd61.base.eth',
-          avatar: '🛡️',
-          githubProgress: 3.18,
-          onchainProgress: 17.93,
-          rewards: 120,
-          weeklyChange: 15,
-          activitySummary: 'Built Stacks DeFi Sentinel with Chainhooks',
-          badges: ['🚀', '⚡'],
-        },
-      ];
+      const API = import.meta.env.VITE_API_URL || 'https://stacks-defi-sentinel-production.up.railway.app';
+      const HIRO = 'https://api.hiro.so';
 
-      setLeaderboard(mockLeaderboard);
+      // Fetch recent high-value transfers to identify most active addresses
+      const res = await fetch(
+        `${HIRO}/extended/v1/tx?type=token_transfer&limit=50&order=desc&order_by=block_height`,
+        { headers: { Accept: 'application/json' } }
+      );
+
+      const activityMap = new Map<string, { txCount: number; totalAmount: number; lastTx: string }>();
+      const avatars = ['🔷', '🟣', '🟠', '⚡', '🔮', '🎯', '💎', '🧙', '🎮', '💥', '🦍', '🌟'];
+
+      if (res.ok) {
+        const data = await res.json() as { results?: Record<string, unknown>[] };
+        const txs = data.results || [];
+
+        for (const tx of txs) {
+          const sender = tx['sender_address'] as string;
+          const tt = tx['token_transfer'] as Record<string, unknown> | undefined;
+          if (!sender || !tt) continue;
+
+          const amount = Number(tt['amount'] || 0) / 1_000_000;
+          const existing = activityMap.get(sender) || { txCount: 0, totalAmount: 0, lastTx: '' };
+          existing.txCount++;
+          existing.totalAmount += amount;
+          existing.lastTx = (tx['burn_block_time_iso'] as string) || '';
+          activityMap.set(sender, existing);
+        }
+      }
+
+      // Sort by total amount and convert to leaderboard entries
+      const sorted = Array.from(activityMap.entries())
+        .sort((a, b) => b[1].totalAmount - a[1].totalAmount)
+        .slice(0, 10);
+
+      const entries: LeaderboardEntry[] = sorted.map(([address, data], index) => ({
+        rank: index + 1,
+        address,
+        avatar: avatars[index % avatars.length],
+        githubProgress: 0,
+        onchainProgress: Math.min(data.totalAmount / 10_000 * 100, 100),
+        rewards: 0,
+        weeklyChange: 0,
+        activitySummary: `${data.txCount} transactions, ${Math.round(data.totalAmount).toLocaleString()} STX transferred`,
+        badges: data.totalAmount >= 100_000 ? ['🐋'] : data.totalAmount >= 10_000 ? ['🦈'] : [],
+      }));
+
+      setLeaderboard(entries);
       setStats({
-        totalParticipants: 1250,
-        totalRewardsDistributed: 125000,
-        yourRank: 41,
-        yourRewards: 120,
+        totalParticipants: activityMap.size,
+        totalRewardsDistributed: 0,
       });
     } catch (error) {
       console.error('Error fetching leaderboard:', error);
@@ -205,8 +137,8 @@ const StacksLeaderboard: React.FC = () => {
             <Trophy className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white">Builder Challenge</h2>
-            <p className="text-sm text-yellow-300/70">Weekly Leaderboard</p>
+            <h2 className="text-xl font-bold text-white">On-Chain Leaderboard</h2>
+            <p className="text-sm text-yellow-300/70">Top Active Addresses (Live)</p>
           </div>
         </div>
         <a
@@ -221,34 +153,20 @@ const StacksLeaderboard: React.FC = () => {
 
       {/* Stats Overview */}
       {stats && (
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 gap-3 mb-6">
           <div className="bg-black/30 rounded-xl p-4 border border-yellow-500/20">
             <div className="flex items-center gap-2 mb-1">
               <Users className="w-4 h-4 text-yellow-400" />
-              <span className="text-xs text-yellow-300/70">Participants</span>
+              <span className="text-xs text-yellow-300/70">Active Addresses</span>
             </div>
             <p className="text-lg font-bold text-white">{stats.totalParticipants.toLocaleString()}</p>
           </div>
           <div className="bg-black/30 rounded-xl p-4 border border-yellow-500/20">
             <div className="flex items-center gap-2 mb-1">
               <Award className="w-4 h-4 text-yellow-400" />
-              <span className="text-xs text-yellow-300/70">Total Rewards</span>
+              <span className="text-xs text-yellow-300/70">Data Source</span>
             </div>
-            <p className="text-lg font-bold text-white">{stats.totalRewardsDistributed.toLocaleString()} $STX</p>
-          </div>
-          <div className="bg-gradient-to-r from-purple-500/20 to-orange-500/20 rounded-xl p-4 border border-purple-500/30">
-            <div className="flex items-center gap-2 mb-1">
-              <Star className="w-4 h-4 text-purple-400" />
-              <span className="text-xs text-purple-300/70">Your Rank</span>
-            </div>
-            <p className="text-lg font-bold text-white">#{stats.yourRank}</p>
-          </div>
-          <div className="bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-xl p-4 border border-green-500/30">
-            <div className="flex items-center gap-2 mb-1">
-              <Zap className="w-4 h-4 text-green-400" />
-              <span className="text-xs text-green-300/70">Your Rewards</span>
-            </div>
-            <p className="text-lg font-bold text-white">{stats.yourRewards?.toFixed(2)} $STX</p>
+            <p className="text-lg font-bold text-white">Hiro API</p>
           </div>
         </div>
       )}
@@ -289,12 +207,12 @@ const StacksLeaderboard: React.FC = () => {
 
       {/* Leaderboard Table */}
       <div className="space-y-2">
-        {leaderboard.slice(0, 8).map((entry, index) => (
+        {leaderboard.slice(0, 10).map((entry, index) => (
           <div
             key={index}
             className={`flex items-center gap-4 p-4 rounded-xl transition-all ${
-              entry.rank === 41
-                ? 'bg-gradient-to-r from-purple-500/20 to-orange-500/20 border-2 border-purple-500/50'
+              entry.rank <= 3
+                ? 'bg-gradient-to-r from-yellow-500/10 to-amber-500/10 border border-yellow-500/30'
                 : 'bg-black/20 border border-yellow-500/10 hover:border-yellow-500/30'
             }`}
           >
@@ -362,64 +280,10 @@ const StacksLeaderboard: React.FC = () => {
           </div>
         ))}
 
-        {/* Show "You" separator if not in top 8 */}
-        {leaderboard.find(e => e.rank === 41) && (
-          <>
-            <div className="flex items-center gap-4 py-2">
-              <div className="flex-1 border-t border-dashed border-yellow-500/30"></div>
-              <span className="text-yellow-300/50 text-sm">• • •</span>
-              <div className="flex-1 border-t border-dashed border-yellow-500/30"></div>
-            </div>
-            <div
-              className="flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-purple-500/20 to-orange-500/20 border-2 border-purple-500/50"
-            >
-              {/* Your entry highlighted */}
-              <div className="w-10 flex justify-center">
-                <span className="text-purple-400 font-mono font-bold">#41</span>
-              </div>
-              <div className="flex items-center gap-3 flex-1">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-orange-500 flex items-center justify-center text-xl">
-                  🛡️
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-white font-bold">serayd61.base.eth</span>
-                    <span className="px-2 py-0.5 bg-purple-500/30 text-purple-300 text-xs rounded-full">You</span>
-                    <span>🚀</span>
-                    <span>⚡</span>
-                  </div>
-                  <p className="text-xs text-purple-300/70">Built Stacks DeFi Sentinel with Chainhooks</p>
-                </div>
-              </div>
-              <div className="hidden md:flex gap-4">
-                <div className="w-24">
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-400">GitHub</span>
-                    <span className="text-white">3.18%</span>
-                  </div>
-                  <div className="h-1.5 bg-black/50 rounded-full overflow-hidden">
-                    <div className="h-full bg-red-500 rounded-full" style={{ width: '3.18%' }} />
-                  </div>
-                </div>
-                <div className="w-24">
-                  <div className="flex justify-between text-xs mb-1">
-                    <span className="text-gray-400">Onchain</span>
-                    <span className="text-white">17.93%</span>
-                  </div>
-                  <div className="h-1.5 bg-black/50 rounded-full overflow-hidden">
-                    <div className="h-full bg-orange-500 rounded-full" style={{ width: '17.93%' }} />
-                  </div>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-white font-bold">120.00 $STX</p>
-                <p className="text-xs text-green-400 flex items-center justify-end gap-1">
-                  <TrendingUp className="w-3 h-3" />
-                  +15 ranks
-                </p>
-              </div>
-            </div>
-          </>
+        {leaderboard.length === 0 && (
+          <div className="text-center py-8 text-gray-400">
+            <p className="text-sm">No recent activity data available. Leaderboard updates every 60 seconds.</p>
+          </div>
         )}
       </div>
 
