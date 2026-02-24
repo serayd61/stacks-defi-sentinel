@@ -82,7 +82,7 @@ const WALLETS: WalletInfo[] = [
 ];
 
 const StacksWalletConnect: React.FC = () => {
-  // Use WalletContext — single source of truth
+  // Use WalletContext as the single source of truth
   const {
     isConnected,
     isLoading,

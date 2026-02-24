@@ -9,6 +9,9 @@ import { EventProcessor } from './services/event-processor';
 import { AnalyticsService } from './services/analytics';
 import { DeFiRoutes } from './api/routes';
 import { setupWebSocket } from './api/websocket';
+import { HiroDataService } from './services/hiro-data';
+import { HiroWebSocketService } from './services/hiro-websocket';
+import { ProtocolDiscoveryService } from './services/protocol-discovery';
 import { logger } from './utils/logger';
 
 // Load environment variables
@@ -73,6 +76,10 @@ async function main() {
 
   const analytics = new AnalyticsService();
 
+  // Service references for shutdown
+  let hiroWsService: HiroWebSocketService | null = null;
+  let protocolDiscovery: ProtocolDiscoveryService | null = null;
+
   // Connect event processor to analytics
   eventProcessor.on('swap', (event) => analytics.recordSwap(event));
   eventProcessor.on('liquidity', (event) => analytics.recordLiquidity(event));
@@ -86,12 +93,19 @@ async function main() {
     webhookBaseUrl: config.webhookBaseUrl,
   });
 
+  // Initialize Hiro Data Service (active polling)
+  const hiroDataService = new HiroDataService(analytics, eventProcessor, {
+    pollIntervalMs: 30_000,
+    whaleThresholdStx: config.whaleThresholdStx,
+  });
+
   // Register API routes
   await fastify.register(DeFiRoutes, {
     prefix: '/api',
     analytics,
     chainhooksManager,
     eventProcessor,
+    hiroDataService,
   });
 
   // Setup WebSocket
@@ -156,6 +170,26 @@ async function main() {
     logger.info(`📊 Dashboard: http://${config.host}:${config.port}/api/dashboard`);
     logger.info(`🔌 WebSocket: ws://${config.host}:${config.port}/ws`);
 
+    // Start Hiro Data Service (active polling for real data)
+    hiroDataService.start().catch((err) => {
+      logger.error('Failed to start Hiro Data Service:', err);
+    });
+    logger.info('📊 Hiro Data Service: active polling enabled');
+
+    // Start Hiro WebSocket Service (real-time event streaming)
+    hiroWsService = new HiroWebSocketService(eventProcessor, analytics);
+    hiroWsService.start().catch((err) => {
+      logger.warn('Hiro WebSocket Service failed to start:', err);
+    });
+    logger.info('🔌 Hiro WebSocket Service: real-time streaming enabled');
+
+    // Start Protocol Discovery Service (auto-detect new DeFi protocols)
+    protocolDiscovery = new ProtocolDiscoveryService(3600_000); // 1 hour
+    protocolDiscovery.start().catch((err) => {
+      logger.warn('Protocol Discovery Service failed to start:', err);
+    });
+    logger.info('🔍 Protocol Discovery Service: scanning for new protocols');
+
     // Initialize chainhooks if API key is provided
     if (config.chainhooksApiKey) {
       logger.info('🔗 Initializing Chainhooks...');
@@ -198,6 +232,11 @@ async function main() {
     logger.info('🛑 Shutting down...');
 
     try {
+      // Stop services
+      hiroDataService.stop();
+      hiroWsService?.stop();
+      protocolDiscovery?.stop();
+
       // Cleanup chainhooks if they were registered
       if (config.chainhooksApiKey) {
         await chainhooksManager.cleanup();
