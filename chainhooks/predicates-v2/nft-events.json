@@ -15,7 +15,7 @@
   },
   "action": {
     "type": "http_post",
-    "url": "https://stacks-defi-sentinel-production.up.railway.app/webhooks/nft-events"
+    "url": "https://stacks-defi-sentinel-production.up.railway.app/api/webhooks/nft-events"
   },
   "options": {
     "decode_clarity_values": true,
