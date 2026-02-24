@@ -6,6 +6,7 @@ import {
   Target, Star, Fuel,
   ChevronDown, Code, Server, Search,
   Home, ChevronLeft, Brain, Bitcoin,
+  BarChart3,
 } from 'lucide-react';
 
 import { StatCard } from './components/StatCard';
@@ -22,9 +23,11 @@ import GasTracker from './components/GasTracker';
 import StacksLeaderboard from './components/StacksLeaderboard';
 import StacksPredict from './components/StacksPredict';
 import SBTCBridgeMonitor from './components/SBTCBridgeMonitor';
+import AnalyticsTab from './components/AnalyticsTab';
 import { WalletProvider } from './contexts/WalletContext';
 import { useApi } from './hooks/useApi';
 import { useWebSocket } from './hooks/useWebSocket';
+import { useTrackEvent } from './hooks/useTrackEvent';
 
 const WS_URL = import.meta.env.VITE_WS_URL || 'wss://stacks-defi-sentinel-production.up.railway.app/ws';
 
@@ -33,7 +36,8 @@ type TabType =
   | 'swaps' | 'price-alerts'
   | 'contracts' | 'alerts' | 'wallet-analytics'
   | 'ai-agents' | 'sbtc'
-  | 'gas' | 'leaderboard' | 'predict';
+  | 'gas' | 'leaderboard' | 'predict'
+  | 'user-analytics';
 
 interface NavItem { id: TabType; label: string; icon: React.ElementType; badge?: 'hot'|'new'|'live'; }
 interface NavSection { label: string; items: NavItem[]; }
@@ -45,7 +49,8 @@ const NAV: NavSection[] = [
     { id: 'network',    label: 'Network Health',  icon: Server,     badge: 'new'  },
   ]},
   { label: 'Analytics', items: [
-    { id: 'contracts',        label: 'Contract Activity', icon: Code,     badge: 'new' },
+    { id: 'user-analytics',   label: 'Analytics',         icon: BarChart3, badge: 'new' },
+    { id: 'contracts',        label: 'Contract Activity', icon: Code },
     { id: 'alerts',           label: 'Whale Alerts',      icon: Activity },
     { id: 'wallet-analytics', label: 'Wallet Analyzer',   icon: Search },
   ]},
@@ -275,11 +280,17 @@ const Sidebar: React.FC<{
 function App() {
   const { dashboardStats, isLoading, isRefreshing, error, fetchDashboard } = useApi();
   const { isConnected: wsConnected, events } = useWebSocket(WS_URL);
+  const { track } = useTrackEvent();
 
   const [activeTab, setActiveTab] = useState<TabType>('ai-agents');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(new Date());
+
+  // Track page view on mount
+  useEffect(() => {
+    track('page_view');
+  }, [track]);
 
   useEffect(() => {
     const iv = setInterval(() => { fetchDashboard(); setLastUpdate(new Date()); }, 30000);
@@ -556,6 +567,8 @@ function App() {
               )}
 
               {/* ─── ANALYTICS ─── */}
+              {activeTab === 'user-analytics' && <div style={{ maxWidth: 1100, margin: '0 auto' }}><AnalyticsTab /></div>}
+
               {activeTab === 'contracts' && <div style={{ maxWidth: 920, margin: '0 auto' }}><ContractActivityMonitor /></div>}
 
               {activeTab === 'alerts' && (

@@ -1,9 +1,16 @@
 import { FastifyPluginAsync, FastifyRequest, FastifyReply } from 'fastify';
+import crypto from 'crypto';
 import { AnalyticsService } from '../services/analytics';
 import { DeFiChainhooksManager } from '../chainhooks/client';
 import { EventProcessor } from '../services/event-processor';
 import { apiKeyService, ApiTier, TIER_LIMITS, TIER_PRICES } from '../services/api-keys';
 import { notificationService, NotificationChannel } from '../services/notifications';
+import {
+  recordUserEvent,
+  getOverview,
+  getAcquisitionFunnel,
+  UserEvent,
+} from '../services/user-analytics';
 import { WebhookPayload } from '../types';
 import { logger } from '../utils/logger';
 
@@ -351,6 +358,58 @@ export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (fastify, opts
       logger.error('transactions proxy error:', err);
       return reply.send([]);
     }
+  });
+
+  // ── User Analytics Endpoints ─────────────────────────────────────────────
+
+  // POST /api/events — user event ingest
+  fastify.post('/events', async (req: FastifyRequest, reply: FastifyReply) => {
+    const body = req.body as Partial<UserEvent>;
+    if (!body.eventName || !body.timestamp) {
+      return reply.status(400).send({ error: 'eventName and timestamp required' });
+    }
+
+    const event: UserEvent = {
+      id: crypto.randomUUID(),
+      eventName: body.eventName as UserEvent['eventName'],
+      walletAddress: body.walletAddress,
+      sessionId: body.sessionId,
+      value: body.value,
+      currency: body.currency ?? 'USD',
+      timestamp: body.timestamp,
+      context: body.context ?? {},
+    };
+
+    recordUserEvent(event);
+    return { ok: true };
+  });
+
+  // GET /api/analytics/overview — daily metrics overview
+  fastify.get('/analytics/overview', async (req: FastifyRequest, reply: FastifyReply) => {
+    const query = req.query as { from?: string; to?: string };
+    const now = new Date();
+    const defaultTo = now.toISOString().slice(0, 10);
+    const defaultFrom = new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+
+    const from = query.from ?? defaultFrom;
+    const to = query.to ?? defaultTo;
+    const data = getOverview(from, to);
+    return data;
+  });
+
+  // GET /api/analytics/funnel/acquisition — acquisition funnel
+  fastify.get('/analytics/funnel/acquisition', async (req: FastifyRequest, reply: FastifyReply) => {
+    const query = req.query as { from?: string; to?: string };
+    const now = new Date();
+    const defaultTo = now.toISOString();
+    const defaultFrom = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    const from = query.from ?? defaultFrom;
+    const to = query.to ?? defaultTo;
+    const data = getAcquisitionFunnel(from, to);
+    return { funnelId: 'acquisition', steps: data };
   });
 
   // GET /api/contracts/recent — son deploy edilen smart contract'lar
