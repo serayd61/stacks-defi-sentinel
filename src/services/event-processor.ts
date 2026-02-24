@@ -125,6 +125,14 @@ export class EventProcessor extends EventEmitter {
     return transfers;
   }
 
+  emitClusterUpdate(data: unknown): void {
+    this.emit('cluster-update', data);
+  }
+
+  emitDivergenceSignal(signal: unknown): void {
+    this.emit('divergence', signal);
+  }
+
   private createWhaleAlert(type: WhaleAlert['type'], event: TokenTransfer): WhaleAlert {
     return {
       id: `${Date.now()}-${Math.random().toString(36).substring(7)}`,

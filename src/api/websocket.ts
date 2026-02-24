@@ -47,6 +47,18 @@ export class WebSocketManager {
       this.broadcast('all', { type: 'whale-alert', data: alert });
     });
 
+    // Listen for cluster updates (from GAUSS agent)
+    this.eventProcessor.on('cluster-update', (data: unknown) => {
+      this.broadcast('cluster-update', data);
+      this.broadcast('all', { type: 'cluster-update', data });
+    });
+
+    // Listen for divergence signals (from GAUSS agent)
+    this.eventProcessor.on('divergence', (signal: unknown) => {
+      this.broadcast('divergence', signal);
+      this.broadcast('all', { type: 'divergence', data: signal });
+    });
+
     logger.info('WebSocket event listeners initialized');
   }
 
@@ -114,7 +126,7 @@ export class WebSocketManager {
     const client = this.clients.get(clientId);
     if (!client) return;
 
-    const validChannels = ['all', 'swap', 'liquidity', 'transfer', 'whale-alert'];
+    const validChannels = ['all', 'swap', 'liquidity', 'transfer', 'whale-alert', 'cluster-update', 'divergence'];
     if (!validChannels.includes(channel)) {
       this.sendToClient(clientId, {
         type: 'error',
@@ -216,6 +228,8 @@ export class WebSocketManager {
       liquidity: 0,
       transfer: 0,
       'whale-alert': 0,
+      'cluster-update': 0,
+      divergence: 0,
     };
 
     for (const client of this.clients.values()) {

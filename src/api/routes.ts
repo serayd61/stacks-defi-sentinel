@@ -4,7 +4,7 @@ import { DeFiChainhooksManager } from '../chainhooks/client';
 import { EventProcessor } from '../services/event-processor';
 import { apiKeyService, ApiTier, TIER_LIMITS, TIER_PRICES } from '../services/api-keys';
 import { notificationService, NotificationChannel } from '../services/notifications';
-import { WebhookPayload } from '../types';
+import { WebhookPayload, WalletCluster, ClusterSummary, DivergenceSignal } from '../types';
 import { logger } from '../utils/logger';
 
 interface RouteOptions {
@@ -39,6 +39,7 @@ export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (fastify, opts
       { name: 'nakamoto', role: 'DEX Arbitrage & Price Analysis',    model: 'llama3.2:1b' },
       { name: 'szabo',    role: 'Contract Security Scanner',         model: 'llama3.2:1b' },
       { name: 'finney',   role: 'User Reports & Notifications',      model: 'llama3.2:1b' },
+      { name: 'gauss',    role: 'Wallet Clustering & Smart Money Divergence', model: 'llama3.2:1b' },
     ];
     const lastInsight = aiInsights[0] as Record<string, unknown> | undefined;
     return reply.send({
@@ -77,6 +78,63 @@ export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (fastify, opts
     const limit = (req.query as { limit?: number }).limit || 20;
     const alerts = analytics.getWhaleAlerts(limit);
     return reply.send({ alerts });
+  });
+
+  // ── Wallet Clustering & Divergence Endpoints ──────────────────────────────
+
+  // GET /api/clusters — cluster summary + all clusters
+  fastify.get('/clusters', async (req: FastifyRequest, reply: FastifyReply) => {
+    const data = analytics.getClusters();
+    return reply.send(data);
+  });
+
+  // GET /api/clusters/:id — single cluster detail
+  fastify.get('/clusters/:id', async (req: FastifyRequest, reply: FastifyReply) => {
+    const { id } = req.params as { id: string };
+    const cluster = analytics.getClusterById(id);
+    if (!cluster) {
+      return reply.status(404).send({ error: 'Cluster not found' });
+    }
+    return reply.send(cluster);
+  });
+
+  // GET /api/clusters/wallet/:address — find cluster by wallet address
+  fastify.get('/clusters/wallet/:address', async (req: FastifyRequest, reply: FastifyReply) => {
+    const { address } = req.params as { address: string };
+    const cluster = analytics.getClusterByWallet(address);
+    if (!cluster) {
+      return reply.send({ clusterId: null, cluster: null });
+    }
+    return reply.send({ clusterId: cluster.id, cluster });
+  });
+
+  // GET /api/divergence-signals — smart money divergence signals
+  fastify.get('/divergence-signals', async (req: FastifyRequest, reply: FastifyReply) => {
+    const limit = (req.query as { limit?: number }).limit || 20;
+    const signals = analytics.getDivergenceSignals(limit);
+    return reply.send({ signals, count: signals.length });
+  });
+
+  // POST /api/cluster-data — GAUSS agent pushes cluster data
+  fastify.post('/cluster-data', async (req: FastifyRequest, reply: FastifyReply) => {
+    const body = req.body as { summary: ClusterSummary; clusters: WalletCluster[] };
+    if (!body?.summary || !body?.clusters) {
+      return reply.status(400).send({ error: 'summary and clusters required' });
+    }
+    analytics.recordClusterUpdate(body.summary, body.clusters);
+    eventProcessor.emitClusterUpdate(body.summary);
+    return reply.send({ ok: true });
+  });
+
+  // POST /api/divergence-signals — GAUSS agent pushes divergence signals
+  fastify.post('/divergence-signals', async (req: FastifyRequest, reply: FastifyReply) => {
+    const signal = req.body as DivergenceSignal;
+    if (!signal?.type || !signal?.id) {
+      return reply.status(400).send({ error: 'Invalid signal data' });
+    }
+    analytics.recordDivergenceSignal(signal);
+    eventProcessor.emitDivergenceSignal(signal);
+    return reply.send({ ok: true });
   });
 
   // Chainhooks list

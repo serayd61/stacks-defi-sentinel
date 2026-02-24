@@ -138,3 +138,52 @@ export interface NetworkConfig {
   networkUrl: string;
   explorerUrl: string;
 }
+
+// Wallet Clustering Types
+export interface WalletCluster {
+  id: string;
+  wallets: string[];
+  walletCount: number;
+  type: 'whale_group' | 'bot_network' | 'exchange' | 'market_maker' | 'retail';
+  totalVolume: number;
+  totalSent: number;
+  totalReceived: number;
+  avgTxSize: number;
+  txCount: number;
+  dominantDex: string;
+  activeSince: string;
+  lastActivity: string;
+  accumulationScore: number;  // -100 to +100
+  scoreTrend: number[];       // Last 24 hourly scores
+  updatedAt: string;
+}
+
+export interface ClusterSummary {
+  totalClusters: number;
+  whaleGroups: number;
+  botNetworks: number;
+  exchanges: number;
+  marketMakers: number;
+  retail: number;
+  smartMoneyCount: number;
+  smartMoneyClusters: string[];
+  topAccumulators: WalletCluster[];
+  topDistributors: WalletCluster[];
+  totalWallets: number;
+  lastUpdate: string;
+}
+
+export interface DivergenceSignal {
+  id: string;
+  type: 'bullish_divergence' | 'bearish_divergence' | 'confirmation';
+  strength: number;           // 0-100
+  smartMoneyAction: 'accumulating' | 'distributing' | 'neutral';
+  priceTrend: 'rising' | 'falling' | 'sideways';
+  affectedClusters: string[];
+  stxPrice: number;
+  timestamp: string;
+  description: string;
+  avgAccumulationScore: number;
+  priceChange6hPct: number;
+  smartMoneyCount: number;
+}
