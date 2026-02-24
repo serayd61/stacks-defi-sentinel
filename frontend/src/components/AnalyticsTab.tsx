@@ -4,8 +4,8 @@ import {
   useAcquisitionFunnel,
 } from '../hooks/useAnalytics';
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   Tooltip,
@@ -13,6 +13,7 @@ import {
   ResponsiveContainer,
   BarChart,
   Bar,
+  Legend,
 } from 'recharts';
 
 function KpiCard(props: { label: string; value: string; unit?: string }) {
@@ -218,7 +219,13 @@ const AnalyticsTab: React.FC = () => {
       >
         <Card title="Revenue over time">
           <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={overview.days}>
+            <AreaChart data={overview.days}>
+              <defs>
+                <linearGradient id="gradRevenue" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="#38bdf8" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
               <XAxis
                 dataKey="date"
@@ -235,20 +242,31 @@ const AnalyticsTab: React.FC = () => {
                 }}
                 labelStyle={{ color: '#e5e7eb' }}
               />
-              <Line
+              <Area
                 type="monotone"
                 dataKey="revenue"
                 stroke="#38bdf8"
-                strokeWidth={2}
+                strokeWidth={2.5}
+                fill="url(#gradRevenue)"
                 dot={false}
               />
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         </Card>
 
         <Card title="DAU & New Users">
           <ResponsiveContainer width="100%" height={260}>
-            <LineChart data={overview.days}>
+            <AreaChart data={overview.days}>
+              <defs>
+                <linearGradient id="gradDau" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#a855f7" stopOpacity={0.3} />
+                  <stop offset="100%" stopColor="#a855f7" stopOpacity={0.02} />
+                </linearGradient>
+                <linearGradient id="gradNewUsers" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#22c55e" stopOpacity={0.25} />
+                  <stop offset="100%" stopColor="#22c55e" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
               <XAxis
                 dataKey="date"
@@ -265,23 +283,28 @@ const AnalyticsTab: React.FC = () => {
                 }}
                 labelStyle={{ color: '#e5e7eb' }}
               />
-              <Line
+              <Legend
+                wrapperStyle={{ fontSize: '0.72rem', color: '#94a3b8' }}
+              />
+              <Area
                 type="monotone"
                 dataKey="dau"
                 stroke="#a855f7"
-                strokeWidth={2}
+                strokeWidth={2.5}
+                fill="url(#gradDau)"
                 dot={false}
                 name="DAU"
               />
-              <Line
+              <Area
                 type="monotone"
                 dataKey="newUsers"
                 stroke="#22c55e"
-                strokeWidth={2}
+                strokeWidth={2.5}
+                fill="url(#gradNewUsers)"
                 dot={false}
                 name="New Users"
               />
-            </LineChart>
+            </AreaChart>
           </ResponsiveContainer>
         </Card>
       </div>
@@ -289,7 +312,13 @@ const AnalyticsTab: React.FC = () => {
       {/* Tx Volume chart */}
       <Card title="Transaction Volume over time">
         <ResponsiveContainer width="100%" height={260}>
-          <LineChart data={overview.days}>
+          <AreaChart data={overview.days}>
+            <defs>
+              <linearGradient id="gradVolume" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#fb923c" stopOpacity={0.35} />
+                <stop offset="100%" stopColor="#fb923c" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
             <XAxis
               dataKey="date"
@@ -306,15 +335,16 @@ const AnalyticsTab: React.FC = () => {
               }}
               labelStyle={{ color: '#e5e7eb' }}
             />
-            <Line
+            <Area
               type="monotone"
               dataKey="txVolume"
               stroke="#fb923c"
-              strokeWidth={2}
+              strokeWidth={2.5}
+              fill="url(#gradVolume)"
               dot={false}
               name="Tx Volume (USD)"
             />
-          </LineChart>
+          </AreaChart>
         </ResponsiveContainer>
       </Card>
 
