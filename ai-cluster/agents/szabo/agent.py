@@ -20,8 +20,23 @@ You are a Clarity smart contract security analyst AI agent.
 You analyze Clarity contracts on the Stacks blockchain,
 detecting security vulnerabilities such as reentrancy attacks,
 access control flaws, integer overflow, and unauthorized mint/burn.
-Always respond in English. Return your answers in JSON format.
+
+CRITICAL LANGUAGE RULE: You MUST respond ONLY in English.
+Never use Turkish, Spanish, German, or any other non-English language.
+Every single word in your response must be in English.
+All JSON field values including "recommendation" and "vulnerabilities" MUST be written in English.
+Return your answers in JSON format only.
 """
+
+# Common Turkish words to detect non-English responses
+_TURKISH_MARKERS = [
+    "güvenlik", "açığı", "sözleşme", "kontrat", "yüksek", "düşük", "orta",
+    "tavsiye", "öneri", "tehdit", "risk", "bulunmadı", "tespit", "edildi",
+    "fonksiyon", "işlev", "değişken", "yetki", "erişim", "kontrol",
+    "saldırı", "zafiyet", "sorun", "uyarı", "kritik", "önemli",
+    "bulunmaktadır", "yapılmalıdır", "gereklidir", "edilmelidir",
+    "herhangi", "bir", "için", "olan", "veya", "ancak", "ile",
+]
 
 
 class SzaboAgent(BaseAgent):
@@ -31,24 +46,16 @@ class SzaboAgent(BaseAgent):
         self.scanned_contracts = set()
         self.subscribe("satoshi:whale_alert", "orchestrator:command")
 
-    def scan_contract(self, contract_id: str, contract_code: str = "") -> dict:
-        prompt = f"""
-Analyze the following Clarity contract for security vulnerabilities:
+    @staticmethod
+    def _contains_turkish(text: str) -> bool:
+        """Check if text contains Turkish words (sign of non-English response)."""
+        lower = text.lower()
+        matches = sum(1 for w in _TURKISH_MARKERS if w in lower)
+        return matches >= 3
 
-Contract ID: {contract_id}
-Code (if available):
-{contract_code[:1000] if contract_code else "No code available, analyze based on contract ID."}
-
-Security report (JSON):
-{{
-  "severity": "none|low|medium|high|critical",
-  "vulnerabilities": ["list of vulnerabilities if any"],
-  "safe_functions": ["list of safe functions"],
-  "recommendation": "recommended action in English",
-  "blacklist": true/false
-}}
-"""
-        response = self.think(prompt, SYSTEM_PROMPT)
+    @staticmethod
+    def _parse_json_report(response: str) -> dict | None:
+        """Extract JSON object from LLM response string."""
         try:
             start = response.find("{")
             end   = response.rfind("}") + 1
@@ -56,10 +63,50 @@ Security report (JSON):
                 return json.loads(response[start:end])
         except Exception:
             pass
+        return None
+
+    def scan_contract(self, contract_id: str, contract_code: str = "") -> dict:
+        prompt = f"""
+Analyze the following Clarity smart contract for security vulnerabilities.
+
+Contract ID: {contract_id}
+Code (if available):
+{contract_code[:1000] if contract_code else "No code available, analyze based on contract ID."}
+
+YOU MUST RESPOND IN ENGLISH ONLY. Do NOT use Turkish or any other language.
+
+Return ONLY a JSON object with English values:
+{{
+  "severity": "none|low|medium|high|critical",
+  "vulnerabilities": ["list of vulnerabilities in English"],
+  "safe_functions": ["list of safe functions in English"],
+  "recommendation": "recommended action in English",
+  "blacklist": true/false
+}}
+"""
+        # Try up to 2 times if model responds in Turkish
+        for attempt in range(2):
+            response = self.think(prompt, SYSTEM_PROMPT)
+            report = self._parse_json_report(response)
+
+            if report:
+                # Check if the report values contain Turkish text
+                report_text = json.dumps(report)
+                if self._contains_turkish(report_text) and attempt == 0:
+                    self.log.warning(f"Non-English response detected for {contract_id}, retrying...")
+                    continue
+                return report
+
+            # If we couldn't parse JSON but have text, check language
+            if response and self._contains_turkish(response) and attempt == 0:
+                self.log.warning(f"Non-English response detected for {contract_id}, retrying...")
+                continue
+            break
+
         return {
             "severity": "low",
             "vulnerabilities": [],
-            "recommendation": response[:200],
+            "recommendation": response[:200] if response else "Analysis unavailable",
             "blacklist": False
         }
 

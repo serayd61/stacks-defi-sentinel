@@ -8,6 +8,13 @@ import { notificationService, NotificationChannel } from '../services/notificati
 import { getAggregatedQuote, scanArbitrageOpportunities, getSupportedTokens, getDEXInfo } from '../dex-aggregator';
 import { WebhookPayload } from '../types';
 import { logger } from '../utils/logger';
+import {
+  recordUserEvent,
+  getOverview,
+  getAcquisitionFunnel,
+  UserEvent,
+} from '../services/user-analytics';
+import { getHyperbrowserService } from '../services/hyperbrowser';
 
 interface RouteOptions {
   analytics: AnalyticsService;
@@ -255,6 +262,61 @@ export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (fastify, opts
       logger.error('Failed to process token-transfer webhook', error);
       return reply.status(500).send({ error: 'Failed to process webhook' });
     }
+  });
+
+  // ── User & Revenue Analytics ────────────────────────────────────────────────
+
+  // POST /api/events — ingest user events from frontend
+  fastify.post('/events', async (req: FastifyRequest, reply: FastifyReply) => {
+    const body = req.body as Partial<UserEvent>;
+
+    if (!body.eventName || !body.timestamp) {
+      return reply.status(400).send({ error: 'eventName and timestamp required' });
+    }
+
+    const event: UserEvent = {
+      id: crypto.randomUUID(),
+      eventName: body.eventName,
+      walletAddress: body.walletAddress,
+      sessionId: body.sessionId,
+      value: body.value,
+      currency: body.currency ?? 'USD',
+      timestamp: body.timestamp,
+      context: body.context ?? {},
+    };
+
+    recordUserEvent(event);
+    return { ok: true };
+  });
+
+  // GET /api/analytics/overview — daily metrics + summary
+  fastify.get('/analytics/overview', async (req: FastifyRequest, reply: FastifyReply) => {
+    const query = req.query as { from?: string; to?: string };
+    const now = new Date();
+    const defaultTo = now.toISOString().slice(0, 10);
+    const defaultFrom = new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+
+    const from = query.from ?? defaultFrom;
+    const to = query.to ?? defaultTo;
+
+    return reply.send(getOverview(from, to));
+  });
+
+  // GET /api/analytics/funnel/acquisition — acquisition funnel stats
+  fastify.get('/analytics/funnel/acquisition', async (req: FastifyRequest, reply: FastifyReply) => {
+    const query = req.query as { from?: string; to?: string };
+    const now = new Date();
+    const defaultTo = now.toISOString().slice(0, 10);
+    const defaultFrom = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
+
+    const from = query.from ?? defaultFrom;
+    const to = query.to ?? defaultTo;
+
+    return reply.send({ funnelId: 'acquisition', steps: getAcquisitionFunnel(from, to) });
   });
 
   // Health check
@@ -682,5 +744,52 @@ export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (fastify, opts
       logger.error('contracts/recent proxy error:', err);
       return reply.send([]);
     }
+  });
+
+  // ── Web Intelligence (Hyperbrowser) ──────────────────────────────────────
+
+  const hb = getHyperbrowserService();
+
+  // GET /api/web-intel — full web intelligence dashboard data
+  fastify.get('/web-intel', async (_req: FastifyRequest, reply: FastifyReply) => {
+    if (!hb.isEnabled()) {
+      return reply.send({ dex: [], news: [], credits: { used: 0, limit: 0, remaining: 0, resetAt: '' } });
+    }
+    try {
+      const data = await hb.getWebIntelligence();
+      return reply.send(data);
+    } catch (err) {
+      logger.error('web-intel error:', err);
+      return reply.send({ dex: [], news: [], credits: hb.getCreditUsage() });
+    }
+  });
+
+  // GET /api/web-intel/dex — scraped DEX data only
+  fastify.get('/web-intel/dex', async (_req: FastifyRequest, reply: FastifyReply) => {
+    if (!hb.isEnabled()) return reply.send([]);
+    try {
+      const data = await hb.scrapeDexData();
+      return reply.send(data);
+    } catch (err) {
+      logger.error('web-intel/dex error:', err);
+      return reply.send([]);
+    }
+  });
+
+  // GET /api/web-intel/news — scraped news only
+  fastify.get('/web-intel/news', async (_req: FastifyRequest, reply: FastifyReply) => {
+    if (!hb.isEnabled()) return reply.send([]);
+    try {
+      const data = await hb.scrapeNews();
+      return reply.send(data);
+    } catch (err) {
+      logger.error('web-intel/news error:', err);
+      return reply.send([]);
+    }
+  });
+
+  // GET /api/web-intel/credits — credit usage status
+  fastify.get('/web-intel/credits', async (_req: FastifyRequest, reply: FastifyReply) => {
+    return reply.send(hb.getCreditUsage());
   });
 };
