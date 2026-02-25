@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [Daily Update] - 2026-02-25
+
+### Changes
+- fix: remove working-directory to avoid duplicate frontend/frontend path
+- fix: use vercel --prod instead of vercel build for CI deployment
+- fix: add npm install step before vercel build in deploy workflow
+- feat: complete Hiro API integration — active polling, 13 new endpoints, 7 new UI tabs (#9)
+- feat: implement cache helper [mm0q2yqc]
+- feat: add Chainhooks V2 webhook handlers and fix predicate URLs
+
+
 ## [Daily Update] - 2026-02-24
 
 ### Changes
