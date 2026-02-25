@@ -13,6 +13,7 @@ import { HiroDataService } from './services/hiro-data';
 import { HiroWebSocketService } from './services/hiro-websocket';
 import { ProtocolDiscoveryService } from './services/protocol-discovery';
 import { logger } from './utils/logger';
+import { seedDemoData } from './services/user-analytics';
 
 // Load environment variables
 import * as dotenv from 'dotenv';
@@ -67,6 +68,9 @@ async function main() {
   });
 
   await fastify.register(websocket);
+
+  // Seed demo analytics data
+  seedDemoData();
 
   // Initialize services
   const eventProcessor = new EventProcessor({

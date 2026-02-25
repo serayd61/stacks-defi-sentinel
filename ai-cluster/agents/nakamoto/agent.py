@@ -11,15 +11,24 @@ import time
 import os
 import json
 import schedule
+import requests as http_requests
 from base_agent import BaseAgent
 
 POLL_INTERVAL = int(os.getenv("POLL_INTERVAL", "60"))
+DEX_SCRAPE_INTERVAL = int(os.getenv("DEX_SCRAPE_INTERVAL", "14400"))  # 4 hours
+
+HYPERBROWSER_API_KEY = os.getenv("HYPERBROWSER_API_KEY", "")
+HYPERBROWSER_BASE = "https://api.hyperbrowser.ai/api"
 
 SYSTEM_PROMPT = """
 You are a DeFi DEX analyst AI agent.
 You monitor decentralized exchanges on the Stacks blockchain (Velar, ALEX, Arkadiko),
 detecting price discrepancies, arbitrage opportunities, and liquidity changes.
-Always respond in English. Return concise and clear JSON answers.
+
+CRITICAL LANGUAGE RULE: You MUST respond ONLY in English.
+Never use Turkish, Spanish, German, or any other non-English language.
+Every single word in your response must be in English.
+Return concise and clear JSON answers.
 """
 
 
@@ -28,6 +37,106 @@ class NakamotoAgent(BaseAgent):
     def __init__(self):
         super().__init__()
         self.subscribe("satoshi:whale_alert", "orchestrator:command")
+        self.last_web_dex_data = {}
+
+    # ── Hyperbrowser DEX Scraping ─────────────────────────────────────────
+
+    def _hb_scrape(self, url: str) -> str:
+        """Scrape a webpage via Hyperbrowser and return markdown content."""
+        if not HYPERBROWSER_API_KEY:
+            return ""
+        try:
+            # Start scrape job
+            r = http_requests.post(
+                f"{HYPERBROWSER_BASE}/scrape",
+                headers={"Content-Type": "application/json", "x-api-key": HYPERBROWSER_API_KEY},
+                json={"url": url, "scrapeOptions": {"formats": ["markdown"], "onlyMainContent": True, "timeout": 15000}},
+                timeout=20,
+            )
+            if not r.ok:
+                self.log.error(f"HB scrape start failed: {r.status_code}")
+                return ""
+            job_id = r.json().get("jobId", "")
+            if not job_id:
+                return ""
+
+            # Poll for result (max 60s)
+            for _ in range(30):
+                time.sleep(2)
+                res = http_requests.get(
+                    f"{HYPERBROWSER_BASE}/scrape/{job_id}",
+                    headers={"x-api-key": HYPERBROWSER_API_KEY},
+                    timeout=15,
+                )
+                if not res.ok:
+                    continue
+                result = res.json()
+                if result.get("status") == "completed":
+                    return result.get("data", {}).get("markdown", "")
+                if result.get("status") == "failed":
+                    self.log.error(f"HB scrape failed: {result.get('error')}")
+                    return ""
+            return ""
+        except Exception as e:
+            self.log.error(f"HB scrape error: {e}")
+            return ""
+
+    def scrape_dex_data(self):
+        """Scrape real DEX data from web sources using Hyperbrowser."""
+        if not HYPERBROWSER_API_KEY:
+            self.log.info("Hyperbrowser not configured, skipping web DEX scrape.")
+            return
+
+        targets = [
+            {"name": "DeFi Llama (Stacks)", "url": "https://defillama.com/chain/Stacks"},
+            {"name": "Velar", "url": "https://www.velar.co/pools"},
+        ]
+
+        for target in targets:
+            cached = self.cache_get(f"web_dex:{target['name']}")
+            if cached:
+                self.log.info(f"Web DEX cache hit: {target['name']}")
+                continue
+
+            self.log.info(f"Scraping DEX data from {target['name']}...")
+            markdown = self._hb_scrape(target["url"])
+            if not markdown:
+                continue
+
+            # Use LLM to extract structured data from markdown
+            extract_prompt = f"""
+Extract DEX pool data from this webpage content.
+Source: {target['name']}
+
+Content (first 2000 chars):
+{markdown[:2000]}
+
+Return JSON only:
+{{
+  "source": "{target['name']}",
+  "total_tvl_usd": 0,
+  "pools": [
+    {{"name": "TOKEN0/TOKEN1", "tvl_usd": 0, "volume_24h_usd": 0, "apr_pct": 0}}
+  ]
+}}
+"""
+            response = self.think(extract_prompt, SYSTEM_PROMPT)
+            try:
+                start = response.find("{")
+                end = response.rfind("}") + 1
+                if start >= 0 and end > start:
+                    parsed = json.loads(response[start:end])
+                    self.last_web_dex_data[target["name"]] = parsed
+                    self.cache_set(f"web_dex:{target['name']}", parsed, ttl=DEX_SCRAPE_INTERVAL)
+                    self.post_insight({
+                        "agent": self.name,
+                        "type": "web_dex_scrape",
+                        "source": target["name"],
+                        "data": parsed,
+                    })
+                    self.log.info(f"Web DEX extracted: {target['name']} — {len(parsed.get('pools', []))} pools")
+            except Exception as e:
+                self.log.error(f"Web DEX parse error ({target['name']}): {e}")
 
     def analyze_dex(self, dex_data: dict) -> dict:
         if not dex_data:
@@ -142,6 +251,13 @@ How will this movement affect Stacks DEX platforms? (JSON):
     def run(self):
         self.log.info("NAKAMOTO active — starting DEX analysis.")
         schedule.every(POLL_INTERVAL).seconds.do(self.scan_dex)
+
+        # Hyperbrowser web scraping (every 4 hours)
+        if HYPERBROWSER_API_KEY:
+            schedule.every(DEX_SCRAPE_INTERVAL).seconds.do(self.scrape_dex_data)
+            self.log.info(f"Hyperbrowser DEX scraping enabled (every {DEX_SCRAPE_INTERVAL}s)")
+            self.scrape_dex_data()
+
         self.scan_dex()
 
         while True:

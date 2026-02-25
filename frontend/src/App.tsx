@@ -6,7 +6,8 @@ import {
   Target, Star, Fuel,
   ChevronDown, Code, Server, Search,
   Home, ChevronLeft, Brain, Bitcoin,
-  Layers, Image, BarChart3, Link2, PieChart, Blocks,
+  Layers, Image, BarChart3, Link2, PieChart, Blocks, BarChart2,
+  Globe,
 } from 'lucide-react';
 
 import { StatCard } from './components/StatCard';
@@ -30,6 +31,8 @@ import DEXAggregator from './components/DEXAggregator';
 import NFTGallery from './components/NFTGallery';
 import ChainhooksMonitor from './components/ChainhooksMonitor';
 import TokenAnalytics from './components/TokenAnalytics';
+import UserRevenueAnalytics from './components/UserRevenueAnalytics';
+import WebIntelligence from './components/WebIntelligence';
 import { WalletProvider } from './contexts/WalletContext';
 import { useApi } from './hooks/useApi';
 import { useWebSocket } from './hooks/useWebSocket';
@@ -39,8 +42,8 @@ const WS_URL = import.meta.env.VITE_WS_URL || 'wss://stacks-defi-sentinel-produc
 type TabType =
   | 'overview' | 'market' | 'network'
   | 'swaps' | 'price-alerts' | 'block-explorer' | 'dex'
-  | 'contracts' | 'alerts' | 'wallet-analytics' | 'portfolio' | 'stacking' | 'token-analytics' | 'chainhooks'
-  | 'ai-agents' | 'sbtc'
+  | 'contracts' | 'alerts' | 'wallet-analytics' | 'portfolio' | 'stacking' | 'token-analytics' | 'user-analytics' | 'chainhooks'
+  | 'ai-agents' | 'web-intel' | 'sbtc'
   | 'gas' | 'leaderboard' | 'predict' | 'nfts';
 
 interface NavItem { id: TabType; label: string; icon: React.ElementType; badge?: 'hot'|'new'|'live'; }
@@ -59,6 +62,7 @@ const NAV: NavSection[] = [
     { id: 'portfolio',        label: 'Portfolio',          icon: PieChart,   badge: 'new' },
     { id: 'stacking',         label: 'Stacking',           icon: Layers,     badge: 'new' },
     { id: 'token-analytics',  label: 'Token Analytics',    icon: BarChart3,  badge: 'new' },
+    { id: 'user-analytics',   label: 'User & Revenue',     icon: BarChart2,  badge: 'new' },
   ]},
   { label: 'Live Data', items: [
     { id: 'swaps',          label: 'Swap History',    icon: ArrowRightLeft },
@@ -71,6 +75,7 @@ const NAV: NavSection[] = [
   ]},
   { label: 'AI', items: [
     { id: 'ai-agents',  label: 'AI Agents',    icon: Brain,  badge: 'live' as const },
+    { id: 'web-intel',   label: 'Web Intel',     icon: Globe,  badge: 'new' as const },
     { id: 'chainhooks',  label: 'Chainhooks',    icon: Link2 },
   ]},
   { label: 'Explore', items: [
@@ -606,6 +611,7 @@ function App() {
               {activeTab === 'portfolio'        && <div style={{ maxWidth: 1000, margin: '0 auto' }}><PortfolioTracker /></div>}
               {activeTab === 'stacking'         && <div style={{ maxWidth: 1000, margin: '0 auto' }}><StackingTracker /></div>}
               {activeTab === 'token-analytics'  && <div style={{ maxWidth: 1000, margin: '0 auto' }}><TokenAnalytics /></div>}
+              {activeTab === 'user-analytics'   && <div style={{ maxWidth: 1100, margin: '0 auto' }}><UserRevenueAnalytics /></div>}
 
               {/* ─── LIVE DATA ─── */}
               {activeTab === 'swaps'          && <SwapTable swaps={combinedSwaps} isLive={wsConnected} showAll />}
@@ -618,6 +624,7 @@ function App() {
 
               {/* ─── AI AGENTS ─── */}
               {activeTab === 'ai-agents'  && <div style={{ maxWidth: 1000, margin: '0 auto' }}><AIAgents /></div>}
+              {activeTab === 'web-intel'  && <div style={{ maxWidth: 1100, margin: '0 auto' }}><WebIntelligence /></div>}
               {activeTab === 'chainhooks' && <div style={{ maxWidth: 1000, margin: '0 auto' }}><ChainhooksMonitor /></div>}
 
               {/* ─── EXPLORE ─── */}
