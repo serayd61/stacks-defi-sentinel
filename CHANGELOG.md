@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [Daily Update] - 2026-02-26
+
+### Changes
+- fix: Market Overview — fetch real-time prices from CoinGecko, TVL from DeFi Llama, blocks from Hiro API
+- fix: Hyperbrowser web-intel fixes + Portfolio wallet connect
+- docs: add deployment guide [mm2ns1dy]
+- docs: add deployment guide [mm25hoau]
+- feat: integrate Hyperbrowser.ai web intelligence — DEX scraping, news feed, credit tracking
+- chore: Auto-update CHANGELOG [skip ci]
+
+
 ## [Daily Update] - 2026-02-25
 
 ### Changes
