@@ -30,7 +30,7 @@ interface PortfolioStats {
 }
 
 const PortfolioTracker: React.FC = () => {
-  const { isConnected, userAddress: stxAddress } = useWallet();
+  const { isConnected, userAddress: stxAddress, connectWallet, hasProvider } = useWallet();
   const [tokens, setTokens] = useState<TokenBalance[]>([]);
   const [nfts, setNfts] = useState<NFTBalance[]>([]);
   const [stats, setStats] = useState<PortfolioStats | null>(null);
@@ -206,17 +206,116 @@ const PortfolioTracker: React.FC = () => {
 
   if (!isConnected) {
     return (
-      <div className="bg-gradient-to-br from-indigo-900/20 to-violet-900/20 rounded-2xl p-8 border border-indigo-500/30 text-center">
-        <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-indigo-500/20 flex items-center justify-center">
-          <Wallet className="w-8 h-8 text-indigo-400" />
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(85,70,255,0.08) 0%, rgba(124,58,237,0.08) 100%)',
+        borderRadius: 20, padding: '48px 24px', textAlign: 'center',
+        border: '1px solid rgba(85,70,255,0.2)',
+      }}>
+        {/* Wallet Icon */}
+        <div style={{
+          width: 72, height: 72, margin: '0 auto 20px', borderRadius: 20,
+          background: 'linear-gradient(135deg, rgba(85,70,255,0.2), rgba(124,58,237,0.2))',
+          border: '1px solid rgba(85,70,255,0.3)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Wallet size={32} color="#7c6aff" />
         </div>
-        <h3 className="text-xl font-bold text-white mb-2">Connect Your Wallet</h3>
-        <p className="text-gray-400 mb-6">
-          Connect your Stacks wallet to view your portfolio
+
+        <h3 style={{ fontSize: '1.35rem', fontWeight: 700, color: '#fff', marginBottom: 8, letterSpacing: '-0.02em' }}>
+          Connect Your Wallet
+        </h3>
+        <p style={{ color: '#64748b', fontSize: '0.95rem', marginBottom: 32, maxWidth: 400, margin: '0 auto 32px' }}>
+          Connect your Stacks wallet to view your portfolio, track tokens and NFTs
         </p>
-        <button className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 rounded-xl text-white font-medium transition-all">
-          Connect Wallet
-        </button>
+
+        {/* Wallet Grid */}
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12,
+          maxWidth: 480, margin: '0 auto 28px',
+        }}>
+          {[
+            { id: 'leather' as const, name: 'Leather', desc: 'Most popular Stacks wallet', color: '#F5F5F4', bg: '#12100D',
+              icon: <svg width="24" height="24" viewBox="0 0 48 48" fill="none"><rect width="48" height="48" rx="12" fill="#12100D"/><rect x="14" y="14" width="20" height="20" rx="2" fill="#F5F5F4"/><rect x="20" y="20" width="8" height="8" rx="1" fill="#12100D"/></svg>,
+              url: 'https://leather.io/install-extension',
+            },
+            { id: 'xverse' as const, name: 'Xverse', desc: 'Bitcoin & Stacks wallet', color: '#EE7242', bg: '#1E293B',
+              icon: <svg width="24" height="24" viewBox="0 0 48 48" fill="none"><rect width="48" height="48" rx="24" fill="#1E293B"/><path d="M14 34L24 22L34 34H14Z" fill="#EE7242"/><rect x="16" y="14" width="16" height="5" rx="1" fill="#EE7242"/></svg>,
+              url: 'https://www.xverse.app/download',
+            },
+            { id: 'hiro' as const, name: 'Hiro Wallet', desc: 'Developer-focused wallet', color: '#FF5500', bg: '#FF5500',
+              icon: <svg width="24" height="24" viewBox="0 0 48 48" fill="none"><rect width="48" height="48" rx="12" fill="#FF5500"/><rect x="12" y="12" width="9" height="24" rx="2" fill="white"/><rect x="27" y="12" width="9" height="24" rx="2" fill="white"/><rect x="21" y="20" width="6" height="8" rx="1" fill="white"/></svg>,
+              url: 'https://wallet.hiro.so/',
+            },
+            { id: 'okx' as const, name: 'OKX Wallet', desc: 'Multi-chain wallet', color: '#fff', bg: '#000',
+              icon: <svg width="24" height="24" viewBox="0 0 48 48" fill="none"><rect width="48" height="48" rx="12" fill="#000"/><rect x="10" y="10" width="9" height="9" fill="white"/><rect x="20" y="20" width="8" height="8" fill="white"/><rect x="29" y="10" width="9" height="9" fill="white"/><rect x="10" y="29" width="9" height="9" fill="white"/><rect x="29" y="29" width="9" height="9" fill="white"/></svg>,
+              url: 'https://www.okx.com/web3',
+            },
+          ].map(w => (
+            <button
+              key={w.id}
+              onClick={() => {
+                if (hasProvider) {
+                  connectWallet(w.id);
+                } else {
+                  window.open(w.url, '_blank');
+                }
+              }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '14px 16px', background: 'rgba(255,255,255,0.03)',
+                border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14,
+                cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s',
+                fontFamily: 'inherit', width: '100%',
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                e.currentTarget.style.borderColor = `${w.color}44`;
+                e.currentTarget.style.transform = 'translateY(-2px)';
+                e.currentTarget.style.boxShadow = `0 8px 24px rgba(0,0,0,0.3)`;
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+                e.currentTarget.style.transform = '';
+                e.currentTarget.style.boxShadow = 'none';
+              }}
+            >
+              <div style={{
+                width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                overflow: 'hidden', backgroundColor: w.bg,
+              }}>
+                {w.icon}
+              </div>
+              <div>
+                <div style={{ fontWeight: 600, fontSize: '0.9rem', color: '#fff', marginBottom: 2 }}>{w.name}</div>
+                <div style={{ fontSize: '0.73rem', color: '#64748b' }}>{w.desc}</div>
+              </div>
+            </button>
+          ))}
+        </div>
+
+        {/* Detection Status */}
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+          fontSize: '0.82rem', color: hasProvider ? '#22c55e' : '#f59e0b',
+          marginBottom: 12,
+        }}>
+          <div style={{
+            width: 8, height: 8, borderRadius: '50%',
+            background: hasProvider ? '#22c55e' : '#f59e0b',
+            boxShadow: hasProvider ? '0 0 8px rgba(34,197,94,0.5)' : '0 0 8px rgba(245,158,11,0.5)',
+          }} />
+          {hasProvider ? `Wallet detected — click to connect` : 'No wallet found — click to install'}
+        </div>
+
+        <p style={{ fontSize: '0.78rem', color: '#475569', margin: 0 }}>
+          New to Stacks?{' '}
+          <a href="https://www.stacks.co/explore/discover-apps" target="_blank" rel="noopener noreferrer"
+            style={{ color: '#5546FF', textDecoration: 'none' }}>
+            Learn more about Stacks wallets →
+          </a>
+        </p>
       </div>
     );
   }
