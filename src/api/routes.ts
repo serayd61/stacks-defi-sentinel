@@ -792,4 +792,20 @@ export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (fastify, opts
   fastify.get('/web-intel/credits', async (_req: FastifyRequest, reply: FastifyReply) => {
     return reply.send(hb.getCreditUsage());
   });
+
+  // ── Whale Intelligence (Hyperbrowser Extract API) ─────────────────────────
+
+  // GET /api/whale-intel — whale wallet intelligence data
+  fastify.get('/whale-intel', async (_req: FastifyRequest, reply: FastifyReply) => {
+    if (!hb.isEnabled()) {
+      return reply.send({ whales: [], alerts: [], scannedAt: '' });
+    }
+    try {
+      const data = await hb.getWhaleIntelligence();
+      return reply.send(data);
+    } catch (err) {
+      logger.error('whale-intel error:', err);
+      return reply.send({ whales: [], alerts: [], scannedAt: '', credits: hb.getCreditUsage() });
+    }
+  });
 };

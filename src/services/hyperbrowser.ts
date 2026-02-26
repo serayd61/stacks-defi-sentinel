@@ -63,6 +63,49 @@ export interface CreditUsage {
   resetAt: string;
 }
 
+// ── Whale Intelligence Types ──────────────────────────────────────────────────
+
+export interface WhaleWallet {
+  address: string;
+  label?: string;
+  stxBalance: number;
+  topTokens: Array<{ symbol: string; balance: number; valueUsd?: number }>;
+  recentActivity: Array<{
+    type: 'transfer' | 'swap' | 'stake' | 'contract-call';
+    description: string;
+    amount?: number;
+    timestamp: string;
+  }>;
+  totalValueUsd?: number;
+  lastSeen: string;
+}
+
+export interface WhaleIntelligence {
+  whales: WhaleWallet[];
+  alerts: Array<{
+    severity: 'info' | 'warning' | 'critical';
+    message: string;
+    wallet: string;
+    timestamp: string;
+  }>;
+  scannedAt: string;
+}
+
+// ── Extract API Types ─────────────────────────────────────────────────────────
+
+export interface ExtractOptions {
+  prompt: string;
+  schema?: Record<string, unknown>;
+  sessionOptions?: { useProxy?: boolean; solveCaptchas?: boolean };
+}
+
+export interface ExtractResult {
+  jobId: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  data?: Record<string, unknown>;
+  error?: string;
+}
+
 // ── Cache Entry ────────────────────────────────────────────────────────────────
 
 interface CacheEntry<T> {
@@ -244,6 +287,208 @@ export class HyperbrowserService {
     if (result) {
       this.setCache(cacheKey, result);
     }
+    return result;
+  }
+
+  // ── Extract API (Structured Data Extraction) ─────────────────────────────
+
+  /**
+   * Extract structured data from a URL using AI + JSON schema.
+   * Uses Hyperbrowser Extract endpoint: POST /extract
+   */
+  async extractStructuredData<T = Record<string, unknown>>(
+    url: string,
+    options: ExtractOptions,
+  ): Promise<T | null> {
+    const cacheKey = `extract:${url}:${options.prompt.slice(0, 50)}`;
+    const cached = this.getCached<T>(cacheKey);
+    if (cached) return cached;
+
+    if (!this.apiKey) return null;
+    if (!this.consumeCredit()) return null;
+
+    try {
+      const res = await fetch(`${BASE_URL}/extract`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.apiKey,
+        },
+        body: JSON.stringify({
+          urls: [url],
+          prompt: options.prompt,
+          schema: options.schema,
+          sessionOptions: options.sessionOptions,
+        }),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '');
+        logger.error(`Hyperbrowser extract failed: ${res.status} ${errText}`);
+        return null;
+      }
+
+      const job = (await res.json()) as { jobId?: string };
+      if (!job.jobId) return null;
+
+      // Poll for result
+      for (let i = 0; i < MAX_POLL_ATTEMPTS; i++) {
+        const pollRes = await fetch(`${BASE_URL}/extract/${job.jobId}`, {
+          headers: { 'x-api-key': this.apiKey },
+        });
+        if (!pollRes.ok) return null;
+
+        const result = (await pollRes.json()) as ExtractResult;
+        if (result.status === 'completed' && result.data) {
+          this.setCache(cacheKey, result.data as T);
+          return result.data as T;
+        }
+        if (result.status === 'failed') {
+          logger.error(`Extract job failed: ${result.error}`);
+          return null;
+        }
+        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+      }
+      return null;
+    } catch (err) {
+      logger.error('Extract request error:', err);
+      return null;
+    }
+  }
+
+  // ── Whale Intelligence ───────────────────────────────────────────────────
+
+  /**
+   * Monitor top whale wallets by scraping Hiro Explorer + extracting data.
+   * Uses ~8 credits/day (4 whales, checked every 6 hours).
+   */
+  async getWhaleIntelligence(): Promise<WhaleIntelligence> {
+    const cacheKey = 'whale:intelligence';
+    const cached = this.getCached<WhaleIntelligence>(cacheKey);
+    if (cached) return cached;
+
+    // Known Stacks whale/notable wallets
+    const WHALE_WALLETS = [
+      { address: 'SP000000000000000000002Q6VF78', label: 'Stacks Genesis' },
+      { address: 'SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR', label: 'Top Holder #1' },
+      { address: 'SP3K8BC0PPEVCV7NZ6QSRWPQ2JE9E5B6N3PA0KBR9', label: 'ALEX Protocol' },
+      { address: 'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9', label: 'Arkadiko' },
+    ];
+
+    const whales: WhaleWallet[] = [];
+    const alerts: WhaleIntelligence['alerts'] = [];
+
+    for (const { address, label } of WHALE_WALLETS) {
+      if (this.getCreditUsage().remaining < 10) {
+        logger.warn('Credits low, skipping remaining whale scans');
+        break;
+      }
+
+      // Use Extract API to get structured wallet data from explorer
+      const walletData = await this.extractStructuredData<{
+        stxBalance?: number;
+        tokenBalances?: Array<{ symbol: string; balance: number }>;
+        recentTxs?: Array<{ type: string; description: string; amount?: number; time?: string }>;
+        totalValue?: number;
+      }>(
+        `https://explorer.hiro.so/address/${address}?chain=mainnet`,
+        {
+          prompt: `Extract wallet information from this Stacks blockchain explorer page.
+                   Get the STX balance (in STX, not microSTX), list of token holdings with symbols and balances,
+                   and the 5 most recent transactions with type (transfer/swap/stake/contract-call),
+                   description, amount, and timestamp.`,
+          schema: {
+            type: 'object',
+            properties: {
+              stxBalance: { type: 'number', description: 'STX balance' },
+              tokenBalances: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    symbol: { type: 'string' },
+                    balance: { type: 'number' },
+                  },
+                },
+              },
+              recentTxs: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    type: { type: 'string', enum: ['transfer', 'swap', 'stake', 'contract-call'] },
+                    description: { type: 'string' },
+                    amount: { type: 'number' },
+                    time: { type: 'string' },
+                  },
+                },
+              },
+              totalValue: { type: 'number', description: 'Total portfolio value in USD' },
+            },
+          },
+        },
+      );
+
+      // Fallback: if Extract API fails, try basic scrape + parse
+      let wallet: WhaleWallet;
+      if (walletData) {
+        wallet = {
+          address,
+          label,
+          stxBalance: walletData.stxBalance ?? 0,
+          topTokens: (walletData.tokenBalances ?? []).map((t) => ({
+            symbol: t.symbol,
+            balance: t.balance,
+          })),
+          recentActivity: (walletData.recentTxs ?? []).map((tx) => ({
+            type: (tx.type as WhaleWallet['recentActivity'][0]['type']) || 'contract-call',
+            description: tx.description || 'Transaction',
+            amount: tx.amount,
+            timestamp: tx.time || new Date().toISOString(),
+          })),
+          totalValueUsd: walletData.totalValue,
+          lastSeen: new Date().toISOString(),
+        };
+        logger.info(`Whale extracted: ${label} (${address.slice(0, 8)}...) — ${wallet.stxBalance} STX`);
+      } else {
+        // Fallback: basic scrape
+        const scrapeResult = await this.scrapeWebpage(
+          `https://explorer.hiro.so/address/${address}?chain=mainnet`,
+        );
+        const md = scrapeResult?.data?.markdown || '';
+        const balanceMatch = md.match(/([\d,.]+)\s*STX/);
+        wallet = {
+          address,
+          label,
+          stxBalance: balanceMatch ? parseFloat(balanceMatch[1].replace(/,/g, '')) : 0,
+          topTokens: [],
+          recentActivity: [],
+          lastSeen: new Date().toISOString(),
+        };
+        logger.info(`Whale scraped (fallback): ${label} — ${wallet.stxBalance} STX`);
+      }
+
+      // Generate alerts for large balances
+      if (wallet.stxBalance > 1_000_000) {
+        alerts.push({
+          severity: 'info',
+          message: `${label} holds ${(wallet.stxBalance / 1_000_000).toFixed(1)}M STX`,
+          wallet: address,
+          timestamp: new Date().toISOString(),
+        });
+      }
+
+      whales.push(wallet);
+    }
+
+    const result: WhaleIntelligence = {
+      whales,
+      alerts,
+      scannedAt: new Date().toISOString(),
+    };
+
+    // Cache for 6 hours (whale data doesn't change fast)
+    this.setCache(cacheKey, result, 6 * 60 * 60 * 1000);
     return result;
   }
 
