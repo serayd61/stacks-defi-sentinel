@@ -68,3 +68,33 @@ path = "contracts/stx-donation.clar"
 clarity_version = 3
 epoch = 3.0
 
+# sBTC Bridge Monitor v2
+[contracts.sbtc-monitor-v2]
+path = "contracts/sbtc-monitor-v2.clar"
+clarity_version = 3
+epoch = 3.0
+
+# DeFi Index Fund v1
+[contracts.defi-index-v1]
+path = "contracts/defi-index-v1.clar"
+clarity_version = 3
+epoch = 3.0
+
+# Liquidation Bot Registry v1
+[contracts.liquidation-bot-v1]
+path = "contracts/liquidation-bot-v1.clar"
+clarity_version = 3
+epoch = 3.0
+
+# Yield Aggregator v1
+[contracts.yield-aggregator-v1]
+path = "contracts/yield-aggregator-v1.clar"
+clarity_version = 3
+epoch = 3.0
+
+# Gas Optimizer v1
+[contracts.gas-optimizer-v1]
+path = "contracts/gas-optimizer-v1.clar"
+clarity_version = 3
+epoch = 3.0
+
