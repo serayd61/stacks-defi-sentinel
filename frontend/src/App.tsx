@@ -296,7 +296,7 @@ function App() {
   const { dashboardStats, isLoading, isRefreshing, error, fetchDashboard } = useApi();
   const { isConnected: wsConnected, events } = useWebSocket(WS_URL);
 
-  const [activeTab, setActiveTab] = useState<TabType>('ai-agents');
+  const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(new Date());
