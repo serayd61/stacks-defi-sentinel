@@ -300,6 +300,12 @@ export class HyperbrowserService {
         extracted.totalTvl = parseMoneyString(tvlMatch[0]);
       }
 
+      // Log scraped content for debugging
+      logger.info(`DEX scrape ${target.name}: ${markdown.length} chars`);
+      if (markdown.length < 200) {
+        logger.warn(`DEX scrape ${target.name}: short content — "${markdown.slice(0, 200)}"`);
+      }
+
       // Extract pool data from table-like structures
       const poolLines = markdown.split('\n').filter(
         (line) =>
@@ -307,8 +313,16 @@ export class HyperbrowserService {
           (line.includes('$') || line.includes('%'))
       );
 
+      // Fallback: looser matching for token pairs
+      if (poolLines.length === 0) {
+        const altLines = markdown.split('\n').filter(
+          (line) => /[A-Z]{2,10}\s*[\/\-]\s*[A-Z]{2,10}/i.test(line)
+        );
+        poolLines.push(...altLines.slice(0, 10));
+      }
+
       for (const line of poolLines.slice(0, 10)) {
-        const pairMatch = line.match(/([A-Z]{2,10})\/([A-Z]{2,10})/);
+        const pairMatch = line.match(/([A-Z]{2,10})\s*[\/\-]\s*([A-Z]{2,10})/);
         if (!pairMatch) continue;
 
         const pool: ExtractedDexData['pools'][0] = {
@@ -328,12 +342,13 @@ export class HyperbrowserService {
         const pctMatch = line.match(/([\d.]+)%/);
         if (pctMatch) pool.apr = parseFloat(pctMatch[1]);
 
-        results.push(extracted);
         extracted.pools.push(pool);
       }
 
+      // Always push (even with 0 pools — still shows source was scraped)
+      results.push(extracted);
       this.setCache(urlCacheKey, extracted, this.cacheTtl);
-      logger.info(`DEX scraped: ${target.name} (${extracted.pools.length} pools)`);
+      logger.info(`DEX scraped: ${target.name} — TVL: ${extracted.totalTvl ?? 'N/A'}, pools: ${extracted.pools.length}`);
     }
 
     if (results.length > 0) {
@@ -372,8 +387,12 @@ export class HyperbrowserService {
         onlyMainContent: true,
       });
 
-      if (!scrapeResult?.data?.markdown) continue;
+      if (!scrapeResult?.data?.markdown) {
+        logger.warn(`News scrape ${source.name}: no markdown returned`);
+        continue;
+      }
 
+      logger.info(`News scrape ${source.name}: ${scrapeResult.data.markdown.length} chars`);
       const articles = extractArticlesFromMarkdown(scrapeResult.data.markdown, source.name);
       allNews.push(...articles);
       logger.info(`News scraped: ${source.name} (${articles.length} articles)`);
@@ -402,8 +421,14 @@ export class HyperbrowserService {
     credits: CreditUsage;
   }> {
     const [dex, news] = await Promise.all([
-      this.scrapeDexData().catch(() => [] as ExtractedDexData[]),
-      this.scrapeNews().catch(() => [] as ExtractedNewsItem[]),
+      this.scrapeDexData().catch((err) => {
+        logger.error('scrapeDexData failed:', err);
+        return [] as ExtractedDexData[];
+      }),
+      this.scrapeNews().catch((err) => {
+        logger.error('scrapeNews failed:', err);
+        return [] as ExtractedNewsItem[];
+      }),
     ]);
     return { dex, news, credits: this.getCreditUsage() };
   }
@@ -476,8 +501,10 @@ function buildNewsItem(
   const combined = (title + ' ' + summary).toLowerCase();
   const matchCount = keywords.filter((k) => combined.includes(k)).length;
 
-  // Skip articles with no relevance to Stacks ecosystem
-  if (matchCount === 0 && source !== 'Stacks Blog') return null;
+  // For DeFi Llama raises and Stacks Blog, keep all articles
+  // For other sources, require at least one Stacks keyword
+  const alwaysInclude = source === 'Stacks Blog' || source === 'DeFi Llama News';
+  if (matchCount === 0 && !alwaysInclude) return null;
 
   const relevance: ExtractedNewsItem['relevance'] =
     matchCount >= 3 ? 'high' : matchCount >= 1 ? 'medium' : 'low';
