@@ -7,7 +7,7 @@ import {
   ChevronDown, Code, Server, Search,
   Home, ChevronLeft, Brain, Bitcoin,
   Layers, Image, BarChart3, Link2, PieChart, Blocks, BarChart2,
-  Globe, Fish,
+  Globe, Fish, Vote,
 } from 'lucide-react';
 
 import { StatCard } from './components/StatCard';
@@ -35,6 +35,7 @@ import UserRevenueAnalytics from './components/UserRevenueAnalytics';
 import WebIntelligence from './components/WebIntelligence';
 import WhaleIntelligence from './components/WhaleIntelligence';
 import DefiScanner from './components/DefiScanner';
+import GovernanceTracker from './components/GovernanceTracker';
 import { WalletProvider } from './contexts/WalletContext';
 import { useApi } from './hooks/useApi';
 import { useWebSocket } from './hooks/useWebSocket';
@@ -45,7 +46,7 @@ type TabType =
   | 'overview' | 'market' | 'network'
   | 'swaps' | 'price-alerts' | 'block-explorer' | 'dex'
   | 'contracts' | 'alerts' | 'wallet-analytics' | 'portfolio' | 'stacking' | 'token-analytics' | 'user-analytics' | 'chainhooks'
-  | 'ai-agents' | 'web-intel' | 'whale-intel' | 'defi-scan' | 'sbtc'
+  | 'ai-agents' | 'web-intel' | 'whale-intel' | 'defi-scan' | 'governance' | 'sbtc'
   | 'gas' | 'leaderboard' | 'predict' | 'nfts';
 
 interface NavItem { id: TabType; label: string; icon: React.ElementType; badge?: 'hot'|'new'|'live'; }
@@ -80,6 +81,7 @@ const NAV: NavSection[] = [
     { id: 'web-intel',   label: 'Web Intel',     icon: Globe,  badge: 'new' as const },
     { id: 'whale-intel', label: 'Whale Intel',   icon: Fish,   badge: 'new' as const },
     { id: 'defi-scan',  label: 'DeFi Scanner',  icon: Search, badge: 'new' as const },
+    { id: 'governance', label: 'Governance',    icon: Vote,   badge: 'new' as const },
     { id: 'chainhooks',  label: 'Chainhooks',    icon: Link2 },
   ]},
   { label: 'Explore', items: [
@@ -631,6 +633,7 @@ function App() {
               {activeTab === 'web-intel'  && <div style={{ maxWidth: 1100, margin: '0 auto' }}><WebIntelligence /></div>}
               {activeTab === 'whale-intel' && <div style={{ maxWidth: 1000, margin: '0 auto' }}><WhaleIntelligence /></div>}
               {activeTab === 'defi-scan' && <div style={{ maxWidth: 1100, margin: '0 auto' }}><DefiScanner /></div>}
+              {activeTab === 'governance' && <div style={{ maxWidth: 900, margin: '0 auto' }}><GovernanceTracker /></div>}
               {activeTab === 'chainhooks' && <div style={{ maxWidth: 1000, margin: '0 auto' }}><ChainhooksMonitor /></div>}
 
               {/* ─── EXPLORE ─── */}

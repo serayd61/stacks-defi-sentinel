@@ -133,6 +133,27 @@ export interface DefiScanResult {
   scannedAt: string;
 }
 
+// ── Governance & SIP Types ────────────────────────────────────────────────────
+
+export interface SipProposal {
+  sipNumber: string;
+  title: string;
+  status: 'draft' | 'discussion' | 'voting' | 'accepted' | 'rejected' | 'implemented';
+  author: string;
+  summary: string;
+  url: string;
+  createdAt?: string;
+  votesFor?: number;
+  votesAgainst?: number;
+}
+
+export interface GovernanceData {
+  proposals: SipProposal[];
+  activeCount: number;
+  totalCount: number;
+  scannedAt: string;
+}
+
 // ── Cache Entry ────────────────────────────────────────────────────────────────
 
 interface CacheEntry<T> {
@@ -728,6 +749,136 @@ export class HyperbrowserService {
       protocols,
       totalTvl: protocols.reduce((sum, p) => sum + p.tvl, 0),
       totalPools: protocols.reduce((sum, p) => sum + p.poolCount, 0),
+      scannedAt: new Date().toISOString(),
+    };
+
+    // Cache for 12 hours
+    this.setCache(cacheKey, result, 12 * 60 * 60 * 1000);
+    return result;
+  }
+
+  // ── Governance & SIP Tracker ──────────────────────────────────────────────
+
+  /**
+   * Track Stacks governance proposals (SIPs) from GitHub + Stacks.co.
+   * Uses Extract API for structured proposal data. ~4 credits/day.
+   */
+  async getGovernanceData(): Promise<GovernanceData> {
+    const cacheKey = 'governance:data';
+    const cached = this.getCached<GovernanceData>(cacheKey);
+    if (cached) return cached;
+
+    const proposals: SipProposal[] = [];
+
+    // Source 1: GitHub SIPs repository
+    if (this.getCreditUsage().remaining >= 5) {
+      const sipData = await this.extractStructuredData<{
+        proposals?: Array<{
+          number?: string;
+          title?: string;
+          status?: string;
+          author?: string;
+          summary?: string;
+        }>;
+      }>(
+        'https://github.com/stacksgov/sips',
+        {
+          prompt: `Extract all Stacks Improvement Proposals (SIPs) from this GitHub repository page.
+                   For each SIP, get: SIP number, title, status (draft/discussion/voting/accepted/rejected/implemented),
+                   author name, and a brief 1-line summary.`,
+          schema: {
+            type: 'object',
+            properties: {
+              proposals: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    number: { type: 'string' },
+                    title: { type: 'string' },
+                    status: { type: 'string' },
+                    author: { type: 'string' },
+                    summary: { type: 'string' },
+                  },
+                },
+              },
+            },
+          },
+        },
+      );
+
+      if (sipData?.proposals) {
+        for (const p of sipData.proposals) {
+          if (!p.title || !p.number) continue;
+          const validStatuses = ['draft', 'discussion', 'voting', 'accepted', 'rejected', 'implemented'];
+          const status = validStatuses.includes(p.status?.toLowerCase() ?? '')
+            ? (p.status!.toLowerCase() as SipProposal['status'])
+            : 'draft';
+          proposals.push({
+            sipNumber: p.number.startsWith('SIP') ? p.number : `SIP-${p.number}`,
+            title: p.title.slice(0, 200),
+            status,
+            author: p.author || 'Unknown',
+            summary: p.summary?.slice(0, 300) || '',
+            url: `https://github.com/stacksgov/sips/blob/main/sips/${p.number?.toLowerCase().replace(/[^a-z0-9]/g, '-')}.md`,
+          });
+        }
+        logger.info(`Governance: extracted ${proposals.length} SIPs from GitHub`);
+      }
+    }
+
+    // Source 2: Stacks.co blog/governance page for updates
+    if (this.getCreditUsage().remaining >= 3) {
+      const govPage = await this.scrapeWebpage('https://www.stacks.co/blog', {
+        formats: ['markdown'],
+        onlyMainContent: true,
+      });
+
+      if (govPage?.data?.markdown) {
+        const md = govPage.data.markdown;
+        // Look for governance-related articles
+        const govKeywords = ['sip', 'governance', 'vote', 'proposal', 'upgrade', 'nakamoto', 'pox'];
+        const lines = md.split('\n');
+        let currentTitle = '';
+
+        for (const line of lines) {
+          const heading = line.match(/^#{1,3}\s+(.+)/);
+          if (heading) {
+            currentTitle = heading[1].replace(/\[|\]|\(.*?\)/g, '').trim();
+            continue;
+          }
+
+          if (currentTitle) {
+            const combined = (currentTitle + ' ' + line).toLowerCase();
+            const isGov = govKeywords.some((k) => combined.includes(k));
+            if (isGov && currentTitle.length > 15) {
+              // Avoid duplicates
+              if (!proposals.some((p) => p.title === currentTitle)) {
+                proposals.push({
+                  sipNumber: 'Update',
+                  title: currentTitle.slice(0, 200),
+                  status: 'discussion',
+                  author: 'Stacks Foundation',
+                  summary: line.trim().slice(0, 300),
+                  url: 'https://www.stacks.co/blog',
+                });
+              }
+              currentTitle = '';
+            }
+          }
+        }
+        logger.info(`Governance: found gov-related updates from Stacks blog`);
+      }
+    }
+
+    const activeCount = proposals.filter((p) =>
+      ['draft', 'discussion', 'voting'].includes(p.status),
+    ).length;
+
+    const result: GovernanceData = {
+      proposals,
+      activeCount,
+      totalCount: proposals.length,
       scannedAt: new Date().toISOString(),
     };
 

@@ -809,6 +809,22 @@ export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (fastify, opts
     }
   });
 
+  // ── Governance & SIP Tracker ────────────────────────────────────────────────
+
+  // GET /api/governance — SIP proposals & governance data
+  fastify.get('/governance', async (_req: FastifyRequest, reply: FastifyReply) => {
+    if (!hb.isEnabled()) {
+      return reply.send({ proposals: [], activeCount: 0, totalCount: 0, scannedAt: '' });
+    }
+    try {
+      const data = await hb.getGovernanceData();
+      return reply.send(data);
+    } catch (err) {
+      logger.error('governance error:', err);
+      return reply.send({ proposals: [], activeCount: 0, totalCount: 0, scannedAt: '' });
+    }
+  });
+
   // ── DeFi Protocol Scanner (Hyperbrowser Crawl + Extract API) ──────────────
 
   // GET /api/defi-scan — DeFi protocol comparison report
