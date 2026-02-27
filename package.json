@@ -4,7 +4,7 @@
   "description": "🛡️ Real-time DeFi monitoring & whale tracking platform for Stacks blockchain, powered by Chainhooks",
   "repository": {
     "type": "git",
-    "url": "https://github.com/serkanaydin/stacks-defi-sentinel.git"
+    "url": "git+https://github.com/serkanaydin/stacks-defi-sentinel.git"
   },
   "keywords": [
     "stacks",
@@ -68,5 +68,10 @@
   "engines": {
     "node": ">=20"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "types": "./dist/index.d.ts"
 }
