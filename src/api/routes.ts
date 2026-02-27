@@ -808,4 +808,20 @@ export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (fastify, opts
       return reply.send({ whales: [], alerts: [], scannedAt: '', credits: hb.getCreditUsage() });
     }
   });
+
+  // ── DeFi Protocol Scanner (Hyperbrowser Crawl + Extract API) ──────────────
+
+  // GET /api/defi-scan — DeFi protocol comparison report
+  fastify.get('/defi-scan', async (_req: FastifyRequest, reply: FastifyReply) => {
+    if (!hb.isEnabled()) {
+      return reply.send({ protocols: [], totalTvl: 0, totalPools: 0, scannedAt: '' });
+    }
+    try {
+      const data = await hb.scanDefiProtocols();
+      return reply.send(data);
+    } catch (err) {
+      logger.error('defi-scan error:', err);
+      return reply.send({ protocols: [], totalTvl: 0, totalPools: 0, scannedAt: '', error: 'scan failed' });
+    }
+  });
 };

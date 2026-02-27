@@ -106,6 +106,33 @@ export interface ExtractResult {
   error?: string;
 }
 
+// ── DeFi Protocol Scanner Types ───────────────────────────────────────────────
+
+export interface DefiProtocol {
+  name: string;
+  url: string;
+  tvl: number;
+  tvlChange24h?: number;
+  poolCount: number;
+  topPools: Array<{
+    name: string;
+    tvl: number;
+    apr?: number;
+    volume24h?: number;
+  }>;
+  tokens: string[];
+  category: 'DEX' | 'Lending' | 'Staking' | 'Bridge' | 'Other';
+  riskLevel: 'low' | 'medium' | 'high';
+  scrapedAt: string;
+}
+
+export interface DefiScanResult {
+  protocols: DefiProtocol[];
+  totalTvl: number;
+  totalPools: number;
+  scannedAt: string;
+}
+
 // ── Cache Entry ────────────────────────────────────────────────────────────────
 
 interface CacheEntry<T> {
@@ -489,6 +516,223 @@ export class HyperbrowserService {
 
     // Cache for 6 hours (whale data doesn't change fast)
     this.setCache(cacheKey, result, 6 * 60 * 60 * 1000);
+    return result;
+  }
+
+  // ── Crawl API ─────────────────────────────────────────────────────────────
+
+  /**
+   * Crawl a website starting from a URL, following links up to maxPages.
+   * Uses Hyperbrowser Crawl endpoint: POST /crawl
+   */
+  async crawlWebsite(
+    url: string,
+    maxPages: number = 3,
+  ): Promise<Array<{ url: string; markdown: string }> | null> {
+    const cacheKey = `crawl:${url}:${maxPages}`;
+    const cached = this.getCached<Array<{ url: string; markdown: string }>>(cacheKey);
+    if (cached) return cached;
+
+    if (!this.apiKey) return null;
+    if (!this.consumeCredit(maxPages)) return null; // crawl costs ~1 credit per page
+
+    try {
+      const res = await fetch(`${BASE_URL}/crawl`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.apiKey,
+        },
+        body: JSON.stringify({
+          url,
+          maxPages,
+          scrapeOptions: { formats: ['markdown'], onlyMainContent: true },
+        }),
+      });
+
+      if (!res.ok) {
+        logger.error(`Hyperbrowser crawl failed: ${res.status}`);
+        return null;
+      }
+
+      const job = (await res.json()) as { jobId?: string };
+      if (!job.jobId) return null;
+
+      // Poll for result
+      for (let i = 0; i < MAX_POLL_ATTEMPTS * 2; i++) { // crawl takes longer
+        const pollRes = await fetch(`${BASE_URL}/crawl/${job.jobId}`, {
+          headers: { 'x-api-key': this.apiKey },
+        });
+        if (!pollRes.ok) return null;
+
+        const result = (await pollRes.json()) as {
+          status: string;
+          data?: Array<{ metadata?: { url?: string }; markdown?: string }>;
+          error?: string;
+        };
+
+        if (result.status === 'completed' && result.data) {
+          const pages = result.data
+            .filter((p) => p.markdown)
+            .map((p) => ({ url: p.metadata?.url || url, markdown: p.markdown! }));
+          this.setCache(cacheKey, pages);
+          return pages;
+        }
+        if (result.status === 'failed') {
+          logger.error(`Crawl failed: ${result.error}`);
+          return null;
+        }
+        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS * 1.5));
+      }
+      return null;
+    } catch (err) {
+      logger.error('Crawl request error:', err);
+      return null;
+    }
+  }
+
+  // ── DeFi Protocol Deep Scanner ───────────────────────────────────────────
+
+  /**
+   * Scan Stacks DeFi protocols using Crawl + Extract APIs.
+   * Generates a protocol comparison report.
+   * ~12 credits/day (3 protocols × 4 pages crawl)
+   */
+  async scanDefiProtocols(): Promise<DefiScanResult> {
+    const cacheKey = 'defi:scan';
+    const cached = this.getCached<DefiScanResult>(cacheKey);
+    if (cached) return cached;
+
+    const PROTOCOLS = [
+      {
+        name: 'ALEX', url: 'https://app.alexlab.co',
+        category: 'DEX' as const, crawlPages: 3,
+      },
+      {
+        name: 'Velar', url: 'https://www.velar.co',
+        category: 'DEX' as const, crawlPages: 3,
+      },
+      {
+        name: 'Arkadiko', url: 'https://arkadiko.finance',
+        category: 'Lending' as const, crawlPages: 3,
+      },
+      {
+        name: 'STXCity', url: 'https://stxcity.com',
+        category: 'DEX' as const, crawlPages: 2,
+      },
+    ];
+
+    const protocols: DefiProtocol[] = [];
+
+    for (const proto of PROTOCOLS) {
+      if (this.getCreditUsage().remaining < 8) {
+        logger.warn('Credits low, skipping remaining protocol scans');
+        break;
+      }
+
+      logger.info(`DeFi scan: crawling ${proto.name}...`);
+
+      // Step 1: Crawl the protocol pages
+      const pages = await this.crawlWebsite(proto.url, proto.crawlPages);
+      if (!pages || pages.length === 0) {
+        logger.warn(`DeFi scan ${proto.name}: no pages crawled`);
+        continue;
+      }
+
+      logger.info(`DeFi scan ${proto.name}: crawled ${pages.length} pages`);
+
+      // Step 2: Extract structured data using Extract API
+      const extracted = await this.extractStructuredData<{
+        tvl?: number;
+        poolCount?: number;
+        topPools?: Array<{ name: string; tvl?: number; apr?: number; volume?: number }>;
+        tokens?: string[];
+      }>(proto.url, {
+        prompt: `Analyze this DeFi protocol page. Extract:
+                 1. Total TVL (Total Value Locked) in USD
+                 2. Number of liquidity pools
+                 3. Top 5 pools with name, TVL, APR%, and 24h volume
+                 4. List of supported tokens (symbols only)`,
+        schema: {
+          type: 'object',
+          properties: {
+            tvl: { type: 'number', description: 'Total TVL in USD' },
+            poolCount: { type: 'number' },
+            topPools: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  tvl: { type: 'number' },
+                  apr: { type: 'number' },
+                  volume: { type: 'number' },
+                },
+              },
+            },
+            tokens: { type: 'array', items: { type: 'string' } },
+          },
+        },
+      });
+
+      // Step 3: Also parse markdown for TVL if Extract failed
+      let tvl = extracted?.tvl ?? 0;
+      let poolCount = extracted?.poolCount ?? 0;
+      const topPools = (extracted?.topPools ?? []).map((p) => ({
+        name: p.name,
+        tvl: p.tvl ?? 0,
+        apr: p.apr,
+        volume24h: p.volume,
+      }));
+      const tokens = extracted?.tokens ?? [];
+
+      if (tvl === 0) {
+        // Fallback: parse from crawled markdown
+        for (const page of pages) {
+          const tvlMatch = page.markdown.match(/\$([\d,.]+)\s*[BMK]?\s*(?:TVL|Total Value)/i);
+          if (tvlMatch) {
+            tvl = parseMoneyString(tvlMatch[0]);
+            break;
+          }
+        }
+      }
+
+      if (poolCount === 0) {
+        // Count pool-like lines
+        for (const page of pages) {
+          const pairCount = (page.markdown.match(/[A-Z]{2,10}\s*[\/\-]\s*[A-Z]{2,10}/g) || []).length;
+          poolCount = Math.max(poolCount, pairCount);
+        }
+      }
+
+      // Risk assessment
+      const riskLevel: DefiProtocol['riskLevel'] =
+        tvl > 30_000_000 ? 'low' : tvl > 5_000_000 ? 'medium' : 'high';
+
+      protocols.push({
+        name: proto.name,
+        url: proto.url,
+        tvl,
+        poolCount,
+        topPools: topPools.slice(0, 5),
+        tokens: tokens.slice(0, 20),
+        category: proto.category,
+        riskLevel,
+        scrapedAt: new Date().toISOString(),
+      });
+
+      logger.info(`DeFi scan ${proto.name}: TVL=${tvl}, pools=${poolCount}, risk=${riskLevel}`);
+    }
+
+    const result: DefiScanResult = {
+      protocols,
+      totalTvl: protocols.reduce((sum, p) => sum + p.tvl, 0),
+      totalPools: protocols.reduce((sum, p) => sum + p.poolCount, 0),
+      scannedAt: new Date().toISOString(),
+    };
+
+    // Cache for 12 hours
+    this.setCache(cacheKey, result, 12 * 60 * 60 * 1000);
     return result;
   }
 
