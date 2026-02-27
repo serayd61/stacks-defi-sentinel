@@ -15,6 +15,7 @@ import {
   UserEvent,
 } from '../services/user-analytics';
 import { getHyperbrowserService } from '../services/hyperbrowser';
+import { cacheService } from '../utils/cache';
 
 interface RouteOptions {
   analytics: AnalyticsService;
@@ -80,28 +81,36 @@ export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (fastify, opts
 
   // Dashboard
   fastify.get('/dashboard', async (_req: FastifyRequest, reply: FastifyReply) => {
-    const stats = analytics.getDashboardStats();
+    const stats = await cacheService.getOrSet('dashboard', 10, async () => {
+      return analytics.getDashboardStats();
+    });
     return reply.send(stats);
   });
 
   // Pools
   fastify.get('/pools', async (req: FastifyRequest, reply: FastifyReply) => {
     const limit = (req.query as { limit?: number }).limit || 10;
-    const pools = analytics.getTopPools(limit);
+    const pools = await cacheService.getOrSet('pools_' + limit, 15, async () => {
+      return analytics.getTopPools(limit);
+    });
     return reply.send({ pools });
   });
 
   // Tokens
   fastify.get('/tokens', async (req: FastifyRequest, reply: FastifyReply) => {
     const limit = (req.query as { limit?: number }).limit || 10;
-    const tokens = analytics.getTopTokens(limit);
+    const tokens = await cacheService.getOrSet('tokens_' + limit, 15, async () => {
+      return analytics.getTopTokens(limit);
+    });
     return reply.send({ tokens });
   });
 
   // Alerts
   fastify.get('/alerts', async (req: FastifyRequest, reply: FastifyReply) => {
     const limit = (req.query as { limit?: number }).limit || 20;
-    const alerts = analytics.getWhaleAlerts(limit);
+    const alerts = await cacheService.getOrSet('alerts_' + limit, 5, async () => {
+      return analytics.getWhaleAlerts(limit);
+    });
     return reply.send({ alerts });
   });
 
@@ -822,6 +831,42 @@ export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (fastify, opts
     } catch (err) {
       logger.error('governance error:', err);
       return reply.send({ proposals: [], activeCount: 0, totalCount: 0, scannedAt: '' });
+    }
+  });
+
+  // ── sBTC Bridge Monitor ────────────────────────────────────────────────────
+
+  fastify.get('/sbtc-bridge', async (_req: FastifyRequest, reply: FastifyReply) => {
+    if (!hb.isEnabled()) return reply.send({ pegInCount: 0, pegOutCount: 0, totalLocked: 0, pegRatio: 1, recentOps: [], scannedAt: '' });
+    try {
+      return reply.send(await hb.getSbtcBridgeData());
+    } catch (err) {
+      logger.error('sbtc-bridge error:', err);
+      return reply.send({ pegInCount: 0, pegOutCount: 0, totalLocked: 0, pegRatio: 1, recentOps: [], scannedAt: '' });
+    }
+  });
+
+  // ── Token Launch Scanner ──────────────────────────────────────────────────
+
+  fastify.get('/token-launches', async (_req: FastifyRequest, reply: FastifyReply) => {
+    if (!hb.isEnabled()) return reply.send({ launches: [], scannedAt: '' });
+    try {
+      return reply.send(await hb.getTokenLaunches());
+    } catch (err) {
+      logger.error('token-launches error:', err);
+      return reply.send({ launches: [], scannedAt: '' });
+    }
+  });
+
+  // ── Social Pulse ──────────────────────────────────────────────────────────
+
+  fastify.get('/social-pulse', async (_req: FastifyRequest, reply: FastifyReply) => {
+    if (!hb.isEnabled()) return reply.send({ sentiment: 'neutral', mentionCount: 0, topTopics: [], articles: [], scannedAt: '' });
+    try {
+      return reply.send(await hb.getSocialPulse());
+    } catch (err) {
+      logger.error('social-pulse error:', err);
+      return reply.send({ sentiment: 'neutral', mentionCount: 0, topTopics: [], articles: [], scannedAt: '' });
     }
   });
 

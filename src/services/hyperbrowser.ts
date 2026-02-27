@@ -154,6 +154,55 @@ export interface GovernanceData {
   scannedAt: string;
 }
 
+// ── sBTC Bridge Types ─────────────────────────────────────────────────────────
+
+export interface SbtcBridgeData {
+  pegInCount: number;
+  pegOutCount: number;
+  totalLocked: number;
+  pegRatio: number;
+  recentOps: Array<{
+    type: 'peg-in' | 'peg-out';
+    amount: number;
+    status: 'pending' | 'confirmed';
+    timestamp: string;
+  }>;
+  scannedAt: string;
+}
+
+// ── Token Launch Types ────────────────────────────────────────────────────────
+
+export interface TokenLaunch {
+  name: string;
+  symbol: string;
+  platform: string;
+  launchDate?: string;
+  initialPrice?: number;
+  status: 'upcoming' | 'live' | 'ended';
+  url: string;
+  description: string;
+}
+
+export interface TokenLaunchData {
+  launches: TokenLaunch[];
+  scannedAt: string;
+}
+
+// ── Social Pulse Types ────────────────────────────────────────────────────────
+
+export interface SocialPulseData {
+  sentiment: 'bullish' | 'neutral' | 'bearish';
+  mentionCount: number;
+  topTopics: string[];
+  articles: Array<{
+    title: string;
+    source: string;
+    url: string;
+    sentiment: 'positive' | 'neutral' | 'negative';
+  }>;
+  scannedAt: string;
+}
+
 // ── Cache Entry ────────────────────────────────────────────────────────────────
 
 interface CacheEntry<T> {
@@ -884,6 +933,223 @@ export class HyperbrowserService {
 
     // Cache for 12 hours
     this.setCache(cacheKey, result, 12 * 60 * 60 * 1000);
+    return result;
+  }
+
+  // ── sBTC Bridge Monitor ───────────────────────────────────────────────────
+
+  async getSbtcBridgeData(): Promise<SbtcBridgeData> {
+    const cacheKey = 'sbtc:bridge';
+    const cached = this.getCached<SbtcBridgeData>(cacheKey);
+    if (cached) return cached;
+
+    const extracted = await this.extractStructuredData<{
+      totalLocked?: number;
+      pegInCount?: number;
+      pegOutCount?: number;
+      recentOps?: Array<{ type: string; amount: number; status: string; time: string }>;
+    }>('https://explorer.hiro.so/token/SM3VDXK3WZZSA84XXFKAFAF15NNZX32CTSG82JFQ4.sbtc-token?chain=mainnet', {
+      prompt: `Extract sBTC token information: total locked/supply, number of peg-in and peg-out operations,
+               and recent operations (type, amount in BTC, status, timestamp).`,
+      schema: {
+        type: 'object',
+        properties: {
+          totalLocked: { type: 'number' },
+          pegInCount: { type: 'number' },
+          pegOutCount: { type: 'number' },
+          recentOps: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                type: { type: 'string' },
+                amount: { type: 'number' },
+                status: { type: 'string' },
+                time: { type: 'string' },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const result: SbtcBridgeData = {
+      pegInCount: extracted?.pegInCount ?? 0,
+      pegOutCount: extracted?.pegOutCount ?? 0,
+      totalLocked: extracted?.totalLocked ?? 0,
+      pegRatio: 1.0,
+      recentOps: (extracted?.recentOps ?? []).map((op) => ({
+        type: op.type?.includes('in') ? 'peg-in' : 'peg-out',
+        amount: op.amount ?? 0,
+        status: op.status?.includes('confirm') ? 'confirmed' : 'pending',
+        timestamp: op.time || new Date().toISOString(),
+      })),
+      scannedAt: new Date().toISOString(),
+    };
+
+    this.setCache(cacheKey, result, 4 * 60 * 60 * 1000);
+    logger.info(`sBTC Bridge: locked=${result.totalLocked}, ops=${result.recentOps.length}`);
+    return result;
+  }
+
+  // ── Token Launch Scanner ─────────────────────────────────────────────────
+
+  async getTokenLaunches(): Promise<TokenLaunchData> {
+    const cacheKey = 'token:launches';
+    const cached = this.getCached<TokenLaunchData>(cacheKey);
+    if (cached) return cached;
+
+    const launches: TokenLaunch[] = [];
+    const sources = [
+      { name: 'STXCity', url: 'https://stxcity.com' },
+      { name: 'ALEX Launchpad', url: 'https://app.alexlab.co/launchpad' },
+    ];
+
+    for (const source of sources) {
+      if (this.getCreditUsage().remaining < 5) break;
+
+      const extracted = await this.extractStructuredData<{
+        tokens?: Array<{
+          name: string; symbol: string; price?: number;
+          launchDate?: string; status?: string; description?: string;
+        }>;
+      }>(source.url, {
+        prompt: `Extract all token launches, IDOs, or new tokens listed on this platform.
+                 For each: name, symbol, initial price, launch date, status (upcoming/live/ended), description.`,
+        schema: {
+          type: 'object',
+          properties: {
+            tokens: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  name: { type: 'string' },
+                  symbol: { type: 'string' },
+                  price: { type: 'number' },
+                  launchDate: { type: 'string' },
+                  status: { type: 'string' },
+                  description: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (extracted?.tokens) {
+        for (const t of extracted.tokens) {
+          if (!t.name) continue;
+          const validStatuses = ['upcoming', 'live', 'ended'];
+          launches.push({
+            name: t.name,
+            symbol: t.symbol || '???',
+            platform: source.name,
+            launchDate: t.launchDate,
+            initialPrice: t.price,
+            status: validStatuses.includes(t.status?.toLowerCase() ?? '') ? (t.status!.toLowerCase() as TokenLaunch['status']) : 'live',
+            url: source.url,
+            description: t.description?.slice(0, 200) || '',
+          });
+        }
+      }
+    }
+
+    const result: TokenLaunchData = { launches, scannedAt: new Date().toISOString() };
+    this.setCache(cacheKey, result, 6 * 60 * 60 * 1000);
+    logger.info(`Token launches: found ${launches.length}`);
+    return result;
+  }
+
+  // ── Social Pulse ─────────────────────────────────────────────────────────
+
+  async getSocialPulse(): Promise<SocialPulseData> {
+    const cacheKey = 'social:pulse';
+    const cached = this.getCached<SocialPulseData>(cacheKey);
+    if (cached) return cached;
+
+    // Scrape crypto news sources for Stacks sentiment
+    const sources = [
+      'https://www.coindesk.com/tag/stacks/',
+      'https://cryptopanic.com/news/stacks/',
+    ];
+
+    const allArticles: SocialPulseData['articles'] = [];
+    let positiveCount = 0;
+    let negativeCount = 0;
+    const topicCounts: Record<string, number> = {};
+
+    for (const url of sources) {
+      if (this.getCreditUsage().remaining < 5) break;
+
+      const extracted = await this.extractStructuredData<{
+        articles?: Array<{
+          title: string; source: string; url?: string; sentiment?: string;
+          topics?: string[];
+        }>;
+      }>(url, {
+        prompt: `Extract news articles from this crypto news page about Stacks/STX.
+                 For each article: title, source name, URL, sentiment (positive/neutral/negative),
+                 and key topics mentioned.`,
+        schema: {
+          type: 'object',
+          properties: {
+            articles: {
+              type: 'array',
+              items: {
+                type: 'object',
+                properties: {
+                  title: { type: 'string' },
+                  source: { type: 'string' },
+                  url: { type: 'string' },
+                  sentiment: { type: 'string' },
+                  topics: { type: 'array', items: { type: 'string' } },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (extracted?.articles) {
+        for (const a of extracted.articles) {
+          if (!a.title) continue;
+          const sent = a.sentiment?.toLowerCase() === 'positive' ? 'positive'
+            : a.sentiment?.toLowerCase() === 'negative' ? 'negative' : 'neutral';
+          if (sent === 'positive') positiveCount++;
+          if (sent === 'negative') negativeCount++;
+          allArticles.push({
+            title: a.title.slice(0, 200),
+            source: a.source || 'Unknown',
+            url: a.url || url,
+            sentiment: sent,
+          });
+          for (const topic of a.topics ?? []) {
+            topicCounts[topic] = (topicCounts[topic] || 0) + 1;
+          }
+        }
+      }
+    }
+
+    const topTopics = Object.entries(topicCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([topic]) => topic);
+
+    const sentiment: SocialPulseData['sentiment'] =
+      positiveCount > negativeCount * 2 ? 'bullish'
+        : negativeCount > positiveCount * 2 ? 'bearish' : 'neutral';
+
+    const result: SocialPulseData = {
+      sentiment,
+      mentionCount: allArticles.length,
+      topTopics,
+      articles: allArticles.slice(0, 20),
+      scannedAt: new Date().toISOString(),
+    };
+
+    this.setCache(cacheKey, result, 6 * 60 * 60 * 1000);
+    logger.info(`Social Pulse: ${sentiment}, ${allArticles.length} articles`);
     return result;
   }
 

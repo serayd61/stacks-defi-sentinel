@@ -7,7 +7,7 @@ import {
   ChevronDown, Code, Server, Search,
   Home, ChevronLeft, Brain, Bitcoin,
   Layers, Image, BarChart3, Link2, PieChart, Blocks, BarChart2,
-  Globe, Fish, Vote,
+  Globe, Fish, Vote, Shield, Rocket, Radio,
 } from 'lucide-react';
 
 import { StatCard } from './components/StatCard';
@@ -36,264 +36,20 @@ import WebIntelligence from './components/WebIntelligence';
 import WhaleIntelligence from './components/WhaleIntelligence';
 import DefiScanner from './components/DefiScanner';
 import GovernanceTracker from './components/GovernanceTracker';
+import SbtcBridge from './components/SbtcBridge';
+import TokenLaunches from './components/TokenLaunches';
+import SocialPulse from './components/SocialPulse';
 import { WalletProvider } from './contexts/WalletContext';
 import { useApi } from './hooks/useApi';
 import { useWebSocket } from './hooks/useWebSocket';
+import { TabType, NAV, BADGE } from './types/navigation';
+import { fmt, fmtCount } from './utils/formatters';
+import { Sidebar } from './components/layout/Sidebar';
+import { Header } from './components/layout/Header';
 
 const WS_URL = import.meta.env.VITE_WS_URL || 'wss://stacks-defi-sentinel-production.up.railway.app/ws';
 
-type TabType =
-  | 'overview' | 'market' | 'network'
-  | 'swaps' | 'price-alerts' | 'block-explorer' | 'dex'
-  | 'contracts' | 'alerts' | 'wallet-analytics' | 'portfolio' | 'stacking' | 'token-analytics' | 'user-analytics' | 'chainhooks'
-  | 'ai-agents' | 'web-intel' | 'whale-intel' | 'defi-scan' | 'governance' | 'sbtc'
-  | 'gas' | 'leaderboard' | 'predict' | 'nfts';
 
-interface NavItem { id: TabType; label: string; icon: React.ElementType; badge?: 'hot'|'new'|'live'; }
-interface NavSection { label: string; items: NavItem[]; }
-
-const NAV: NavSection[] = [
-  { label: 'Overview', items: [
-    { id: 'overview',   label: 'Dashboard',      icon: Home,       badge: 'live' },
-    { id: 'market',     label: 'Market',          icon: TrendingUp, badge: 'hot'  },
-    { id: 'network',    label: 'Network Health',  icon: Server },
-  ]},
-  { label: 'Analytics', items: [
-    { id: 'contracts',        label: 'Contract Activity', icon: Code },
-    { id: 'alerts',           label: 'Whale Alerts',      icon: Activity },
-    { id: 'wallet-analytics', label: 'Wallet Analyzer',   icon: Search },
-    { id: 'portfolio',        label: 'Portfolio',          icon: PieChart,   badge: 'new' },
-    { id: 'stacking',         label: 'Stacking',           icon: Layers,     badge: 'new' },
-    { id: 'token-analytics',  label: 'Token Analytics',    icon: BarChart3,  badge: 'new' },
-    { id: 'user-analytics',   label: 'User & Revenue',     icon: BarChart2,  badge: 'new' },
-  ]},
-  { label: 'Live Data', items: [
-    { id: 'swaps',          label: 'Swap History',    icon: ArrowRightLeft },
-    { id: 'dex',            label: 'DEX Aggregator',  icon: Link2,     badge: 'new' },
-    { id: 'block-explorer', label: 'Block Explorer',  icon: Blocks,    badge: 'new' },
-    { id: 'price-alerts',   label: 'Price Alerts',    icon: Bell },
-  ]},
-  { label: 'Bitcoin', items: [
-    { id: 'sbtc', label: 'sBTC Bridge', icon: Bitcoin, badge: 'live' as const },
-  ]},
-  { label: 'AI', items: [
-    { id: 'ai-agents',  label: 'AI Agents',    icon: Brain,  badge: 'live' as const },
-    { id: 'web-intel',   label: 'Web Intel',     icon: Globe,  badge: 'new' as const },
-    { id: 'whale-intel', label: 'Whale Intel',   icon: Fish,   badge: 'new' as const },
-    { id: 'defi-scan',  label: 'DeFi Scanner',  icon: Search, badge: 'new' as const },
-    { id: 'governance', label: 'Governance',    icon: Vote,   badge: 'new' as const },
-    { id: 'chainhooks',  label: 'Chainhooks',    icon: Link2 },
-  ]},
-  { label: 'Explore', items: [
-    { id: 'gas',         label: 'Gas Tracker',   icon: Fuel },
-    { id: 'nfts',        label: 'NFT Gallery',   icon: Image,  badge: 'new' },
-    { id: 'leaderboard', label: 'Leaderboard',   icon: Star },
-    { id: 'predict',     label: 'Predictions',   icon: Target },
-  ]},
-];
-
-const BADGE: Record<string, { label: string; bg: string; text: string }> = {
-  hot:  { label: 'HOT',  bg: 'rgba(251,146,60,0.15)',  text: '#fb923c' },
-  new:  { label: 'NEW',  bg: 'rgba(34,197,94,0.15)',   text: '#22c55e' },
-  live: { label: 'LIVE', bg: 'rgba(239,68,68,0.15)',   text: '#f87171' },
-};
-
-const fmt = (n: number) => {
-  if (n >= 1e9) return `$${(n/1e9).toFixed(2)}B`;
-  if (n >= 1e6) return `$${(n/1e6).toFixed(2)}M`;
-  if (n >= 1e3) return `$${(n/1e3).toFixed(2)}K`;
-  return `$${n.toFixed(2)}`;
-};
-const fmtCount = (n: number) => {
-  if (n >= 1e6) return `${(n/1e6).toFixed(1)}M`;
-  if (n >= 1e3) return `${(n/1e3).toFixed(1)}K`;
-  return n.toString();
-};
-
-/* ═══════════════════════════════════════════════
-   SIDEBAR
-═══════════════════════════════════════════════ */
-const Sidebar: React.FC<{
-  open: boolean; activeTab: TabType;
-  onSelect: (t: TabType) => void;
-  onToggle: () => void; tvl: number;
-}> = ({ open, activeTab, onSelect, onToggle, tvl }) => {
-  const [expanded, setExpanded] = useState<string|null>('Overview');
-
-  return (
-    <aside style={{
-      width: open ? 248 : 72, minHeight: '100vh', height: '100vh',
-      position: 'fixed', left: 0, top: 0,
-      background: 'rgba(9,9,18,0.98)', backdropFilter: 'blur(20px)',
-      borderRight: '1px solid rgba(255,255,255,0.05)',
-      display: 'flex', flexDirection: 'column',
-      transition: 'width 0.25s cubic-bezier(0.4,0,0.2,1)',
-      zIndex: 40, overflow: 'hidden',
-    }}>
-
-      {/* Logo */}
-      <div style={{
-        padding: '18px 16px 16px', borderBottom: '1px solid rgba(255,255,255,0.05)',
-        display: 'flex', alignItems: 'center', gap: 12, flexShrink: 0,
-      }}>
-        <div style={{ position: 'relative', flexShrink: 0 }}>
-          <div style={{
-            width: 38, height: 38, borderRadius: 10,
-            background: 'linear-gradient(135deg,#5546FF,#7c3aed,#FC6432)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 4px 14px rgba(85,70,255,0.35)',
-          }}>
-            <Zap size={18} color="white" />
-          </div>
-          <div style={{
-            position: 'absolute', bottom: -2, right: -2,
-            width: 10, height: 10, borderRadius: '50%',
-            background: '#22c55e', border: '2px solid #090912',
-          }} />
-        </div>
-        {open && (
-          <div style={{ overflow: 'hidden' }}>
-            <div style={{ fontWeight: 700, fontSize: '0.95rem', color: '#fff', letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}>
-              Stacks Sentinel
-            </div>
-            <div style={{ fontSize: '0.68rem', color: '#475569', fontFamily: 'monospace', whiteSpace: 'nowrap' }}>
-              Stacks Mainnet · AI-Powered
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Nav */}
-      <nav style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', padding: '10px 8px' }}>
-        {NAV.map(section => (
-          <div key={section.label} style={{ marginBottom: 4 }}>
-            {open ? (
-              <>
-                <button
-                  onClick={() => setExpanded(e => e === section.label ? null : section.label)}
-                  style={{
-                    width: '100%', display: 'flex', alignItems: 'center',
-                    justifyContent: 'space-between', padding: '6px 10px',
-                    background: 'none', border: 'none', color: '#475569',
-                    fontSize: '0.67rem', fontWeight: 700, letterSpacing: '0.06em',
-                    textTransform: 'uppercase', cursor: 'pointer', borderRadius: 8,
-                    transition: 'color 0.15s', fontFamily: 'inherit',
-                  }}
-                  onMouseEnter={e => (e.currentTarget.style.color = '#94a3b8')}
-                  onMouseLeave={e => (e.currentTarget.style.color = '#475569')}
-                >
-                  {section.label}
-                  <ChevronDown size={12} style={{
-                    transform: expanded === section.label ? 'rotate(180deg)' : '',
-                    transition: 'transform 0.2s',
-                  }} />
-                </button>
-                {expanded === section.label && (
-                  <div style={{ marginTop: 2 }}>
-                    {section.items.map(item => {
-                      const active = activeTab === item.id;
-                      const b = item.badge ? BADGE[item.badge] : null;
-                      return (
-                        <button key={item.id} onClick={() => onSelect(item.id)}
-                          style={{
-                            width: '100%', display: 'flex', alignItems: 'center',
-                            gap: 10, padding: '8px 10px', borderRadius: 9,
-                            background: active
-                              ? 'linear-gradient(90deg,rgba(85,70,255,0.18),rgba(124,58,237,0.06))'
-                              : 'transparent',
-                            border: active ? '1px solid rgba(85,70,255,0.22)' : '1px solid transparent',
-                            color: active ? '#e2e8f0' : '#64748b',
-                            cursor: 'pointer', transition: 'all 0.15s',
-                            fontFamily: 'inherit', fontSize: '0.82rem',
-                            fontWeight: active ? 600 : 400, marginBottom: 1, textAlign: 'left',
-                          }}
-                          onMouseEnter={e => { if (!active) { e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; e.currentTarget.style.color = '#e2e8f0'; }}}
-                          onMouseLeave={e => { if (!active) { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = '#64748b'; }}}
-                        >
-                          <item.icon size={15} color={active ? '#818cf8' : '#475569'} style={{ flexShrink: 0 }} />
-                          <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {item.label}
-                          </span>
-                          {b && (
-                            <span style={{
-                              padding: '1px 6px', borderRadius: 20, fontSize: '0.59rem',
-                              fontWeight: 700, letterSpacing: '0.04em',
-                              background: b.bg, color: b.text, flexShrink: 0,
-                            }}>
-                              {b.label}
-                            </span>
-                          )}
-                          {active && <ChevronRight size={12} color="#818cf8" style={{ flexShrink: 0 }} />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </>
-            ) : (
-              /* Collapsed – icons only */
-              <div>
-                {section.items.map(item => {
-                  const active = activeTab === item.id;
-                  return (
-                    <button key={item.id} onClick={() => onSelect(item.id)} title={item.label}
-                      style={{
-                        width: '100%', display: 'flex', alignItems: 'center',
-                        justifyContent: 'center', padding: '9px 0',
-                        borderRadius: 9, marginBottom: 1,
-                        background: active ? 'rgba(85,70,255,0.15)' : 'transparent',
-                        border: '1px solid transparent', cursor: 'pointer', transition: 'all 0.15s',
-                      }}
-                      onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'rgba(255,255,255,0.04)'; }}
-                      onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
-                    >
-                      <item.icon size={16} color={active ? '#818cf8' : '#475569'} />
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        ))}
-      </nav>
-
-      {/* Footer */}
-      <div style={{ padding: '12px 10px 14px', borderTop: '1px solid rgba(255,255,255,0.05)', flexShrink: 0 }}>
-        {open && tvl > 0 && (
-          <div style={{
-            background: 'linear-gradient(135deg,rgba(85,70,255,0.1),rgba(252,100,50,0.05))',
-            border: '1px solid rgba(85,70,255,0.18)',
-            borderRadius: 10, padding: '10px 12px', marginBottom: 10,
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-              <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: 500 }}>Stacks TVL</span>
-              <span style={{ fontSize: '0.68rem', color: '#22c55e', fontWeight: 600 }}>Live</span>
-            </div>
-            <div style={{ fontWeight: 700, fontSize: '1.05rem', color: '#fff', letterSpacing: '-0.02em' }}>
-              {fmt(tvl)}
-            </div>
-          </div>
-        )}
-        <button onClick={onToggle}
-          style={{
-            width: '100%', display: 'flex', alignItems: 'center',
-            justifyContent: open ? 'flex-start' : 'center',
-            gap: 8, padding: '7px 10px',
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.06)',
-            borderRadius: 9, color: '#475569', cursor: 'pointer',
-            fontSize: '0.76rem', fontFamily: 'inherit', transition: 'all 0.15s',
-          }}
-          onMouseEnter={e => { e.currentTarget.style.color = '#94a3b8'; e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
-          onMouseLeave={e => { e.currentTarget.style.color = '#475569'; e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
-        >
-          {open ? <ChevronLeft size={14} /> : <ChevronRight size={14} />}
-          {open && 'Collapse'}
-        </button>
-      </div>
-    </aside>
-  );
-};
 
 /* ═══════════════════════════════════════════════
    MAIN APP
@@ -405,115 +161,16 @@ function App() {
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: '100vh', position: 'relative', zIndex: 1 }}>
 
         {/* TOP HEADER */}
-        <header style={{
-          position: 'sticky', top: 0, zIndex: 30,
-          background: 'rgba(9,9,18,0.88)', backdropFilter: 'blur(20px)',
-          borderBottom: '1px solid rgba(255,255,255,0.05)', flexShrink: 0,
-        }}>
-          <div style={{ padding: '0 20px', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-
-            {/* Left: mobile button + breadcrumb */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <button className="lg:hidden" onClick={() => setMobileOpen(true)} style={{
-                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)',
-                color: '#94a3b8', cursor: 'pointer', padding: '6px 8px', borderRadius: 9, display: 'flex',
-              }}>
-                <Menu size={18} />
-              </button>
-              <div className="hidden sm:flex" style={{ alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: '0.75rem', color: '#334155', fontWeight: 500 }}>Stacks Sentinel</span>
-                <ChevronRight size={12} color="#1e293b" />
-                {currentItem && (
-                  <>
-                    <currentItem.icon size={13} color="#5546FF" />
-                    <span style={{ fontSize: '0.8rem', color: '#94a3b8', fontWeight: 500 }}>{currentItem.label}</span>
-                  </>
-                )}
-              </div>
-            </div>
-
-            {/* Right: status chips + actions */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-
-              {/* Live pill */}
-              <div className="hidden sm:flex" style={{
-                alignItems: 'center', gap: 6, padding: '4px 11px', borderRadius: 20,
-                fontSize: '0.72rem', fontWeight: 600,
-                background: wsConnected ? 'rgba(34,197,94,0.08)' : 'rgba(245,158,11,0.08)',
-                border: `1px solid ${wsConnected ? 'rgba(34,197,94,0.18)' : 'rgba(245,158,11,0.18)'}`,
-                color: wsConnected ? '#22c55e' : '#f59e0b',
-              }}>
-                {wsConnected ? (
-                  <>
-                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 0 2px rgba(34,197,94,0.3)', flexShrink: 0 }} />
-                    Live
-                  </>
-                ) : (
-                  <><WifiOff size={11} /> Connecting</>
-                )}
-              </div>
-
-              {/* AI Agents shortcut */}
-              <button
-                onClick={() => setActiveTab('ai-agents')}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px',
-                  background: activeTab === 'ai-agents' ? 'rgba(85,70,255,0.18)' : 'rgba(255,255,255,0.04)',
-                  border: `1px solid ${activeTab === 'ai-agents' ? 'rgba(85,70,255,0.35)' : 'rgba(255,255,255,0.07)'}`,
-                  color: activeTab === 'ai-agents' ? '#818cf8' : '#64748b',
-                  cursor: 'pointer', borderRadius: 9, fontSize: '0.72rem', fontWeight: 600,
-                  transition: 'all 0.15s', fontFamily: 'inherit',
-                }}
-              >
-                <Brain size={13} />
-                <span className="hidden sm:inline">AI</span>
-              </button>
-
-              {/* Alerts */}
-              {combinedAlerts.length > 0 && (
-                <button onClick={() => setActiveTab('alerts')} style={{
-                  position: 'relative', background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.07)', color: '#94a3b8',
-                  cursor: 'pointer', padding: '6px 8px', borderRadius: 9, display: 'flex', transition: 'all 0.15s',
-                }}>
-                  <Bell size={16} />
-                  <span style={{
-                    position: 'absolute', top: -4, right: -4, width: 16, height: 16,
-                    borderRadius: '50%', background: 'linear-gradient(135deg,#FC6432,#ef4444)',
-                    border: '2px solid #090912', fontSize: '0.56rem', fontWeight: 700, color: '#fff',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    {combinedAlerts.length > 9 ? '9+' : combinedAlerts.length}
-                  </span>
-                </button>
-              )}
-
-              {/* Refresh */}
-              <button onClick={() => fetchDashboard()} title="Refresh" style={{
-                background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)',
-                color: isRefreshing ? '#818cf8' : '#64748b', cursor: 'pointer',
-                padding: '6px 8px', borderRadius: 9, display: 'flex', transition: 'all 0.15s',
-              }}>
-                <RefreshCw size={15} style={{ animation: isRefreshing ? 'spinCW 0.8s linear infinite' : 'none' }} />
-              </button>
-
-              {/* GitHub */}
-              <a href="https://github.com/serayd61/stacks-defi-sentinel"
-                target="_blank" rel="noopener noreferrer"
-                style={{
-                  background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)',
-                  color: '#64748b', padding: '6px 8px', borderRadius: 9, display: 'flex',
-                  textDecoration: 'none', transition: 'all 0.15s',
-                }}
-                onMouseEnter={e => { (e.currentTarget as any).style.color = '#fff'; (e.currentTarget as any).style.background = 'rgba(255,255,255,0.08)'; }}
-                onMouseLeave={e => { (e.currentTarget as any).style.color = '#64748b'; (e.currentTarget as any).style.background = 'rgba(255,255,255,0.04)'; }}
-              >
-                <Github size={16} />
-              </a>
-            </div>
-          </div>
-
-        </header>
+        <Header 
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          setMobileOpen={setMobileOpen}
+          currentItem={currentItem}
+          wsConnected={wsConnected}
+          combinedAlertsCount={combinedAlerts.length}
+          isRefreshing={isRefreshing}
+          fetchDashboard={fetchDashboard}
+        />
 
         {/* PAGE BODY */}
         <div style={{ flex: 1, padding: '24px 20px 48px' }}>
@@ -558,16 +215,16 @@ function App() {
                     gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))',
                     gap: 14, marginBottom: 22,
                   }}>
-                    <StatCard title="Total Value Locked" value={fmt(dashboardStats?.totalValueLocked||0)} icon={<Wallet size={20}/>} color="purple" trend={12.5}/>
-                    <StatCard title="24h Volume" value={fmt(dashboardStats?.totalVolume24h||0)} icon={<TrendingUp size={20}/>} color="orange" trend={-3.2}/>
-                    <StatCard title="Transactions (24h)" value={fmtCount(dashboardStats?.totalTransactions24h||0)} icon={<Activity size={20}/>} color="green" subtitle="Confirmed"/>
-                    <StatCard title="Active Wallets" value={fmtCount(dashboardStats?.activeWallets24h||0)} icon={<Users size={20}/>} color="blue" subtitle="Unique addresses"/>
+                    <StatCard title="Total Value Locked" value={fmt(dashboardStats?.totalValueLocked || 0)} icon={<Wallet size={20} />} color="purple" trend={12.5} />
+                    <StatCard title="24h Volume" value={fmt(dashboardStats?.totalVolume24h || 0)} icon={<TrendingUp size={20} />} color="orange" trend={-3.2} />
+                    <StatCard title="Transactions (24h)" value={fmtCount(dashboardStats?.totalTransactions24h || 0)} icon={<Activity size={20} />} color="green" subtitle="Confirmed" />
+                    <StatCard title="Active Wallets" value={fmtCount(dashboardStats?.activeWallets24h || 0)} icon={<Users size={20} />} color="blue" subtitle="Unique addresses" />
                   </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 18, marginBottom: 18 }}>
                     <SwapTable swaps={combinedSwaps} isLive={wsConnected} />
                     <WhaleAlerts alerts={combinedAlerts} />
                   </div>
-                  <PoolsTable pools={dashboardStats?.topPools||[]} />
+                  <PoolsTable pools={dashboardStats?.topPools || []} />
                 </>
               )}
 
@@ -594,8 +251,8 @@ function App() {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
                       {[
                         { label: 'Large Transfers', type: 'large_transfer', color: '#fb923c' },
-                        { label: 'Large Swaps',     type: 'large_swap',     color: '#818cf8' },
-                        { label: 'Liquidity Events',type: 'large_liquidity', color: '#60a5fa' },
+                        { label: 'Large Swaps', type: 'large_swap', color: '#818cf8' },
+                        { label: 'Liquidity Events', type: 'large_liquidity', color: '#60a5fa' },
                       ].map(r => (
                         <div key={r.type} style={{
                           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -614,33 +271,36 @@ function App() {
               {activeTab === 'wallet-analytics' && <div style={{ maxWidth: 800, margin: '0 auto' }}><WalletAnalytics /></div>}
 
               {/* ─── ANALYTICS (new) ─── */}
-              {activeTab === 'portfolio'        && <div style={{ maxWidth: 1000, margin: '0 auto' }}><PortfolioTracker /></div>}
-              {activeTab === 'stacking'         && <div style={{ maxWidth: 1000, margin: '0 auto' }}><StackingTracker /></div>}
-              {activeTab === 'token-analytics'  && <div style={{ maxWidth: 1000, margin: '0 auto' }}><TokenAnalytics /></div>}
-              {activeTab === 'user-analytics'   && <div style={{ maxWidth: 1100, margin: '0 auto' }}><UserRevenueAnalytics /></div>}
+              {activeTab === 'portfolio' && <div style={{ maxWidth: 1000, margin: '0 auto' }}><PortfolioTracker /></div>}
+              {activeTab === 'stacking' && <div style={{ maxWidth: 1000, margin: '0 auto' }}><StackingTracker /></div>}
+              {activeTab === 'token-analytics' && <div style={{ maxWidth: 1000, margin: '0 auto' }}><TokenAnalytics /></div>}
+              {activeTab === 'user-analytics' && <div style={{ maxWidth: 1100, margin: '0 auto' }}><UserRevenueAnalytics /></div>}
 
               {/* ─── LIVE DATA ─── */}
-              {activeTab === 'swaps'          && <SwapTable swaps={combinedSwaps} isLive={wsConnected} showAll />}
-              {activeTab === 'dex'            && <div style={{ maxWidth: 1100, margin: '0 auto' }}><DEXAggregator /></div>}
+              {activeTab === 'swaps' && <SwapTable swaps={combinedSwaps} isLive={wsConnected} showAll />}
+              {activeTab === 'dex' && <div style={{ maxWidth: 1100, margin: '0 auto' }}><DEXAggregator /></div>}
               {activeTab === 'block-explorer' && <div style={{ maxWidth: 1100, margin: '0 auto' }}><BlockExplorer /></div>}
-              {activeTab === 'price-alerts'   && <div style={{ maxWidth: 600, margin: '0 auto' }}><PriceAlerts /></div>}
+              {activeTab === 'price-alerts' && <div style={{ maxWidth: 600, margin: '0 auto' }}><PriceAlerts /></div>}
 
               {/* ─── SBTC BRIDGE ─── */}
               {activeTab === 'sbtc' && <div style={{ maxWidth: 960, margin: '0 auto' }}><SBTCBridgeMonitor /></div>}
 
               {/* ─── AI AGENTS ─── */}
-              {activeTab === 'ai-agents'  && <div style={{ maxWidth: 1000, margin: '0 auto' }}><AIAgents /></div>}
-              {activeTab === 'web-intel'  && <div style={{ maxWidth: 1100, margin: '0 auto' }}><WebIntelligence /></div>}
+              {activeTab === 'ai-agents' && <div style={{ maxWidth: 1000, margin: '0 auto' }}><AIAgents /></div>}
+              {activeTab === 'web-intel' && <div style={{ maxWidth: 1100, margin: '0 auto' }}><WebIntelligence /></div>}
               {activeTab === 'whale-intel' && <div style={{ maxWidth: 1000, margin: '0 auto' }}><WhaleIntelligence /></div>}
               {activeTab === 'defi-scan' && <div style={{ maxWidth: 1100, margin: '0 auto' }}><DefiScanner /></div>}
               {activeTab === 'governance' && <div style={{ maxWidth: 900, margin: '0 auto' }}><GovernanceTracker /></div>}
+              {activeTab === 'sbtc-bridge' && <div style={{ maxWidth: 1000, margin: '0 auto' }}><SbtcBridge /></div>}
+              {activeTab === 'token-launches' && <div style={{ maxWidth: 900, margin: '0 auto' }}><TokenLaunches /></div>}
+              {activeTab === 'social-pulse' && <div style={{ maxWidth: 1000, margin: '0 auto' }}><SocialPulse /></div>}
               {activeTab === 'chainhooks' && <div style={{ maxWidth: 1000, margin: '0 auto' }}><ChainhooksMonitor /></div>}
 
               {/* ─── EXPLORE ─── */}
-              {activeTab === 'gas'         && <div style={{ maxWidth: 800, margin: '0 auto' }}><GasTracker /></div>}
-              {activeTab === 'nfts'        && <div style={{ maxWidth: 1100, margin: '0 auto' }}><NFTGallery /></div>}
+              {activeTab === 'gas' && <div style={{ maxWidth: 800, margin: '0 auto' }}><GasTracker /></div>}
+              {activeTab === 'nfts' && <div style={{ maxWidth: 1100, margin: '0 auto' }}><NFTGallery /></div>}
               {activeTab === 'leaderboard' && <div style={{ maxWidth: 920, margin: '0 auto' }}><StacksLeaderboard /></div>}
-              {activeTab === 'predict'     && <div style={{ maxWidth: 800, margin: '0 auto' }}><StacksPredict /></div>}
+              {activeTab === 'predict' && <div style={{ maxWidth: 800, margin: '0 auto' }}><StacksPredict /></div>}
 
               {/* ─── DONATE BANNER ─── */}
               <div style={{
@@ -732,9 +392,9 @@ function App() {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
                     {[
-                      { label: 'Docs',   href: 'https://docs.hiro.so/chainhooks' },
+                      { label: 'Docs', href: 'https://docs.hiro.so/chainhooks' },
                       { label: 'GitHub', href: 'https://github.com/serayd61/stacks-defi-sentinel' },
-                      { label: 'Hiro',   href: 'https://platform.hiro.so' },
+                      { label: 'Hiro', href: 'https://platform.hiro.so' },
                       { label: 'Stacks', href: 'https://stacks.co' },
                     ].map(link => (
                       <a key={link.label} href={link.href} target="_blank" rel="noopener noreferrer"
