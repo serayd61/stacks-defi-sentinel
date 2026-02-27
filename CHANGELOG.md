@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [Daily Update] - 2026-02-27
+
+### Changes
+- test: improve test coverage [mm4jdhpx]
+- chore: ignore .claude/worktrees in gitignore
+- feat: Governance & SIP Tracker — monitor Stacks proposals via Extract API
+- feat: DeFi Protocol Deep Scanner — Crawl + Extract APIs for protocol comparison
+- feat: Whale Intelligence module — Extract API + AI-structured wallet analysis
+- feat: add sBTC monitor, DeFi index, liquidation bot, yield aggregator, and gas optimizer contracts
+- fix: set Dashboard as default landing tab instead of AI Agents
+- chore: Auto-update CHANGELOG [skip ci]
+
+
 ## [Daily Update] - 2026-02-26
 
 ### Changes
