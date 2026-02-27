@@ -48,3 +48,4 @@ frontend/.vite/
 
 .vercel
 .env*.local
+.claude/worktrees/
