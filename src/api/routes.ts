@@ -16,6 +16,8 @@ import {
 } from '../services/user-analytics';
 import { getHyperbrowserService } from '../services/hyperbrowser';
 import { cacheService } from '../utils/cache';
+import { getOracleService } from '../services/oracle-aggregator';
+import { getPortfolioService } from '../services/portfolio-tracker';
 
 interface RouteOptions {
   analytics: AnalyticsService;
@@ -884,5 +886,90 @@ export const DeFiRoutes: FastifyPluginAsync<RouteOptions> = async (fastify, opts
       logger.error('defi-scan error:', err);
       return reply.send({ protocols: [], totalTvl: 0, totalPools: 0, scannedAt: '', error: 'scan failed' });
     }
+  });
+
+  // ── Oracle Aggregator (Real-time prices from Pyth, DIA, CoinGecko) ────────
+
+  const oracleService = getOracleService();
+
+  // GET /api/oracle/prices — all aggregated prices
+  fastify.get('/oracle/prices', async (_req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const prices = oracleService.getFormattedPrices();
+      return reply.send({
+        prices,
+        timestamp: new Date().toISOString(),
+        sources: ['pyth', 'dia', 'coingecko', 'alex'],
+      });
+    } catch (err) {
+      logger.error('oracle/prices error:', err);
+      return reply.send({ prices: [], timestamp: new Date().toISOString() });
+    }
+  });
+
+  // GET /api/oracle/price/:symbol — single token price
+  fastify.get('/oracle/price/:symbol', async (req: FastifyRequest, reply: FastifyReply) => {
+    const { symbol } = req.params as { symbol: string };
+    try {
+      const price = oracleService.getPrice(symbol);
+      if (!price) {
+        return reply.status(404).send({ error: `Price not found for ${symbol}` });
+      }
+      return reply.send(price);
+    } catch (err) {
+      logger.error(`oracle/price/${symbol} error:`, err);
+      return reply.status(500).send({ error: 'Failed to fetch price' });
+    }
+  });
+
+  // GET /api/oracle/map — price map for calculations
+  fastify.get('/oracle/map', async (_req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      return reply.send(oracleService.getPriceMap());
+    } catch (err) {
+      logger.error('oracle/map error:', err);
+      return reply.send({});
+    }
+  });
+
+  // ── Portfolio Tracker (User DeFi positions aggregator) ────────────────────
+
+  const portfolioService = getPortfolioService();
+
+  // GET /api/portfolio/:address — full portfolio summary
+  fastify.get('/portfolio/:address', async (req: FastifyRequest, reply: FastifyReply) => {
+    const { address } = req.params as { address: string };
+    try {
+      const portfolio = await portfolioService.getPortfolio(address);
+      return reply.send(portfolio);
+    } catch (err) {
+      logger.error(`portfolio/${address} error:`, err);
+      return reply.status(500).send({ error: 'Failed to fetch portfolio' });
+    }
+  });
+
+  // GET /api/portfolio/:address/breakdown — portfolio breakdown by category
+  fastify.get('/portfolio/:address/breakdown', async (req: FastifyRequest, reply: FastifyReply) => {
+    const { address } = req.params as { address: string };
+    try {
+      const portfolio = await portfolioService.getPortfolio(address);
+      const breakdown = portfolioService.getPortfolioBreakdown(portfolio);
+      return reply.send({
+        address,
+        totalValueUsd: portfolio.totalValueUsd,
+        breakdown,
+        lastUpdated: portfolio.lastUpdated,
+      });
+    } catch (err) {
+      logger.error(`portfolio/${address}/breakdown error:`, err);
+      return reply.status(500).send({ error: 'Failed to fetch portfolio breakdown' });
+    }
+  });
+
+  // POST /api/portfolio/clear-cache — clear portfolio cache
+  fastify.post('/portfolio/clear-cache', async (req: FastifyRequest, reply: FastifyReply) => {
+    const { address } = req.body as { address?: string };
+    portfolioService.clearCache(address);
+    return reply.send({ success: true, cleared: address || 'all' });
   });
 };

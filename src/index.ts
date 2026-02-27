@@ -14,6 +14,7 @@ import { HiroWebSocketService } from './services/hiro-websocket';
 import { ProtocolDiscoveryService } from './services/protocol-discovery';
 import { logger } from './utils/logger';
 import { seedDemoData } from './services/user-analytics';
+import { getOracleService } from './services/oracle-aggregator';
 
 // Load environment variables
 import * as dotenv from 'dotenv';
@@ -180,6 +181,13 @@ async function main() {
     });
     logger.info('📊 Hiro Data Service: active polling enabled');
 
+    // Start Oracle Aggregator Service (real-time prices from Pyth, DIA, CoinGecko)
+    const oracleService = getOracleService();
+    oracleService.start().catch((err) => {
+      logger.error('Failed to start Oracle Aggregator Service:', err);
+    });
+    logger.info('🔮 Oracle Aggregator Service: real-time prices enabled');
+
     // Start Hiro WebSocket Service (real-time event streaming)
     hiroWsService = new HiroWebSocketService(eventProcessor, analytics);
     hiroWsService.start().catch((err) => {
@@ -240,6 +248,7 @@ async function main() {
       hiroDataService.stop();
       hiroWsService?.stop();
       protocolDiscovery?.stop();
+      getOracleService().stop();
 
       // Cleanup chainhooks if they were registered
       if (config.chainhooksApiKey) {
