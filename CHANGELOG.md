@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [Daily Update] - 2026-02-28
+
+### Changes
+- Add multi-repo contract deployment scripts
+- Add deployment scripts for stx-escrow, stacks-utils, stacks-analytics contracts
+- Add real Oracle Aggregator and Portfolio Tracker
+- Add 51 DeFi Sentinel contract interactions
+- feat: Deploy 20 new DeFi Sentinel smart contracts to mainnet
+- feat: implement retry logic [mm5cgyu8]
+- feat: frontend refactoring, redis caching, and test setup
+- chore: Auto-update CHANGELOG [skip ci]
+
+
 ## [Daily Update] - 2026-02-27
 
 ### Changes
