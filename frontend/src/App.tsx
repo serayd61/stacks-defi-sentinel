@@ -85,12 +85,13 @@ function App() {
   const handleSelect = (t: TabType) => { setActiveTab(t); setMobileOpen(false); };
 
   return (
-    <div style={{ minHeight: '100vh', background: '#090912', color: '#fff', display: 'flex' }}>
+    <div style={{ minHeight: '100vh', background: '#04040e', color: '#fff', display: 'flex' }}>
 
       {/* Ambient glows */}
       <div style={{ position: 'fixed', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 0 }}>
-        <div style={{ position: 'absolute', top: -150, right: -150, width: 600, height: 600, background: 'radial-gradient(circle,rgba(85,70,255,0.1) 0%,transparent 70%)', borderRadius: '50%' }} />
-        <div style={{ position: 'absolute', bottom: -100, left: -100, width: 500, height: 500, background: 'radial-gradient(circle,rgba(252,100,50,0.06) 0%,transparent 70%)', borderRadius: '50%' }} />
+        <div style={{ position: 'absolute', top: -200, right: -200, width: 700, height: 700, background: 'radial-gradient(circle,rgba(108,71,255,0.08) 0%,transparent 70%)', borderRadius: '50%' }} />
+        <div style={{ position: 'absolute', bottom: -150, left: -150, width: 600, height: 600, background: 'radial-gradient(circle,rgba(252,100,50,0.05) 0%,transparent 70%)', borderRadius: '50%' }} />
+        <div style={{ position: 'absolute', top: '40%', left: '30%', width: 400, height: 400, background: 'radial-gradient(circle,rgba(16,185,129,0.03) 0%,transparent 70%)', borderRadius: '50%' }} />
       </div>
 
       {/* Desktop sidebar */}
@@ -173,7 +174,7 @@ function App() {
         />
 
         {/* PAGE BODY */}
-        <div style={{ flex: 1, padding: '24px 20px 48px' }}>
+        <div style={{ flex: 1, padding: '22px 20px 60px' }}>
 
           {/* Error */}
           {error && (
@@ -195,14 +196,18 @@ function App() {
           )}
 
           {isLoading ? (
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 320 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 360 }}>
               <div style={{ textAlign: 'center' }}>
                 <div style={{
-                  width: 44, height: 44, margin: '0 auto 14px',
-                  border: '3px solid rgba(85,70,255,0.12)', borderTopColor: '#5546FF',
-                  borderRadius: '50%', animation: 'spinCW 0.8s linear infinite',
+                  width: 48, height: 48, margin: '0 auto 16px',
+                  borderRadius: '50%',
+                  border: '2px solid rgba(108,71,255,0.12)',
+                  borderTopColor: '#6C47FF',
+                  animation: 'spinCW 0.7s linear infinite',
+                  boxShadow: '0 0 20px rgba(108,71,255,0.2)',
                 }} />
-                <p style={{ color: '#475569', fontSize: '0.85rem' }}>Loading Stacks data...</p>
+                <p style={{ color: '#475569', fontSize: '0.82rem', fontWeight: 500 }}>Loading Stacks data...</p>
+                <p style={{ color: '#334155', fontSize: '0.72rem', marginTop: 4 }}>Connecting to Mainnet</p>
               </div>
             </div>
           ) : (
@@ -210,20 +215,34 @@ function App() {
               {/* ─── OVERVIEW / DASHBOARD ─── */}
               {activeTab === 'overview' && (
                 <>
+                  {/* Section label */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                    <div style={{ width: 3, height: 18, borderRadius: 2, background: 'linear-gradient(180deg,#6C47FF,#FC6432)' }} />
+                    <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                      Network Overview
+                    </span>
+                    <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.04)' }} />
+                    <span style={{ fontSize: '0.68rem', color: '#334155' }}>Updated {lastUpdate.toLocaleTimeString()}</span>
+                  </div>
+
+                  {/* Stat cards */}
                   <div style={{
                     display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))',
+                    gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))',
                     gap: 14, marginBottom: 22,
                   }}>
-                    <StatCard title="Total Value Locked" value={fmt(dashboardStats?.totalValueLocked || 0)} icon={<Wallet size={20} />} color="purple" trend={12.5} />
-                    <StatCard title="24h Volume" value={fmt(dashboardStats?.totalVolume24h || 0)} icon={<TrendingUp size={20} />} color="orange" trend={-3.2} />
-                    <StatCard title="Transactions (24h)" value={fmtCount(dashboardStats?.totalTransactions24h || 0)} icon={<Activity size={20} />} color="green" subtitle="Confirmed" />
-                    <StatCard title="Active Wallets" value={fmtCount(dashboardStats?.activeWallets24h || 0)} icon={<Users size={20} />} color="blue" subtitle="Unique addresses" />
+                    <StatCard title="Total Value Locked" value={fmt(dashboardStats?.totalValueLocked || 0)} icon={<Wallet size={18} />} color="purple" trend={12.5} />
+                    <StatCard title="24h Volume" value={fmt(dashboardStats?.totalVolume24h || 0)} icon={<TrendingUp size={18} />} color="orange" trend={-3.2} />
+                    <StatCard title="Transactions (24h)" value={fmtCount(dashboardStats?.totalTransactions24h || 0)} icon={<Activity size={18} />} color="green" subtitle="Confirmed on-chain" />
+                    <StatCard title="Active Wallets" value={fmtCount(dashboardStats?.activeWallets24h || 0)} icon={<Users size={18} />} color="blue" subtitle="Unique addresses" />
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 320px', gap: 18, marginBottom: 18 }}>
+
+                  {/* Live data grid */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 16, marginBottom: 16 }}>
                     <SwapTable swaps={combinedSwaps} isLive={wsConnected} />
                     <WhaleAlerts alerts={combinedAlerts} />
                   </div>
+
                   <PoolsTable pools={dashboardStats?.topPools || []} />
                 </>
               )}
@@ -302,95 +321,99 @@ function App() {
               {activeTab === 'leaderboard' && <div style={{ maxWidth: 920, margin: '0 auto' }}><StacksLeaderboard /></div>}
               {activeTab === 'predict' && <div style={{ maxWidth: 800, margin: '0 auto' }}><StacksPredict /></div>}
 
-              {/* ─── DONATE BANNER ─── */}
+              {/* ─── SUPPORT BANNER ─── */}
               <div style={{
                 marginTop: 48,
-                background: 'linear-gradient(135deg,rgba(85,70,255,0.08),rgba(252,100,50,0.06))',
-                border: '1px solid rgba(85,70,255,0.2)',
-                borderRadius: 14, padding: '18px 22px',
+                position: 'relative', overflow: 'hidden',
+                background: 'linear-gradient(135deg, rgba(108,71,255,0.07) 0%, rgba(79,70,229,0.04) 50%, rgba(252,100,50,0.05) 100%)',
+                border: '1px solid rgba(108,71,255,0.18)',
+                borderRadius: 16, padding: '20px 24px',
                 display: 'flex', flexWrap: 'wrap', alignItems: 'center',
                 justifyContent: 'space-between', gap: 14,
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                {/* bg glow */}
+                <div style={{ position: 'absolute', top: -60, left: -60, width: 200, height: 200, background: 'radial-gradient(circle,rgba(108,71,255,0.12) 0%,transparent 70%)', pointerEvents: 'none' }} />
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, position: 'relative' }}>
                   <div style={{
-                    width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-                    background: 'linear-gradient(135deg,#5546FF,#FC6432)',
+                    width: 42, height: 42, borderRadius: 12, flexShrink: 0,
+                    background: 'linear-gradient(135deg,#6C47FF,#FC6432)',
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    boxShadow: '0 4px 12px rgba(85,70,255,0.3)',
+                    boxShadow: '0 4px 16px rgba(108,71,255,0.35)',
                   }}>
-                    <Zap size={17} color="white" />
+                    <Zap size={18} color="white" strokeWidth={2.5} />
                   </div>
                   <div>
-                    <div style={{ fontWeight: 700, fontSize: '0.9rem', color: '#e2e8f0', marginBottom: 2 }}>
+                    <div style={{ fontWeight: 700, fontSize: '0.88rem', color: '#E2E8F0', marginBottom: 3 }}>
                       Support Stacks Sentinel
                     </div>
-                    <div style={{ fontSize: '0.75rem', color: '#64748b', maxWidth: 440 }}>
-                      This tool is free & open-source. If it helps you, consider supporting development with a STX donation.
+                    <div style={{ fontSize: '0.74rem', color: '#475569', maxWidth: 400 }}>
+                      Free & open-source. Help keep the platform running with a small donation.
                     </div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  {/* STX donate */}
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', position: 'relative' }}>
                   <a
                     href="https://explorer.stacks.co/address/SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB?chain=mainnet"
                     target="_blank" rel="noopener noreferrer"
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 7,
-                      padding: '7px 14px', borderRadius: 9,
-                      background: 'linear-gradient(135deg,rgba(85,70,255,0.2),rgba(124,58,237,0.12))',
-                      border: '1px solid rgba(85,70,255,0.3)',
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '8px 16px', borderRadius: 10,
+                      background: 'rgba(108,71,255,0.12)',
+                      border: '1px solid rgba(108,71,255,0.28)',
                       textDecoration: 'none', transition: 'all 0.15s',
                     }}
-                    onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(85,70,255,0.32)'; }}
-                    onMouseLeave={e => { (e.currentTarget as any).style.background = 'linear-gradient(135deg,rgba(85,70,255,0.2),rgba(124,58,237,0.12))'; }}
+                    onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(108,71,255,0.22)'; }}
+                    onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(108,71,255,0.12)'; }}
                   >
-                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#a5b4fc' }}>STX</span>
-                    <span style={{ fontFamily: 'monospace', fontSize: '0.68rem', color: '#64748b' }}>
-                      SP2PEB…D9WJB
-                    </span>
-                    <ExternalLink size={11} color="#6366f1" />
+                    <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#818CF8', letterSpacing: '0.02em' }}>STX</span>
+                    <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.68rem', color: '#64748B' }}>SP2PEB…D9WJB</span>
+                    <ExternalLink size={11} color="#818CF8" />
                   </a>
-                  {/* BTC donate */}
                   <a
                     href="https://mempool.space/address/bc1q8jrgvvmu8ufjaqd47mrjpc8yr3x2rfhgkt9lx7"
                     target="_blank" rel="noopener noreferrer"
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 7,
-                      padding: '7px 14px', borderRadius: 9,
-                      background: 'linear-gradient(135deg,rgba(252,100,50,0.15),rgba(251,146,60,0.08))',
-                      border: '1px solid rgba(252,100,50,0.28)',
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      padding: '8px 16px', borderRadius: 10,
+                      background: 'rgba(252,100,50,0.1)',
+                      border: '1px solid rgba(252,100,50,0.25)',
                       textDecoration: 'none', transition: 'all 0.15s',
                     }}
-                    onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(252,100,50,0.28)'; }}
-                    onMouseLeave={e => { (e.currentTarget as any).style.background = 'linear-gradient(135deg,rgba(252,100,50,0.15),rgba(251,146,60,0.08))'; }}
+                    onMouseEnter={e => { (e.currentTarget as any).style.background = 'rgba(252,100,50,0.2)'; }}
+                    onMouseLeave={e => { (e.currentTarget as any).style.background = 'rgba(252,100,50,0.1)'; }}
                   >
-                    <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#fb923c' }}>BTC</span>
-                    <span style={{ fontFamily: 'monospace', fontSize: '0.68rem', color: '#64748b' }}>
-                      bc1q8j…lx7
-                    </span>
-                    <ExternalLink size={11} color="#fb923c" />
+                    <span style={{ fontSize: '0.76rem', fontWeight: 800, color: '#FB923C', letterSpacing: '0.02em' }}>BTC</span>
+                    <span style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.68rem', color: '#64748B' }}>bc1q8j…lx7</span>
+                    <ExternalLink size={11} color="#FB923C" />
                   </a>
                 </div>
               </div>
 
-              {/* FOOTER */}
-              <footer style={{
-                marginTop: 52, paddingTop: 24,
-                borderTop: '1px solid rgba(255,255,255,0.05)',
-              }}>
-                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 16 }}>
+              {/* ─── FOOTER ─── */}
+              <footer style={{ marginTop: 48, paddingTop: 24, borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 18 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ width: 30, height: 30, borderRadius: 8, background: 'linear-gradient(135deg,#5546FF,#FC6432)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <Zap size={13} color="white" />
+                    <div style={{
+                      width: 32, height: 32, borderRadius: 9,
+                      background: 'linear-gradient(135deg,#6C47FF,#FC6432)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      boxShadow: '0 4px 12px rgba(108,71,255,0.3)',
+                    }}>
+                      <Zap size={14} color="white" strokeWidth={2.5} />
                     </div>
                     <div>
-                      <div style={{ fontWeight: 600, fontSize: '0.82rem', color: '#e2e8f0' }}>Stacks Sentinel</div>
-                      <div style={{ fontSize: '0.7rem', color: '#475569' }}>
-                        Powered by <span style={{ color: '#818cf8' }}>Chainhooks</span> · <span style={{ color: '#fb923c' }}>llama3.2:1b</span> AI · Hetzner VPS
+                      <div style={{ fontWeight: 700, fontSize: '0.82rem', color: '#E2E8F0', letterSpacing: '-0.01em' }}>Stacks Sentinel</div>
+                      <div style={{ fontSize: '0.68rem', color: '#334155', marginTop: 1 }}>
+                        Powered by <span style={{ color: '#818CF8' }}>Chainhooks</span>
+                        {' · '}
+                        <span style={{ color: '#FB923C' }}>AI</span>
+                        {' · '}Hiro Platform
                       </div>
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
                     {[
                       { label: 'Docs', href: 'https://docs.hiro.so/chainhooks' },
                       { label: 'GitHub', href: 'https://github.com/serayd61/stacks-defi-sentinel' },
@@ -398,11 +421,11 @@ function App() {
                       { label: 'Stacks', href: 'https://stacks.co' },
                     ].map(link => (
                       <a key={link.label} href={link.href} target="_blank" rel="noopener noreferrer"
-                        style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.78rem', color: '#475569', textDecoration: 'none' }}
-                        onMouseEnter={e => ((e.currentTarget as any).style.color = '#818cf8')}
-                        onMouseLeave={e => ((e.currentTarget as any).style.color = '#475569')}
+                        style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.76rem', color: '#334155', textDecoration: 'none', fontWeight: 500 }}
+                        onMouseEnter={e => ((e.currentTarget as any).style.color = '#818CF8')}
+                        onMouseLeave={e => ((e.currentTarget as any).style.color = '#334155')}
                       >
-                        {link.label} <ExternalLink size={10} />
+                        {link.label} <ExternalLink size={9} />
                       </a>
                     ))}
                   </div>
@@ -410,18 +433,20 @@ function App() {
 
                 {/* Status bar */}
                 <div style={{
-                  display: 'flex', flexWrap: 'wrap', gap: 14, padding: '9px 14px',
-                  background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)',
-                  borderRadius: 9, fontSize: '0.7rem', color: '#475569',
+                  display: 'flex', flexWrap: 'wrap', gap: 16,
+                  padding: '10px 16px',
+                  background: 'rgba(255,255,255,0.02)',
+                  border: '1px solid rgba(255,255,255,0.04)',
+                  borderRadius: 10, fontSize: '0.69rem', color: '#334155',
                 }}>
                   {[
-                    { dot: wsConnected ? '#22c55e' : '#f59e0b', label: `WebSocket: ${wsConnected ? 'Live' : 'Reconnecting'}` },
-                    { dot: '#818cf8', label: 'AI Cluster: Hetzner VPS · 4 Agents' },
-                    { dot: '#60a5fa', label: `Updated: ${lastUpdate.toLocaleTimeString()}` },
-                    { dot: '#fb923c', label: 'Network: Stacks Mainnet' },
+                    { dot: wsConnected ? '#10B981' : '#F59E0B', label: `WebSocket: ${wsConnected ? 'Live' : 'Reconnecting'}` },
+                    { dot: '#818CF8', label: 'AI Cluster: 4 Agents Active' },
+                    { dot: '#60A5FA', label: `Last sync: ${lastUpdate.toLocaleTimeString()}` },
+                    { dot: '#FB923C', label: 'Stacks Mainnet' },
                   ].map(s => (
                     <span key={s.label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                      <span style={{ width: 6, height: 6, borderRadius: '50%', background: s.dot, flexShrink: 0 }} />
+                      <span style={{ width: 5, height: 5, borderRadius: '50%', background: s.dot, flexShrink: 0 }} />
                       {s.label}
                     </span>
                   ))}
@@ -434,6 +459,17 @@ function App() {
 
       <style>{`
         @keyframes spinCW { to { transform: rotate(360deg); } }
+        @keyframes live-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(0.85)} }
+        @keyframes pulse-ring {
+          0%   { box-shadow: 0 0 0 0 rgba(16,185,129,0.5); }
+          70%  { box-shadow: 0 0 0 8px rgba(16,185,129,0); }
+          100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+        }
+        @keyframes ticker-scroll { 0%{transform:translateX(0)} 100%{transform:translateX(-50%)} }
+        @keyframes slide-in-up { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        .ticker-wrap { overflow:hidden; white-space:nowrap; display:flex; mask-image:linear-gradient(90deg,transparent,black 5%,black 95%,transparent); }
+        .ticker-track { display:inline-flex; animation:ticker-scroll 50s linear infinite; }
+        .ticker-track:hover { animation-play-state:paused; }
       `}</style>
     </div>
   );
