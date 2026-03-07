@@ -7,7 +7,7 @@
     "mainnet": {
       "if_this": {
         "scope": "contract_call",
-        "contract_identifier": "SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.sentinel-staking-v2",
+        "contract_identifier": "SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.sentinel-staking-v2",
         "method": "stake"
       },
       "then_that": {

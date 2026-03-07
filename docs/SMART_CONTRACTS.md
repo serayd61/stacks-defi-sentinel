@@ -10,39 +10,39 @@ DeFi Sentinel consists of a comprehensive suite of smart contracts deployed on S
 
 | Contract | Address | Description |
 |----------|---------|-------------|
-| voting-dao | SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.voting-dao | DAO governance and voting |
-| crowdfund | SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.crowdfund | Decentralized fundraising |
-| tip-jar | SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.tip-jar | Creator tipping system |
-| nft-marketplace | SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.nft-marketplace | NFT trading platform |
+| voting-dao | SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.voting-dao | DAO governance and voting |
+| crowdfund | SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.crowdfund | Decentralized fundraising |
+| tip-jar | SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.tip-jar | Creator tipping system |
+| nft-marketplace | SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.nft-marketplace | NFT trading platform |
 
 ### DeFi Contracts
 
 | Contract | Address | Description |
 |----------|---------|-------------|
-| staking-rewards | SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.staking-rewards | Token staking with rewards |
-| token-vesting | SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.token-vesting | Vesting schedules |
-| airdrop | SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.airdrop | Token distribution |
-| treasury | SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.treasury | DAO treasury management |
+| staking-rewards | SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.staking-rewards | Token staking with rewards |
+| token-vesting | SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.token-vesting | Vesting schedules |
+| airdrop | SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.airdrop | Token distribution |
+| treasury | SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.treasury | DAO treasury management |
 
 ### Advanced DeFi Contracts
 
 | Contract | Address | Description |
 |----------|---------|-------------|
-| multi-sig-wallet | SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.multi-sig-wallet | Multi-signature wallet |
-| token-swap | SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.token-swap | AMM DEX |
-| nft-staking | SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.nft-staking | Stake NFTs for rewards |
-| flash-loan | SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.flash-loan | Flash loan protocol |
-| yield-farm | SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.yield-farm | Yield farming |
+| multi-sig-wallet | SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.multi-sig-wallet | Multi-signature wallet |
+| token-swap | SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.token-swap | AMM DEX |
+| nft-staking | SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.nft-staking | Stake NFTs for rewards |
+| flash-loan | SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.flash-loan | Flash loan protocol |
+| yield-farm | SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.yield-farm | Yield farming |
 
 ### Utility Contracts
 
 | Contract | Address | Description |
 |----------|---------|-------------|
-| referral | SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.referral | Referral reward system |
-| token-burn | SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.token-burn | Deflationary mechanism |
-| whitelist | SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.whitelist | Access control |
-| reputation | SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.reputation | User reputation scores |
-| achievement-badge | SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.achievement-badge | Achievement NFTs |
+| referral | SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.referral | Referral reward system |
+| token-burn | SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.token-burn | Deflationary mechanism |
+| whitelist | SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.whitelist | Access control |
+| reputation | SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.reputation | User reputation scores |
+| achievement-badge | SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.achievement-badge | Achievement NFTs |
 
 ## Contract Details
 
@@ -154,7 +154,7 @@ import { callReadOnlyFunction, callPublicFunction } from '@stacks/transactions';
 
 // Read contract state
 const result = await callReadOnlyFunction({
-  contractAddress: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB',
+  contractAddress: 'SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W',
   contractName: 'flash-loan',
   functionName: 'get-available-liquidity',
   functionArgs: [],
@@ -168,7 +168,7 @@ const result = await callReadOnlyFunction({
 import { openContractCall } from '@stacks/connect';
 
 await openContractCall({
-  contractAddress: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB',
+  contractAddress: 'SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W',
   contractName: 'yield-farm',
   functionName: 'deposit',
   functionArgs: [uintCV(1000000)],

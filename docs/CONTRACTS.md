@@ -2,7 +2,7 @@
 
 ## Deployed Contracts on Mainnet
 
-All contracts are deployed at: `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB`
+All contracts are deployed at: `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W`
 
 ### Core Contracts
 
@@ -16,7 +16,7 @@ SIP-010 compliant fungible token.
 - `get-balance(owner)` - Get balance
 - `get-total-supply()` - Get total supply
 
-**Explorer:** [View on Explorer](https://explorer.hiro.so/txid/SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.sentinel-token?chain=mainnet)
+**Explorer:** [View on Explorer](https://explorer.hiro.so/txid/SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.sentinel-token?chain=mainnet)
 
 ---
 
@@ -119,18 +119,18 @@ Crowdfunding platform.
 
 | Contract | Address |
 |----------|---------|
-| sentinel-token | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.sentinel-token` |
-| sentinel-lending | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.sentinel-lending` |
-| sentinel-oracle | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.sentinel-oracle` |
-| token-sale-v8 | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.token-sale-v8` |
-| amm-pool-v2 | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.amm-pool-v2` |
-| voting | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.voting` |
-| nft-marketplace | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.nft-marketplace` |
-| subscription | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.subscription` |
-| lottery | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.lottery` |
-| timelock | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.timelock` |
-| tipjar | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.tipjar` |
-| crowdfund | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.crowdfund` |
-| name-registry | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.name-registry` |
+| sentinel-token | `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.sentinel-token` |
+| sentinel-lending | `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.sentinel-lending` |
+| sentinel-oracle | `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.sentinel-oracle` |
+| token-sale-v8 | `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.token-sale-v8` |
+| amm-pool-v2 | `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.amm-pool-v2` |
+| voting | `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.voting` |
+| nft-marketplace | `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.nft-marketplace` |
+| subscription | `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.subscription` |
+| lottery | `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.lottery` |
+| timelock | `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.timelock` |
+| tipjar | `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.tipjar` |
+| crowdfund | `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.crowdfund` |
+| name-registry | `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.name-registry` |
 
 

@@ -3,7 +3,7 @@
 
 ;; Constants
 (define-constant contract-owner tx-sender)
-(define-constant treasury 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB)
+(define-constant treasury 'SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W)
 (define-constant err-owner-only (err u100))
 (define-constant err-sale-not-active (err u101))
 (define-constant err-sale-ended (err u102))

@@ -178,7 +178,7 @@ const PortfolioTracker: React.FC = () => {
           price: 0.01,
           priceChange24h: 12.5,
           icon: '🛡️',
-          contractId: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.sentinel-token',
+          contractId: 'SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.sentinel-token',
         },
       ]);
 

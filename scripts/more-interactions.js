@@ -11,7 +11,7 @@ const {
 const { STACKS_MAINNET } = require("@stacks/network");
 
 const PRIVATE_KEY = "***REMOVED***";
-const ADDRESS = "SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB";
+const ADDRESS = "SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 

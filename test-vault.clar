@@ -1,6 +1,6 @@
 ;; Test vault - fixed contract address approach
 (define-constant contract-owner tx-sender)
-(define-constant vault-address 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB)
+(define-constant vault-address 'SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W)
 
 (define-data-var total-deposits uint u0)
 

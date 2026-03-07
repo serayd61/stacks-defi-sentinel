@@ -11,9 +11,9 @@ interface StakeInfo {
   rewardPool: string;
 }
 
-const CONTRACT_ADDRESS = 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB';
+const CONTRACT_ADDRESS = 'SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W';
 const CONTRACT_NAME = 'token-sale-v8';
-const SENTINEL_TOKEN = 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.sentinel-token';
+const SENTINEL_TOKEN = 'SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.sentinel-token';
 
 const StakePanel: React.FC = () => {
   const { isConnected, userAddress, connectWallet } = useWallet();

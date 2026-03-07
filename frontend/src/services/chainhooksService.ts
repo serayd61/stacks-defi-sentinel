@@ -185,7 +185,7 @@ class ChainhooksService {
 
   // DeFi Sentinel specific predicates
   setupDeFiSentinelPredicates(webhookBaseUrl: string): void {
-    const CONTRACT_OWNER = 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB';
+    const CONTRACT_OWNER = 'SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W';
 
     // Token transfers
     this.createFTTransferPredicate(

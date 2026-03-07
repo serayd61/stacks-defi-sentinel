@@ -35,7 +35,7 @@ export const MultiSigWallet: React.FC = () => {
     },
     {
       id: 2,
-      to: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB',
+      to: 'SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W',
       amount: 500,
       memo: 'Marketing Budget',
       signatures: 3,
@@ -46,7 +46,7 @@ export const MultiSigWallet: React.FC = () => {
   ]);
 
   const [signers, setSigners] = useState<Signer[]>([
-    { address: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB', name: 'Admin', hasSigned: true },
+    { address: 'SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W', name: 'Admin', hasSigned: true },
     { address: 'SP3K8BC0PPEVCV7NZ6QSRWPQ2JE9E5B6N3PA0KBR9', name: 'Treasury', hasSigned: true },
     { address: 'SP1Y5YSTAHZ88XYK1VPDH24GY0HPX5J4JECTMY4A1', name: 'Dev Lead', hasSigned: false },
   ]);

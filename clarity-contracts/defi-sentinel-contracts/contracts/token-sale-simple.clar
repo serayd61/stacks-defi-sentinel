@@ -38,7 +38,7 @@
     (try! (stx-transfer? stx-amount tx-sender (as-contract tx-sender)))
     
     ;; Mint tokens to buyer
-    (try! (contract-call? 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.sentinel-token mint tokens-to-mint tx-sender))
+    (try! (contract-call? 'SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.sentinel-token mint tokens-to-mint tx-sender))
     
     ;; Update stats
     (var-set total-sold (+ (var-get total-sold) tokens-to-mint))

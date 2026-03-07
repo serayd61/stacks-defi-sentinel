@@ -28,7 +28,7 @@ const TOKENS: Token[] = [
   { symbol: 'VELAR', name: 'Velar', contractId: 'SP1Y5YSTAHZ88XYK1VPDH24GY0HPX5J4JECTMY4A1.velar-token', decimals: 8, icon: '🟣', price: 0.008 },
   { symbol: 'USDA', name: 'USDA', contractId: 'SP2C2YFP12AJZB4MABJBAJ55XECVS7E4PMMZ89YZR.usda-token', decimals: 6, icon: '💵', price: 1.00 },
   { symbol: 'WELSH', name: 'Welsh', contractId: 'SP3NE50GEXFG9SZGTT5P3G5TJS6T6LBF3TWAQCDG3.welshcorgicoin-token', decimals: 6, icon: '🐕', price: 0.000045 },
-  { symbol: 'SNTL', name: 'Sentinel', contractId: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.sentinel-token', decimals: 6, icon: '🛡️', price: 0.001 },
+  { symbol: 'SNTL', name: 'Sentinel', contractId: 'SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.sentinel-token', decimals: 6, icon: '🛡️', price: 0.001 },
 ];
 
 // DEX Router Contracts

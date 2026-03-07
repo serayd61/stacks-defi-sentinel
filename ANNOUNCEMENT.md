@@ -59,7 +59,7 @@ A comprehensive DeFi monitoring and tracking platform for the Stacks ecosystem.
 
 **🔗 Links:**
 • GitHub: https://github.com/serayd61/stacks-defi-sentinel
-• Explorer: https://explorer.hiro.so/address/SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB?chain=mainnet
+• Explorer: https://explorer.hiro.so/address/SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W?chain=mainnet
 
 Would love your feedback! 🙏
 ```

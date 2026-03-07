@@ -165,7 +165,7 @@ GET /api/contracts/:contractName
 ```json
 {
   "name": "yield-farm",
-  "address": "SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.yield-farm",
+  "address": "SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.yield-farm",
   "totalCalls": 1547,
   "uniqueUsers": 324,
   "tvl": 450000,

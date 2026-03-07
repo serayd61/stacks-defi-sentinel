@@ -63,7 +63,7 @@ const WalletConnectIntegration: React.FC<WalletConnectIntegrationProps> = ({
       // In production, this would use @reown/appkit
       await new Promise(resolve => setTimeout(resolve, 1500));
       
-      const mockAddress = 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB';
+      const mockAddress = 'SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W';
       setConnectionStatus('connected');
       onConnect(mockAddress);
     } catch (error) {

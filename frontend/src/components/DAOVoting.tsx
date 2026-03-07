@@ -48,7 +48,7 @@ const DAOVoting: React.FC = () => {
           id: 1,
           title: 'SIP-001: Increase Staking Rewards',
           description: 'Proposal to increase SNTL staking rewards from 8% to 12% APY to incentivize long-term holding and protocol participation.',
-          proposer: 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB',
+          proposer: 'SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W',
           status: 'active',
           votesFor: 125000,
           votesAgainst: 45000,

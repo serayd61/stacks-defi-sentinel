@@ -61,14 +61,14 @@ This project is built for the **Stacks Builder Challenge** and demonstrates:
 
 | Contract | Address | Description |
 |----------|---------|-------------|
-| `defi-sentinel` | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB` | Subscription & alerts |
-| `sentinel-token` | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB` | SNTL token (SIP-010) |
-| `sentinel-staking-v2` | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB` | Staking with tiered APY |
-| `sentinel-dao-v2` | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB` | DAO governance voting |
-| `token-sale-v8` | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB` | ICO with 3-tier pricing |
-| `sentinel-lending` | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB` | Collateralized lending |
-| `sentinel-oracle` | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB` | Price feeds for STX/sBTC/SNTL |
-| `sentinel-multisig-v2` | `SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB` | Multi-sig treasury |
+| `defi-sentinel` | `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W` | Subscription & alerts |
+| `sentinel-token` | `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W` | SNTL token (SIP-010) |
+| `sentinel-staking-v2` | `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W` | Staking with tiered APY |
+| `sentinel-dao-v2` | `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W` | DAO governance voting |
+| `token-sale-v8` | `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W` | ICO with 3-tier pricing |
+| `sentinel-lending` | `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W` | Collateralized lending |
+| `sentinel-oracle` | `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W` | Price feeds for STX/sBTC/SNTL |
+| `sentinel-multisig-v2` | `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W` | Multi-sig treasury |
 
 ### Contract Functions
 
@@ -353,7 +353,7 @@ Located in `/chainhooks/predicates/`:
 ```json
 {
   "scope": "contract_call",
-  "contract_identifier": "SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.sentinel-token",
+  "contract_identifier": "SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.sentinel-token",
   "method": "transfer"
 }
 ```

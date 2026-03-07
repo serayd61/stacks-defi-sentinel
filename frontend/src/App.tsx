@@ -355,7 +355,7 @@ function App() {
 
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', position: 'relative' }}>
                   <a
-                    href="https://explorer.stacks.co/address/SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB?chain=mainnet"
+                    href="https://explorer.stacks.co/address/SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W?chain=mainnet"
                     target="_blank" rel="noopener noreferrer"
                     style={{
                       display: 'flex', alignItems: 'center', gap: 8,

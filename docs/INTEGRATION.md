@@ -8,7 +8,7 @@
 import { request } from '@stacks/connect';
 import { uintCV, stringAsciiCV, cvToJSON, hexToCV } from '@stacks/transactions';
 
-const CONTRACT_ADDRESS = 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB';
+const CONTRACT_ADDRESS = 'SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W';
 
 // Buy tokens
 async function buyTokens(amount: number) {
@@ -77,7 +77,7 @@ export function useSentinelToken(address: string) {
       "start_block": 160000,
       "if_this": {
         "scope": "contract_call",
-        "contract_identifier": "SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.amm-pool-v2",
+        "contract_identifier": "SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.amm-pool-v2",
         "method": "swap-x-for-y"
       },
       "then_that": {

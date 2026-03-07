@@ -12,7 +12,7 @@ const {
 const { STACKS_MAINNET } = require("@stacks/network");
 
 const PRIVATE_KEY = "***REMOVED***";
-const ADDRESS = "SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB";
+const ADDRESS = "SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W";
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -460,7 +460,7 @@ const analyticsInteractions = [
   { contract: "analytics-tvl-v1", fn: "update-tvl", args: [stringAsciiCV("Velar"), uintCV(45000000000000)] },
   { contract: "analytics-volume-v1", fn: "record-volume", args: [uintCV(1), uintCV(12500000000)] },
   { contract: "analytics-volume-v1", fn: "record-token-volume", args: [stringAsciiCV("STX"), uintCV(8500000000)] },
-  { contract: "analytics-users-v1", fn: "record-activity", args: [principalCV("SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB")] },
+  { contract: "analytics-users-v1", fn: "record-activity", args: [principalCV("SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W")] },
   { contract: "analytics-fees-v1", fn: "record-fee", args: [uintCV(1), uintCV(5000)] },
   { contract: "analytics-pools-v1", fn: "update-pool", args: [stringAsciiCV("STX-USDA"), uintCV(25000000000000), uintCV(5000000000), uintCV(15000000)] },
   { contract: "analytics-tokens-v1", fn: "update-token", args: [stringAsciiCV("STX"), uintCV(1850000), uintCV(2500000000000000), uintCV(125000)] },

@@ -112,7 +112,7 @@ export function useContract(): UseContractReturn {
  */
 export function useVotingDAO() {
   const { call, read, isLoading, error, txId } = useContract();
-  const contractId = 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.voting-dao';
+  const contractId = 'SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.voting-dao';
 
   const vote = useCallback(async (proposalId: number, voteChoice: string) => {
     await call({
@@ -149,7 +149,7 @@ export function useVotingDAO() {
  */
 export function useYieldFarm() {
   const { call, read, isLoading, error, txId } = useContract();
-  const contractId = 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.yield-farm';
+  const contractId = 'SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.yield-farm';
 
   const deposit = useCallback(async (amount: number) => {
     await call({
@@ -200,7 +200,7 @@ export function useYieldFarm() {
  */
 export function useFlashLoan() {
   const { call, read, isLoading, error, txId } = useContract();
-  const contractId = 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.flash-loan';
+  const contractId = 'SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.flash-loan';
 
   const flashLoan = useCallback(async (amount: number) => {
     await call({
@@ -242,7 +242,7 @@ export function useFlashLoan() {
  */
 export function useMultiSig() {
   const { call, read, isLoading, error, txId } = useContract();
-  const contractId = 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.multi-sig-wallet';
+  const contractId = 'SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.multi-sig-wallet';
 
   const submitTransaction = useCallback(async (to: string, amount: number, memo: string) => {
     await call({
@@ -288,7 +288,7 @@ export function useMultiSig() {
  */
 export function useTokenSwap() {
   const { call, read, isLoading, error, txId } = useContract();
-  const contractId = 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.token-swap';
+  const contractId = 'SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.token-swap';
 
   const addLiquidity = useCallback(async (amount: number) => {
     await call({

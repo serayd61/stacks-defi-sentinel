@@ -13,7 +13,7 @@
 (define-constant err-sale-paused (err u106))
 
 ;; Sentinel Token Contract
-(define-constant sentinel-token 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.sentinel-token)
+(define-constant sentinel-token 'SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.sentinel-token)
 
 ;; Sale Configuration
 (define-data-var sale-active bool false)
@@ -310,7 +310,7 @@
       )
       
       ;; Transfer SNTL tokens from contract to buyer (tokens pre-loaded)
-      (try! (as-contract (contract-call? 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.sentinel-token transfer tokens-received-adjusted tx-sender buyer none)))
+      (try! (as-contract (contract-call? 'SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.sentinel-token transfer tokens-received-adjusted tx-sender buyer none)))
       
       (ok {
         purchased: tokens-received-adjusted,
@@ -333,12 +333,12 @@
     
     (let
       (
-        (user-balance (unwrap! (contract-call? 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.sentinel-token get-balance tx-sender) (err u600)))
+        (user-balance (unwrap! (contract-call? 'SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.sentinel-token get-balance tx-sender) (err u600)))
       )
       (asserts! (>= user-balance amount) err-insufficient-funds)
       
       ;; Transfer tokens to contract
-      (try! (contract-call? 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.sentinel-token transfer amount tx-sender (as-contract tx-sender) none))
+      (try! (contract-call? 'SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.sentinel-token transfer amount tx-sender (as-contract tx-sender) none))
       
       ;; Update staking data
       (map-set staked-amount tx-sender (+ (default-to u0 (map-get? staked-amount tx-sender)) amount))
@@ -386,7 +386,7 @@
       )
       
       ;; Transfer SNTL back
-      (try! (as-contract (contract-call? 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.sentinel-token transfer amount (as-contract tx-sender) staker none)))
+      (try! (as-contract (contract-call? 'SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.sentinel-token transfer amount (as-contract tx-sender) staker none)))
       
       ;; Transfer STX rewards
       (if (and (> stx-reward u0) (>= reward-pool stx-reward))

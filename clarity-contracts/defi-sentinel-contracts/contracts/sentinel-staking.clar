@@ -11,7 +11,7 @@
 (define-constant ERR_ALREADY_STAKING (err u106))
 
 ;; Token reference
-(define-constant SENTINEL_TOKEN 'SP2PEBKJ2W1ZDDF2QQ6Y4FXKZEDPT9J9R2NKD9WJB.sentinel-token)
+(define-constant SENTINEL_TOKEN 'SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.sentinel-token)
 
 ;; Staking tiers (in SNTL tokens - 6 decimals)
 (define-constant TIER_BRONZE u0)           ;; 0+ SNTL
