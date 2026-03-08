@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [Daily Update] - 2026-03-08
+
+### Changes
+- docs: update configuration options [mmgrwz6r]
+
+
 ## [Daily Update] - 2026-03-07
 
 ### Changes
