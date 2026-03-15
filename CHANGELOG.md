@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [Daily Update] - 2026-03-15
+
+### Changes
+- docs: add architecture overview [mmq6frzf]
+
+
 ## [Daily Update] - 2026-03-14
 
 ### Changes
