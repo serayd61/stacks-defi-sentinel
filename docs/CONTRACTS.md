@@ -79,8 +79,8 @@ Constant product AMM (x*y=k).
 DAO governance voting.
 
 **Functions:**
-- `create-proposal(title, description, duration)` - Create proposal
-- `vote(proposal-id, option-id, weight)` - Cast vote
+- `create-proposal(title, description, duration)` - Create a proposal
+- `vote(proposal-id, option-id, weight)` - Cast a vote
 - `execute-proposal(proposal-id)` - Execute after voting
 
 ---
@@ -91,7 +91,7 @@ NFT trading platform.
 **Functions:**
 - `list-nft(nft-contract, token-id, price, duration)` - List for sale
 - `buy-nft(listing-id)` - Purchase NFT
-- `create-auction(...)` - Start auction
+- `create-auction(...)` - Start an auction
 - `place-bid(auction-id, amount)` - Bid on auction
 
 ---
@@ -132,5 +132,3 @@ Crowdfunding platform.
 | tipjar | `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.tipjar` |
 | crowdfund | `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.crowdfund` |
 | name-registry | `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.name-registry` |
-
-
