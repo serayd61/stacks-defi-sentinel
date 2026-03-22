@@ -7,7 +7,7 @@ All contracts are deployed at: `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W`
 ### Core Contracts
 
 #### sentinel-token
-SIP-010 compliant fungible token.
+SIP-010-compliant fungible token.
 
 **Functions:**
 - `transfer(amount, sender, recipient, memo)` - Transfer tokens
@@ -64,7 +64,7 @@ Token sale contract for SNTL distribution.
 ### DeFi Contracts
 
 #### amm-pool-v2
-Constant product AMM (x*y=k).
+Constant-product AMM (x*y=k).
 
 **Functions:**
 - `create-pool(initial-x, initial-y)` - Create new pool
@@ -79,8 +79,8 @@ Constant product AMM (x*y=k).
 DAO governance voting.
 
 **Functions:**
-- `create-proposal(title, description, duration)` - Create proposal
-- `vote(proposal-id, option-id, weight)` - Cast vote
+- `create-proposal(title, description, duration)` - Create a proposal
+- `vote(proposal-id, option-id, weight)` - Cast a vote
 - `execute-proposal(proposal-id)` - Execute after voting
 
 ---
@@ -132,5 +132,3 @@ Crowdfunding platform.
 | tipjar | `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.tipjar` |
 | crowdfund | `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.crowdfund` |
 | name-registry | `SP387HJN7F2HR9KQ4250YGFCA4815T1F9X7N74C5W.name-registry` |
-
-
