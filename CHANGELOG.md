@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [Daily Update] - 2026-03-23
+
+### Changes
+- docs: update configuration options [mn27mc3e]
+- docs: update API documentation [mn2108t7]
+
+
 ## [Daily Update] - 2026-03-22
 
 ### Changes
