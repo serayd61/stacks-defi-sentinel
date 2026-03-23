@@ -267,7 +267,7 @@ ws.onmessage = (event) => {
 
 ## 🔐 Security
 
-1. **API Key Protection** - Never expose Chainhooks API key
+1. **API Key Protection** - Never expose the Chainhooks API key
 2. **Webhook Verification** - Validate webhook payloads
 3. **Rate Limiting** - Implemented for public endpoints
 4. **Smart Contract Auditing** - Clarity best practices
