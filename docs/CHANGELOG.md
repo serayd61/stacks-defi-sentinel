@@ -609,3 +609,20 @@
 ### Fixed
 - Minor bug fixes
 - Type corrections
+
+
+
+## [1.0.46] - 2026-03-27T17:48:31.146Z
+
+### Added
+- New utility functions
+- Improved documentation
+- Additional test coverage
+
+### Changed
+- Updated dependencies
+- Improved error handling
+
+### Fixed
+- Minor bug fixes
+- Type corrections
