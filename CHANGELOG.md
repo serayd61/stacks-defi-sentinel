@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [Daily Update] - 2026-03-28
+
+### Changes
+- docs: improve installation guide [mn9j2bbu]
+- docs: add architecture overview [mn973b61]
+- feat: implement formatting utility [mn90q0xe]
+- chore: Auto-update CHANGELOG [skip ci]
+
+
 ## [Daily Update] - 2026-03-27
 
 ### Changes
