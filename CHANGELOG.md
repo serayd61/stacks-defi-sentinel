@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [Daily Update] - 2026-03-29
+
+### Changes
+- docs: improve code comments [mnaygack]
+- docs: update API documentation [mnalrhek]
+- docs: add troubleshooting section [mnafik9s]
+
+
 ## [Daily Update] - 2026-03-28
 
 ### Changes
