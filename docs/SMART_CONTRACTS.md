@@ -2,7 +2,7 @@
 
 ## Overview
 
-DeFi Sentinel consists of a comprehensive suite of smart contracts deployed on Stacks mainnet. These contracts power various DeFi functionalities including voting, staking, lending, and more.
+DeFi Sentinel consists of a comprehensive suite of smart contracts deployed on Stacks mainnet. These contracts power various DeFi functionalities, including voting, staking, lending, and more.
 
 ## Deployed Contracts
 
@@ -135,7 +135,7 @@ Stake LP tokens to earn farming rewards.
 1. **Access Control**: All admin functions are protected with `contract-owner` checks
 2. **Input Validation**: All user inputs are validated before processing
 3. **Overflow Protection**: Arithmetic operations are checked for overflow
-4. **Reentrancy**: Contracts follow checks-effects-interactions pattern
+4. **Reentrancy**: Contracts follow the checks-effects-interactions pattern
 
 ## Audit Status
 
@@ -178,5 +178,4 @@ await openContractCall({
 
 ## License
 
-MIT License - See LICENSE file for details.
-
+MIT License - See the LICENSE file for details.
