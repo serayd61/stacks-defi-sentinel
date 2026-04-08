@@ -188,3 +188,19 @@
     (ok active)
   )
 )
+
+(define-public (check-escalation (alert-id uint))
+  (match (map-get? alerts alert-id)
+    alert
+    (let (
+      (rule (map-get? escalation-rules (get category alert)))
+    )
+      (match rule r
+        (if (and (get auto-escalate r)
+                 (not (get acknowledged alert))
+                 (> (- stacks-block-height (get raised-at alert))
+                    (get escalate-after-blocks r)))
+            (begin
+              (map-set alerts alert-id
+                (merge alert { level: (get escalate-to-level r) }))
+              (ok true
